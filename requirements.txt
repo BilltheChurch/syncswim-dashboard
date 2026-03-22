@@ -1,0 +1,19 @@
+# Core dependencies — Python 3.12
+streamlit==1.55.0
+plotly==6.6.0
+pandas==2.2.3
+scipy==1.15.3
+numpy==2.2.6
+mediapipe==0.10.33
+# IMPORTANT: Do NOT install opencv-python — it conflicts with opencv-contrib-python
+# mediapipe depends on opencv-contrib-python; they share the cv2 namespace
+opencv-contrib-python==4.10.0.84
+bleak==2.1.1
+matplotlib==3.10.0
+
+# Config writing (tomllib is stdlib for reading, tomli-w for writing)
+tomli-w==1.2.0
+
+# Dev dependencies
+pytest>=8.0
+ruff>=0.4.0
