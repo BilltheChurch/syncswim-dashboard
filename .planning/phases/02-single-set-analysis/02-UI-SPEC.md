@@ -78,7 +78,7 @@ Inherited from Phase 1. Phase 2 adds Plotly-specific text for gauges and annotat
 | Gauge value (large number) | 28px | 600 | `go.Indicator` number font — matches Page Title size for visual weight |
 | Gauge title (metric name) | 14px | 400 | `go.Indicator` title font — matches Label size |
 | Gauge deduction annotation | 12px | 600 | Red/green annotation below gauge — weight 600 for emphasis |
-| Overall score display | 36px | 600 | `st.markdown` with inline CSS — largest text on page, the "10.0" execution score |
+| Overall score display | 28px | 600 | `st.markdown` with inline CSS — reuses Page Title size; visual dominance achieved through center alignment, semibold weight, and FINA zone color coding (green/yellow/red), not a unique font size |
 | Phase timeline labels | 12px | 400 | Plotly horizontal bar annotation text inside each phase segment |
 | Frame counter label | 14px | 400 | `st.caption` showing "帧 42 / 780" below skeleton overlay |
 | Deviation angle label | 14px | 600 | Plotly annotation on keyframe comparison — weight 600 for red deviation callouts |
@@ -229,7 +229,7 @@ Phase 2 has **no destructive actions**. All operations are read-only analysis of
 
 | Component | Implementation | Behavior |
 |-----------|---------------|----------|
-| Overall score display | `st.markdown` with inline `<h1 style="font-size:36px; font-weight:600; text-align:center;">8.6 / 10</h1>` | Centered above gauges. Color: green if >= 8.0, yellow if >= 6.0, red if < 6.0 |
+| Overall score display | `st.markdown` with inline `<h1 style="font-size:28px; font-weight:600; text-align:center;">8.6 / 10</h1>` | Centered above gauges. Visual dominance via center alignment, semibold weight, and FINA zone color coding: green if >= 8.0, yellow if >= 6.0, red if < 6.0 |
 | Score label | `st.caption("预估执行分")` centered above score | Static label |
 | Gauge row | `st.columns(5)` — one gauge per column | 5 equal-width columns |
 | Individual gauge | `plotly.graph_objects.Indicator(mode="gauge+number")` via `st.plotly_chart` | Each gauge 200px height, shows metric value + FINA zone coloring |
@@ -424,7 +424,7 @@ fig.update_yaxes(title_text="IMU 倾斜角 (°)", secondary_y=True, title_font_s
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────────────────────────────────────────┐│
 │  │         预估执行分                                       ││
-│  │          8.6 / 10  (36px, green/yellow/red)             ││
+│  │          8.6 / 10  (28px, green/yellow/red)             ││
 │  ├─────────────────────────────────────────────────────────┤│
 │  │ [Gauge1]  [Gauge2]  [Gauge3]  [Gauge4]  [Gauge5]       ││
 │  │ 腿部垂直  腿部高度  肩膝对齐  动作流畅  展示稳定          ││
