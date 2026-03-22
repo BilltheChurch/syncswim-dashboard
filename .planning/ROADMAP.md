@@ -12,7 +12,7 @@ Transform existing IMU + vision sensor fusion data into a Streamlit web dashboar
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Environment** - Python 3.12 upgrade, Streamlit skeleton, data loading, configuration
+- [x] **Phase 1: Foundation & Environment** - Python 3.12 upgrade, Streamlit skeleton, data loading, configuration (completed 2026-03-22)
 - [ ] **Phase 2: Single-Set Analysis** - Post-recording analysis report with scoring, phase timeline, keyframe comparison, and sensor visualizations
 - [ ] **Phase 3: Progress Tracking** - Multi-set trend charts, radar comparison, history table, CSV export
 - [ ] **Phase 4: AI Coaching** - Claude API integration with cost management, per-set feedback, pattern clustering, training plan suggestions
@@ -123,7 +123,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Environment | 0/2 | Planning complete | - |
+| 1. Foundation & Environment | 2/2 | Complete   | 2026-03-22 |
 | 2. Single-Set Analysis | 0/3 | Not started | - |
 | 3. Progress Tracking | 0/2 | Not started | - |
 | 4. AI Coaching | 0/2 | Not started | - |

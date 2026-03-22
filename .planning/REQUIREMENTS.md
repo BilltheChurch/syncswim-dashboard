@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Streamlit multi-page app skeleton with 5 views + sidebar navigation
-- [ ] **INFRA-02**: Coach/athlete view toggle via sidebar switch (UI-only, no auth)
+- [x] **INFRA-01**: Streamlit multi-page app skeleton with 5 views + sidebar navigation
+- [x] **INFRA-02**: Coach/athlete view toggle via sidebar switch (UI-only, no auth)
 - [x] **INFRA-03**: CSV data loading layer — scan data/ directory, parse set metadata from filenames
-- [ ] **INFRA-04**: Session/set selector — dropdown to pick which recording to analyze
+- [x] **INFRA-04**: Session/set selector — dropdown to pick which recording to analyze
 - [x] **INFRA-05**: Python 3.12 environment upgrade + requirements.txt with pinned versions
 - [x] **INFRA-06**: Configuration module — FINA thresholds, camera URL, BLE UUIDs as editable config
 
@@ -105,10 +105,10 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 1 | Complete |
-| INFRA-04 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
 | ANAL-01 | Phase 2 | Pending |
