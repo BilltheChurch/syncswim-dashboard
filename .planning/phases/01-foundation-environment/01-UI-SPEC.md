@@ -74,22 +74,24 @@ Exceptions: Streamlit's own widget spacing is not customizable without CSS hacks
 
 Streamlit controls base typography. These values define the **hierarchy used in `st.markdown`, `st.header`, and Plotly chart text**.
 
+**Main type scale (4 sizes, 2 weights):**
+
 | Role | Size | Weight | Line Height | Implementation |
 |------|------|--------|-------------|----------------|
+| Label | 14px | 400 (regular) | 1.4 | `st.caption` for secondary labels; Plotly axis titles |
 | Body | 16px | 400 (regular) | 1.5 | Streamlit default `st.write` / `st.markdown` |
-| Label | 14px | 600 (semibold) | 1.4 | `st.caption` for secondary labels; Plotly axis titles |
 | Heading | 20px | 600 (semibold) | 1.2 | `st.subheader` for page sections |
-| Page Title | 28px | 700 (bold) | 1.2 | `st.header` or `st.title` — one per page only |
+| Page Title | 28px | 600 (semibold) | 1.2 | `st.header` or `st.title` — one per page only |
 
-**Plotly chart text sizing:**
+**Plotly chart text (scoped exception):** Plotly renders text into SVG/WebGL canvas where sub-14px sizes are standard practice for data-dense visualizations. The following sizes are scoped exclusively to Plotly `layout` and `trace` font properties and do NOT apply to any Streamlit widget or markdown text.
 
-| Element | Size | Weight |
-|---------|------|--------|
-| Chart title | 16px | 600 |
-| Axis labels | 12px | 400 |
-| Axis tick labels | 11px | 400 |
-| Annotation text | 12px | 400 |
-| Legend text | 12px | 400 |
+| Element | Size | Weight | Scope |
+|---------|------|--------|-------|
+| Chart title | 16px | 600 | Reuses main Body size — `layout.title.font.size` |
+| Axis labels | 14px | 400 | Reuses main Label size — `layout.xaxis.title.font.size` |
+| Axis tick labels | 11px | 400 | Plotly SVG only — `layout.xaxis.tickfont.size` |
+| Annotation text | 12px | 400 | Plotly SVG only — `layout.annotations[].font.size` |
+| Legend text | 12px | 400 | Plotly SVG only — `layout.legend.font.size` |
 
 ---
 
@@ -120,6 +122,16 @@ Streamlit controls base typography. These values define the **hierarchy used in 
 | Warning / Partial data | `#FACA2B` | Yellow badge — set missing IMU or vision CSV |
 | Error / Corrupted | `#FF4B4B` | Red badge — CSV parse error, unreadable data |
 | Info | `#0068C9` | Blue — informational messages, index rebuild notification |
+
+---
+
+## Focal Point
+
+| Page | Primary Focal Point | Rationale |
+|------|-------------------|-----------|
+| Training (训练监控) | Set Metadata Card row (4 metrics via `st.columns(4)`) — first content block below page header | This is the first data the user sees after selecting a training set. The 4-metric row answers the immediate question: "What set am I looking at, and is the data complete?" |
+| Analysis (数据分析) | Placeholder — no focal point in Phase 1 (content arrives in Phase 2-4) | n/a |
+| Team (团队同步) | Placeholder — no focal point in Phase 1 (content arrives in Phase 6) | n/a |
 
 ---
 
@@ -185,7 +197,7 @@ Phase 1 has **no destructive actions** requiring confirmation dialogs. Config sa
 | Component | Widget/Pattern | Content |
 |-----------|---------------|---------|
 | Page header | `st.header("训练监控")` | Displayed once at top |
-| Set metadata card | `st.columns(4)` + `st.metric` per column | Shows: 训练组 #, 日期, 时长, 数据状态 |
+| Set metadata card | `st.columns(4)` + `st.metric` per column | Shows: 训练组 #, 日期, 时长, 数据状态 — **primary focal point** |
 | Data status badge | `st.success` / `st.warning` / `st.error` | Green/yellow/red based on data completeness |
 | Empty state | `st.info` container | Shown when no set selected or no data directory |
 | Placeholder sections | `st.container` with `st.caption` | "实时监控 — Phase 5 开发中" and "训练报告 — Phase 2 开发中" |
@@ -322,9 +334,10 @@ CHART_THEME = {
     "font_family": "Source Sans Pro, sans-serif",
     "font_color": "#262730",
     "title_font_size": 16,
-    "axis_title_font_size": 12,
+    "axis_title_font_size": 14,
     "axis_tick_font_size": 11,
     "legend_font_size": 12,
+    "annotation_font_size": 12,
     "margin": {"l": 32, "r": 16, "t": 24, "b": 24},
     "paper_bgcolor": "rgba(0,0,0,0)",
     "plot_bgcolor": "rgba(0,0,0,0)",
