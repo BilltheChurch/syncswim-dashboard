@@ -31,12 +31,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Selecting a recording session from the dropdown loads its CSV data and displays basic metadata (set count, duration, timestamps)
   4. App runs on Python 3.12 with all dependencies (numpy, scipy, mediapipe, plotly, streamlit) installed and importable
   5. FINA thresholds and hardware config (camera URL, BLE UUIDs) are editable in a config file without code changes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Environment setup, core library extraction, config module, data loader, and tests
+- [ ] 01-02-PLAN.md — Streamlit app skeleton with navigation, role toggle, set selector, and settings
 
 ### Phase 2: Single-Set Analysis
 **Goal**: After selecting a recorded set, coaches see a complete analysis report with quantitative scoring, phase timeline, keyframe comparison, and sensor fusion visualizations
@@ -124,7 +123,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Environment | 0/3 | Not started | - |
+| 1. Foundation & Environment | 0/2 | Planning complete | - |
 | 2. Single-Set Analysis | 0/3 | Not started | - |
 | 3. Progress Tracking | 0/2 | Not started | - |
 | 4. AI Coaching | 0/2 | Not started | - |
