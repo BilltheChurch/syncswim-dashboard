@@ -105,46 +105,46 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| INFRA-05 | TBD | Pending |
-| INFRA-06 | TBD | Pending |
-| ANAL-01 | TBD | Pending |
-| ANAL-02 | TBD | Pending |
-| ANAL-03 | TBD | Pending |
-| ANAL-04 | TBD | Pending |
-| ANAL-05 | TBD | Pending |
-| ANAL-06 | TBD | Pending |
-| VIZ-01 | TBD | Pending |
-| VIZ-02 | TBD | Pending |
-| VIZ-03 | TBD | Pending |
-| VIZ-04 | TBD | Pending |
-| AI-01 | TBD | Pending |
-| AI-02 | TBD | Pending |
-| AI-03 | TBD | Pending |
-| AI-04 | TBD | Pending |
-| PROG-01 | TBD | Pending |
-| PROG-02 | TBD | Pending |
-| PROG-03 | TBD | Pending |
-| PROG-04 | TBD | Pending |
-| LIVE-01 | TBD | Pending |
-| LIVE-02 | TBD | Pending |
-| LIVE-03 | TBD | Pending |
-| LIVE-04 | TBD | Pending |
-| SYNC-01 | TBD | Pending |
-| SYNC-02 | TBD | Pending |
-| SYNC-03 | TBD | Pending |
-| SYNC-04 | TBD | Pending |
-| SYNC-05 | TBD | Pending |
-| SYNC-06 | TBD | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| ANAL-01 | Phase 2 | Pending |
+| ANAL-02 | Phase 2 | Pending |
+| ANAL-03 | Phase 2 | Pending |
+| ANAL-04 | Phase 2 | Pending |
+| ANAL-05 | Phase 2 | Pending |
+| ANAL-06 | Phase 2 | Pending |
+| VIZ-01 | Phase 2 | Pending |
+| VIZ-02 | Phase 2 | Pending |
+| VIZ-03 | Phase 2 | Pending |
+| VIZ-04 | Phase 2 | Pending |
+| PROG-01 | Phase 3 | Pending |
+| PROG-02 | Phase 3 | Pending |
+| PROG-03 | Phase 3 | Pending |
+| PROG-04 | Phase 3 | Pending |
+| AI-01 | Phase 4 | Pending |
+| AI-02 | Phase 4 | Pending |
+| AI-03 | Phase 4 | Pending |
+| AI-04 | Phase 4 | Pending |
+| LIVE-01 | Phase 5 | Pending |
+| LIVE-02 | Phase 5 | Pending |
+| LIVE-03 | Phase 5 | Pending |
+| LIVE-04 | Phase 5 | Pending |
+| SYNC-01 | Phase 6 | Pending |
+| SYNC-02 | Phase 6 | Pending |
+| SYNC-03 | Phase 6 | Pending |
+| SYNC-04 | Phase 6 | Pending |
+| SYNC-05 | Phase 6 | Pending |
+| SYNC-06 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34 ⚠️
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
