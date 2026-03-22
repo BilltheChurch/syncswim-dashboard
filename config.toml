@@ -1,0 +1,18 @@
+# SyncSwim Dashboard Configuration
+# Edit via dashboard settings page or directly in this file.
+
+[fina]
+clean_threshold_deg = 15
+minor_deduction_deg = 30
+clean_deduction = 0.0
+minor_deduction = 0.2
+major_deduction = 0.5
+
+[hardware]
+camera_url = "http://192.168.66.169:4747/video"
+ble_device_name = "NODE_A1"
+ble_char_uuid = "abcd1234-ab12-cd34-ef56-abcdef123456"
+
+[dashboard]
+default_role = "Coach"
+data_dir = "data"
