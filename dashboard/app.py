@@ -81,64 +81,76 @@ pg = st.navigation({
 })
 
 # ── Sidebar: Settings expander ─────────────────────────────────────────
-with st.sidebar.expander("设置", expanded=False):
+# Initialize settings in session_state from config (only on first load)
+if "_settings_loaded" not in st.session_state:
     cfg = load_config()
-
-    st.subheader("FINA 扣分阈值")
     fina = cfg.get("fina", {})
-    clean_thresh = st.number_input(
+    hw = cfg.get("hardware", {})
+    st.session_state["_cfg_clean_thresh"] = fina.get("clean_threshold_deg", 15)
+    st.session_state["_cfg_minor_thresh"] = fina.get("minor_deduction_deg", 30)
+    st.session_state["_cfg_clean_ded"] = fina.get("clean_deduction", 0.0)
+    st.session_state["_cfg_minor_ded"] = fina.get("minor_deduction", 0.2)
+    st.session_state["_cfg_major_ded"] = fina.get("major_deduction", 0.5)
+    st.session_state["_cfg_camera_url"] = hw.get("camera_url", "")
+    st.session_state["_cfg_ble_name"] = hw.get("ble_device_name", "")
+    st.session_state["_cfg_ble_uuid"] = hw.get("ble_char_uuid", "")
+    st.session_state["_settings_loaded"] = True
+
+with st.sidebar.expander("设置", expanded=False):
+    st.subheader("FINA 扣分阈值")
+    st.number_input(
         "Clean 阈值 (度)",
-        value=fina.get("clean_threshold_deg", 15),
+        key="_cfg_clean_thresh",
         min_value=0,
         max_value=90,
     )
-    minor_thresh = st.number_input(
+    st.number_input(
         "Minor 阈值 (度)",
-        value=fina.get("minor_deduction_deg", 30),
+        key="_cfg_minor_thresh",
         min_value=0,
         max_value=90,
     )
-    clean_ded = st.number_input(
+    st.number_input(
         "Clean 扣分",
-        value=fina.get("clean_deduction", 0.0),
+        key="_cfg_clean_ded",
         min_value=0.0,
         step=0.1,
         format="%.1f",
     )
-    minor_ded = st.number_input(
+    st.number_input(
         "Minor 扣分",
-        value=fina.get("minor_deduction", 0.2),
+        key="_cfg_minor_ded",
         min_value=0.0,
         step=0.1,
         format="%.1f",
     )
-    major_ded = st.number_input(
+    st.number_input(
         "Major 扣分",
-        value=fina.get("major_deduction", 0.5),
+        key="_cfg_major_ded",
         min_value=0.0,
         step=0.1,
         format="%.1f",
     )
 
     st.subheader("硬件配置")
-    hw = cfg.get("hardware", {})
-    camera_url = st.text_input("Camera URL", value=hw.get("camera_url", ""))
-    ble_name = st.text_input("BLE 设备名", value=hw.get("ble_device_name", ""))
-    ble_uuid = st.text_input("BLE Char UUID", value=hw.get("ble_char_uuid", ""))
+    st.text_input("Camera URL", key="_cfg_camera_url")
+    st.text_input("BLE 设备名", key="_cfg_ble_name")
+    st.text_input("BLE Char UUID", key="_cfg_ble_uuid")
 
     if st.button("保存设置"):
+        cfg = load_config()
         new_config = {
             "fina": {
-                "clean_threshold_deg": clean_thresh,
-                "minor_deduction_deg": minor_thresh,
-                "clean_deduction": clean_ded,
-                "minor_deduction": minor_ded,
-                "major_deduction": major_ded,
+                "clean_threshold_deg": st.session_state["_cfg_clean_thresh"],
+                "minor_deduction_deg": st.session_state["_cfg_minor_thresh"],
+                "clean_deduction": st.session_state["_cfg_clean_ded"],
+                "minor_deduction": st.session_state["_cfg_minor_ded"],
+                "major_deduction": st.session_state["_cfg_major_ded"],
             },
             "hardware": {
-                "camera_url": camera_url,
-                "ble_device_name": ble_name,
-                "ble_char_uuid": ble_uuid,
+                "camera_url": st.session_state["_cfg_camera_url"],
+                "ble_device_name": st.session_state["_cfg_ble_name"],
+                "ble_char_uuid": st.session_state["_cfg_ble_uuid"],
             },
             "dashboard": cfg.get("dashboard", {}),
         }
