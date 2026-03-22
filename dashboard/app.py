@@ -2,6 +2,14 @@
 
 Launch with: streamlit run dashboard/app.py
 """
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path so 'dashboard' package is importable
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 import streamlit as st
 
 from dashboard.config import load_config, save_config
@@ -56,14 +64,14 @@ else:
 
 # ── Navigation: 3 page groups ──────────────────────────────────────────
 training_pages = [
-    st.Page("dashboard/pages/training.py", title="训练监控", icon=":material/fitness_center:", default=True),
+    st.Page("pages/training.py", title="训练监控", icon=":material/fitness_center:", default=True),
 ]
 analysis_pages = [
-    st.Page("dashboard/pages/analysis.py", title="数据分析", icon=":material/analytics:"),
+    st.Page("pages/analysis.py", title="数据分析", icon=":material/analytics:"),
 ]
 team_visibility = "visible" if role == "教练" else "hidden"
 team_pages = [
-    st.Page("dashboard/pages/team.py", title="团队同步", icon=":material/group:", visibility=team_visibility),
+    st.Page("pages/team.py", title="团队同步", icon=":material/group:", visibility=team_visibility),
 ]
 
 pg = st.navigation({
