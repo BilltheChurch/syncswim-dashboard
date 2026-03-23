@@ -18,10 +18,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Single-Set Analysis (View 2)
 
-- [ ] **ANAL-01**: Quantitative scoring card — 5 metrics: leg vertical deviation, leg height index, shoulder-knee alignment, smoothness (Jerk), exhibition hold stability
-- [ ] **ANAL-02**: FINA deduction rule mapping — <15°=clean, 15-30°=0.2 deduction, >30°=0.5+ deduction, auto-scored per set
+- [x] **ANAL-01**: Quantitative scoring card — 5 metrics: leg vertical deviation, leg height index, shoulder-knee alignment, smoothness (Jerk), exhibition hold stability
+- [x] **ANAL-02**: FINA deduction rule mapping — <15°=clean, 15-30°=0.2 deduction, >30°=0.5+ deduction, auto-scored per set
 - [ ] **ANAL-03**: Action phase timeline — horizontal bar with prep/entry/lift/exhibition/descent phases, color-coded quality per phase
-- [ ] **ANAL-04**: Phase detection from IMU signals — acceleration peaks for transitions, jerk plateau for holds (scipy.signal.find_peaks)
+- [x] **ANAL-04**: Phase detection from IMU signals — acceleration peaks for transitions, jerk plateau for holds (scipy.signal.find_peaks)
 - [x] **ANAL-05**: Keyframe comparison — exhibition pose vs standard template side-by-side, deviation angles marked in red
 - [ ] **ANAL-06**: Post-set report auto-generation — triggered on set selection, 2-3 second render
 
@@ -111,10 +111,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
-| ANAL-01 | Phase 2 | Pending |
-| ANAL-02 | Phase 2 | Pending |
+| ANAL-01 | Phase 2 | Complete |
+| ANAL-02 | Phase 2 | Complete |
 | ANAL-03 | Phase 2 | Pending |
-| ANAL-04 | Phase 2 | Pending |
+| ANAL-04 | Phase 2 | Complete |
 | ANAL-05 | Phase 2 | Complete |
 | ANAL-06 | Phase 2 | Pending |
 | VIZ-01 | Phase 2 | Pending |

@@ -45,10 +45,11 @@ Progress: [███████░░░] 67%
 |-------|-------|-------|----------|
 | Phase 01 P01 | 10min | 2 tasks | 17 files |
 | Phase 01 P02 | 5min | 2 tasks | 5 files |
+| Phase 02 P01 | 5min | 2 tasks | 5 files |
 | Phase 02 P03 | 4min | 2 tasks | 4 files |
 
 **Recent Trend:**
-- Last 5 plans: 10min, 5min, 4min
+- Last 5 plans: 10min, 5min, 5min, 4min
 - Trend: Accelerating
 
 *Updated after each plan completion*
