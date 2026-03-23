@@ -38,15 +38,17 @@ created: 2026-03-22
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 1 | ANAL-01,ANAL-02 | unit | `python -m pytest tests/test_scoring.py -x -q` | ❌ W0 | ⬜ pending |
-| 02-01-02 | 01 | 1 | ANAL-03,ANAL-04 | unit | `python -m pytest tests/test_phase_detection.py -x -q` | ❌ W0 | ⬜ pending |
-| 02-01-03 | 01 | 1 | VIZ-01,VIZ-02,VIZ-04 | unit | `python -m pytest tests/test_chart_builders.py -x -q` | ❌ W0 | ⬜ pending |
-| 02-02-01 | 02 | 2 | VIZ-03 | unit | `python -m pytest tests/test_skeleton.py -x -q` | ❌ W0 | ⬜ pending |
-| 02-02-02 | 02 | 2 | ANAL-05 | integration | `python -c "from dashboard.core.skeleton import ..."` | ❌ W0 | ⬜ pending |
-| 02-03-01 | 03 | 3 | ANAL-06 | manual | `streamlit run dashboard/app.py` | N/A | ⬜ pending |
-| 02-03-02 | 03 | 3 | VIZ-01,VIZ-02,VIZ-04 | manual | visual chart check | N/A | ⬜ pending |
+| 02-01-T1 | 01 | 1 | ANAL-01,ANAL-02 | unit | `python -m pytest tests/test_scoring.py -x -q` | W0 | pending |
+| 02-01-T2 | 01 | 1 | ANAL-04 | unit | `python -m pytest tests/test_phase_detection.py -x -q` | W0 | pending |
+| 02-02-T1 | 02 | 2 | VIZ-01,ANAL-03 | unit | `python -m pytest tests/test_chart_builders.py -x -q -k "gauge or timeline"` | W0 | pending |
+| 02-02-T2 | 02 | 2 | VIZ-02,VIZ-04 | unit | `python -m pytest tests/test_chart_builders.py -x -q -k "waveform or fusion"` | W0 | pending |
+| 02-03-T1 | 03 | 1 | ANAL-05 | syntax+grep | `python -c "import ast; ast.parse(open('sync_recorder.py').read())"` + grep checks | N/A | pending |
+| 02-03-T2 | 03 | 1 | VIZ-03 | unit | `python -m pytest tests/test_skeleton.py -x -q` | W0 | pending |
+| 02-04-T1 | 04 | 3 | ANAL-06,VIZ-01 | syntax+grep | `python -c "import ast; ast.parse(open('dashboard/pages/training.py').read())"` + grep | N/A | pending |
+| 02-04-T2 | 04 | 3 | VIZ-02,VIZ-04 | syntax+grep | grep for fusion/waveform imports + `np.interp` alignment | N/A | pending |
+| 02-04-T3 | 04 | 3 | ALL | manual | `streamlit run dashboard/app.py` visual verification | N/A | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
@@ -54,7 +56,7 @@ created: 2026-03-22
 
 - [ ] `tests/test_scoring.py` — stubs for scoring engine (5 metrics, FINA deductions)
 - [ ] `tests/test_phase_detection.py` — stubs for IMU phase detection (find_peaks, fallback)
-- [ ] `tests/test_chart_builders.py` — stubs for gauge, waveform, fusion chart builders
+- [ ] `tests/test_chart_builders.py` — stubs for gauge, timeline, waveform, fusion chart builders
 - [ ] `tests/test_skeleton.py` — stubs for MediaPipe re-run and overlay rendering
 
 *Existing test infrastructure (conftest.py, pytest) from Phase 1 covers framework needs.*
