@@ -34,8 +34,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Environment setup, core library extraction, config module, data loader, and tests
-- [ ] 01-02-PLAN.md — Streamlit app skeleton with navigation, role toggle, set selector, and settings
+- [x] 01-01-PLAN.md — Environment setup, core library extraction, config module, data loader, and tests
+- [x] 01-02-PLAN.md — Streamlit app skeleton with navigation, role toggle, set selector, and settings
 
 ### Phase 2: Single-Set Analysis
 **Goal**: After selecting a recorded set, coaches see a complete analysis report with quantitative scoring, phase timeline, keyframe comparison, and sensor fusion visualizations
@@ -47,12 +47,13 @@ Plans:
   3. Keyframe comparison shows the exhibition pose skeleton side-by-side with the standard template, with deviation angles marked in red
   4. Joint angle gauges display green/yellow/red FINA zone coloring, and IMU waveform charts show accel/gyro curves with fused tilt angle
   5. A dual-axis fusion chart overlays IMU tilt angle and vision joint angle on the same timeline with correlation coefficient displayed
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Scoring engine (5 metrics + FINA deductions), phase detection (scipy find_peaks), metrics orchestrator
+- [ ] 02-02-PLAN.md — Plotly chart builders: gauge charts, phase timeline, IMU waveform, fusion dual-axis chart
+- [ ] 02-03-PLAN.md — Recording pipeline MP4/landmarks + dashboard skeleton overlay renderer
+- [ ] 02-04-PLAN.md — Training page integration: scoring card + 3-tab report layout + visual verification
 
 ### Phase 3: Progress Tracking
 **Goal**: Coaches can compare multiple sets within a session and track improvement over time with charts, tables, and data export
@@ -119,12 +120,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Environment | 2/2 | Complete   | 2026-03-22 |
-| 2. Single-Set Analysis | 0/3 | Not started | - |
+| 2. Single-Set Analysis | 0/4 | Not started | - |
 | 3. Progress Tracking | 0/2 | Not started | - |
 | 4. AI Coaching | 0/2 | Not started | - |
 | 5. Real-Time Monitoring | 0/2 | Not started | - |
