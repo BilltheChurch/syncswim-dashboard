@@ -20,17 +20,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **ANAL-01**: Quantitative scoring card — 5 metrics: leg vertical deviation, leg height index, shoulder-knee alignment, smoothness (Jerk), exhibition hold stability
 - [x] **ANAL-02**: FINA deduction rule mapping — <15°=clean, 15-30°=0.2 deduction, >30°=0.5+ deduction, auto-scored per set
-- [ ] **ANAL-03**: Action phase timeline — horizontal bar with prep/entry/lift/exhibition/descent phases, color-coded quality per phase
+- [x] **ANAL-03**: Action phase timeline — horizontal bar with prep/entry/lift/exhibition/descent phases, color-coded quality per phase
 - [x] **ANAL-04**: Phase detection from IMU signals — acceleration peaks for transitions, jerk plateau for holds (scipy.signal.find_peaks)
 - [x] **ANAL-05**: Keyframe comparison — exhibition pose vs standard template side-by-side, deviation angles marked in red
 - [ ] **ANAL-06**: Post-set report auto-generation — triggered on set selection, 2-3 second render
 
 ### Visualization
 
-- [ ] **VIZ-01**: Joint angle gauges with FINA zone coloring — green/yellow/red circular indicators (Plotly go.Indicator)
-- [ ] **VIZ-02**: IMU waveform display — accel/gyro scrolling time-series curves + fused tilt angle
+- [x] **VIZ-01**: Joint angle gauges with FINA zone coloring — green/yellow/red circular indicators (Plotly go.Indicator)
+- [x] **VIZ-02**: IMU waveform display — accel/gyro scrolling time-series curves + fused tilt angle
 - [x] **VIZ-03**: Skeleton overlay on recorded video frames — MediaPipe bones rendered on playback frames via st.image
-- [ ] **VIZ-04**: IMU + Vision fusion chart — dual-axis Plotly showing both sensor angles on same timeline with correlation coefficient
+- [x] **VIZ-04**: IMU + Vision fusion chart — dual-axis Plotly showing both sensor angles on same timeline with correlation coefficient
 
 ### AI Integration (View 4 partial)
 
@@ -113,14 +113,14 @@ Deferred to future release. Tracked but not in current roadmap.
 | INFRA-06 | Phase 1 | Complete |
 | ANAL-01 | Phase 2 | Complete |
 | ANAL-02 | Phase 2 | Complete |
-| ANAL-03 | Phase 2 | Pending |
+| ANAL-03 | Phase 2 | Complete |
 | ANAL-04 | Phase 2 | Complete |
 | ANAL-05 | Phase 2 | Complete |
 | ANAL-06 | Phase 2 | Pending |
-| VIZ-01 | Phase 2 | Pending |
-| VIZ-02 | Phase 2 | Pending |
+| VIZ-01 | Phase 2 | Complete |
+| VIZ-02 | Phase 2 | Complete |
 | VIZ-03 | Phase 2 | Complete |
-| VIZ-04 | Phase 2 | Pending |
+| VIZ-04 | Phase 2 | Complete |
 | PROG-01 | Phase 3 | Pending |
 | PROG-02 | Phase 3 | Pending |
 | PROG-03 | Phase 3 | Pending |
