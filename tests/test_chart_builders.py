@@ -122,3 +122,89 @@ class TestBuildPhaseTimeline:
         from dashboard.components.timeline_chart import build_phase_timeline
         fig = build_phase_timeline(_sample_phases())
         assert fig.layout.height == 40
+
+
+# ---------------------------------------------------------------------------
+# Synthetic data for waveform / fusion tests
+# ---------------------------------------------------------------------------
+
+def _sample_time() -> np.ndarray:
+    return np.linspace(0, 10, 100)
+
+
+def _sample_accel() -> np.ndarray:
+    return np.sin(np.linspace(0, 4 * np.pi, 100))
+
+
+def _sample_gyro() -> np.ndarray:
+    return np.cos(np.linspace(0, 4 * np.pi, 100))
+
+
+def _sample_tilt() -> np.ndarray:
+    return 45.0 + 10.0 * np.sin(np.linspace(0, 2 * np.pi, 100))
+
+
+def _sample_vision_angle() -> np.ndarray:
+    return 90.0 + 15.0 * np.sin(np.linspace(0, 2 * np.pi, 100))
+
+
+def _sample_imu_tilt() -> np.ndarray:
+    return 45.0 + 12.0 * np.sin(np.linspace(0, 2 * np.pi, 100) + 0.3)
+
+
+# ---------------------------------------------------------------------------
+# IMU waveform tests
+# ---------------------------------------------------------------------------
+
+class TestBuildImuWaveform:
+    """Tests for build_imu_waveform function."""
+
+    def test_build_imu_waveform_returns_figure(self):
+        from dashboard.components.waveform_chart import build_imu_waveform
+        fig = build_imu_waveform(_sample_time(), _sample_accel(), _sample_gyro(), _sample_tilt())
+        assert isinstance(fig, go.Figure)
+
+    def test_build_imu_waveform_three_traces(self):
+        from dashboard.components.waveform_chart import build_imu_waveform
+        fig = build_imu_waveform(_sample_time(), _sample_accel(), _sample_gyro(), _sample_tilt())
+        assert len(fig.data) == 3
+        for trace in fig.data:
+            assert trace.type == "scatter"
+
+    def test_build_imu_waveform_height_300(self):
+        from dashboard.components.waveform_chart import build_imu_waveform
+        fig = build_imu_waveform(_sample_time(), _sample_accel(), _sample_gyro(), _sample_tilt())
+        assert fig.layout.height == 300
+
+
+# ---------------------------------------------------------------------------
+# Fusion dual-axis chart tests
+# ---------------------------------------------------------------------------
+
+class TestBuildFusionChart:
+    """Tests for build_fusion_chart function."""
+
+    def test_build_fusion_chart_returns_tuple(self):
+        from dashboard.components.waveform_chart import build_fusion_chart
+        result = build_fusion_chart(_sample_time(), _sample_vision_angle(), _sample_imu_tilt())
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], go.Figure)
+
+    def test_build_fusion_chart_two_traces(self):
+        from dashboard.components.waveform_chart import build_fusion_chart
+        fig, _ = build_fusion_chart(_sample_time(), _sample_vision_angle(), _sample_imu_tilt())
+        assert len(fig.data) == 2
+        for trace in fig.data:
+            assert trace.type == "scatter"
+
+    def test_build_fusion_chart_height_350(self):
+        from dashboard.components.waveform_chart import build_fusion_chart
+        fig, _ = build_fusion_chart(_sample_time(), _sample_vision_angle(), _sample_imu_tilt())
+        assert fig.layout.height == 350
+
+    def test_build_fusion_chart_correlation(self):
+        from dashboard.components.waveform_chart import build_fusion_chart
+        _, corr = build_fusion_chart(_sample_time(), _sample_vision_angle(), _sample_imu_tilt())
+        assert isinstance(corr, float)
+        assert -1.0 <= corr <= 1.0
