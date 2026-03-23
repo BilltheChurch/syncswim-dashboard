@@ -44,6 +44,25 @@ POSE_CONNECTIONS = [
     (25,27),(26,28)
 ]
 
+# ─── Landmark CSV ────────────────────────────────────────
+LANDMARK_NAMES = [
+    "nose", "left_eye_inner", "left_eye", "left_eye_outer",
+    "right_eye_inner", "right_eye", "right_eye_outer",
+    "left_ear", "right_ear", "mouth_left", "mouth_right",
+    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist", "left_pinky", "right_pinky",
+    "left_index", "right_index", "left_thumb", "right_thumb",
+    "left_hip", "right_hip", "left_knee", "right_knee",
+    "left_ankle", "right_ankle", "left_heel", "right_heel",
+    "left_foot_index", "right_foot_index",
+]
+
+def get_landmark_csv_header():
+    header = ["timestamp_local", "frame"]
+    for name in LANDMARK_NAMES:
+        header.extend([f"{name}_x", f"{name}_y", f"{name}_z", f"{name}_vis"])
+    return header
+
 # ─── Shared State ─────────────────────────────────────────
 class SyncState:
     def __init__(self):
@@ -68,6 +87,11 @@ class SyncState:
         self.vision_file = None
         self.vision_writer = None
         self.vision_frame_count = 0
+        # Video + Landmarks
+        self.video_writer = None
+        self.video_writer_pending = False
+        self.landmarks_writer = None
+        self.landmarks_file = None
         # Vision
         self.current_angle = 0.0
         self.vision_fps = 0.0
@@ -115,6 +139,16 @@ def start_recording(set_n):
     state.vision_file = f2
     state.vision_writer = w2
 
+    # Landmarks CSV (33 landmarks x 4 values = 134 columns)
+    f3 = open(os.path.join(set_dir, "landmarks.csv"), "w", newline="")
+    w3 = csv.writer(f3)
+    w3.writerow(get_landmark_csv_header())
+    state.landmarks_file = f3
+    state.landmarks_writer = w3
+
+    # Video writer initialized on first frame (need frame dimensions)
+    state.video_writer_pending = True
+
 def stop_recording():
     for f in [state.imu_file, state.vision_file]:
         if f:
@@ -124,6 +158,19 @@ def stop_recording():
     state.imu_writer = None
     state.vision_file = None
     state.vision_writer = None
+
+    # Release video writer
+    if state.video_writer:
+        state.video_writer.release()
+        state.video_writer = None
+    state.video_writer_pending = False
+
+    # Close landmarks file
+    if state.landmarks_file:
+        state.landmarks_file.flush()
+        state.landmarks_file.close()
+        state.landmarks_file = None
+        state.landmarks_writer = None
 
 # ─── BLE Handler ──────────────────────────────────────────
 def handle_ble_notification(sender, data):
@@ -386,6 +433,9 @@ def main():
             elif state.rotation == 270:
                 frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
+            # Save clean frame (before any OSD/skeleton drawing) for video recording
+            frame_clean = frame.copy()
+
             frame_count += 1
             local_ts = time.time()
 
@@ -440,7 +490,7 @@ def main():
             # OSD
             draw_osd(frame)
 
-            # Write vision CSV
+            # Write vision CSV + video + landmarks
             with state.lock:
                 if state.recording and state.vision_writer:
                     state.vision_writer.writerow([
@@ -451,6 +501,37 @@ def main():
                     state.vision_frame_count += 1
                     if state.vision_frame_count % 30 == 0:
                         state.vision_file.flush()
+
+                    # Initialize video writer on first recording frame
+                    if state.video_writer_pending:
+                        video_path = os.path.join(state.set_dir, "video.mp4")
+                        fourcc = cv2.VideoWriter_fourcc(*"avc1")
+                        state.video_writer = cv2.VideoWriter(
+                            video_path, fourcc, 25.0,
+                            (frame_clean.shape[1], frame_clean.shape[0])
+                        )
+                        state.video_writer_pending = False
+
+                    # Write clean frame to video (no OSD overlay)
+                    if state.video_writer:
+                        state.video_writer.write(frame_clean)
+
+                    # Write landmark row
+                    if state.landmarks_writer:
+                        row = [f"{local_ts:.6f}", frame_count]
+                        if results.pose_landmarks and len(results.pose_landmarks) > 0:
+                            lm = results.pose_landmarks[0]
+                            for l in lm:
+                                row.extend([
+                                    f"{l.x:.6f}", f"{l.y:.6f}",
+                                    f"{l.z:.6f}", f"{l.visibility:.4f}"
+                                ])
+                        else:
+                            # No pose detected -- fill with zeros
+                            row.extend([0.0] * 132)
+                        state.landmarks_writer.writerow(row)
+                        if state.vision_frame_count % 30 == 0:
+                            state.landmarks_file.flush()
 
             cv2.imshow("Sync Recorder", frame)
 
