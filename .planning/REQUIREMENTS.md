@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ANAL-03**: Action phase timeline — horizontal bar with prep/entry/lift/exhibition/descent phases, color-coded quality per phase
 - [x] **ANAL-04**: Phase detection from IMU signals — acceleration peaks for transitions, jerk plateau for holds (scipy.signal.find_peaks)
 - [x] **ANAL-05**: Keyframe comparison — exhibition pose vs standard template side-by-side, deviation angles marked in red
-- [ ] **ANAL-06**: Post-set report auto-generation — triggered on set selection, 2-3 second render
+- [x] **ANAL-06**: Post-set report auto-generation — triggered on set selection, 2-3 second render
 
 ### Visualization
 
@@ -116,7 +116,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | ANAL-03 | Phase 2 | Complete |
 | ANAL-04 | Phase 2 | Complete |
 | ANAL-05 | Phase 2 | Complete |
-| ANAL-06 | Phase 2 | Pending |
+| ANAL-06 | Phase 2 | Complete |
 | VIZ-01 | Phase 2 | Complete |
 | VIZ-02 | Phase 2 | Complete |
 | VIZ-03 | Phase 2 | Complete |
