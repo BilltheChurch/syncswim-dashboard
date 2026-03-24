@@ -37,10 +37,10 @@ def build_phase_timeline(phases: list[dict]) -> go.Figure:
 
     fig.update_layout(
         barmode="stack",
-        height=40,
-        margin={"l": 0, "r": 0, "t": 0, "b": 0},
+        height=80,
+        margin={"l": 0, "r": 0, "t": 8, "b": 32},
         showlegend=False,
-        xaxis={"title": "时间 (秒)", "title_font_size": 14},
+        xaxis={"title": "时间 (秒)", "title_font_size": 12, "showticklabels": False},
         yaxis={"visible": False},
         template=CHART_THEME["template"],
         font_family=CHART_THEME["font_family"],

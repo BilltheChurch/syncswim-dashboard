@@ -60,8 +60,8 @@ def build_gauge(
     )
 
     fig.update_layout(
-        height=200,
-        margin={"l": 0, "r": 0, "t": 24, "b": 0},
+        height=220,
+        margin={"l": 0, "r": 0, "t": 48, "b": 0},
         paper_bgcolor=CHART_THEME["paper_bgcolor"],
         font_family=CHART_THEME["font_family"],
         font_color=CHART_THEME["font_color"],

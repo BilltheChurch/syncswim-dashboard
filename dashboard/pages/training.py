@@ -4,6 +4,7 @@ import os
 import numpy as np
 import streamlit as st
 
+from dashboard.components import CHART_THEME
 from dashboard.config import load_config
 from dashboard.core.data_loader import load_imu, load_vision
 from dashboard.core.metrics import compute_all_metrics
@@ -130,50 +131,86 @@ else:
                 timeline_fig = build_phase_timeline(report.phases)
                 st.plotly_chart(timeline_fig, use_container_width=True, config={"displayModeBar": False})
 
-                # Phase boundary slider
+                # Phase boundary slider (relative seconds, not epoch)
                 imu_df = load_imu(selected["path"])
                 if not imu_df.empty and "timestamp_local" in imu_df.columns:
-                    t_min = float(imu_df["timestamp_local"].iloc[0])
-                    t_max = float(imu_df["timestamp_local"].iloc[-1])
+                    t_origin = float(imu_df["timestamp_local"].iloc[0])
+                    t_min_rel = 0.0
+                    t_max_rel = float(imu_df["timestamp_local"].iloc[-1]) - t_origin
 
-                    # Default boundaries from detected phases
+                    # Default boundaries from detected phases (convert to relative)
                     if len(report.phases) >= 3:
-                        default_b1 = report.phases[0]["end"]
-                        default_b2 = report.phases[1]["end"]
+                        default_b1 = report.phases[0]["end"] - t_origin
+                        default_b2 = report.phases[1]["end"] - t_origin
                     else:
-                        third = (t_max - t_min) / 3
-                        default_b1 = t_min + third
-                        default_b2 = t_min + 2 * third
+                        third = t_max_rel / 3
+                        default_b1 = third
+                        default_b2 = 2 * third
 
                     # Clamp defaults within range
-                    default_b1 = max(t_min, min(default_b1, t_max))
-                    default_b2 = max(t_min, min(default_b2, t_max))
+                    default_b1 = max(t_min_rel, min(default_b1, t_max_rel))
+                    default_b2 = max(t_min_rel, min(default_b2, t_max_rel))
 
                     st.slider(
-                        "调整阶段边界",
-                        min_value=t_min,
-                        max_value=t_max,
-                        value=(default_b1, default_b2),
+                        "调整阶段边界 (秒)",
+                        min_value=t_min_rel,
+                        max_value=t_max_rel,
+                        value=(round(default_b1, 1), round(default_b2, 1)),
+                        step=0.1,
+                        format="%.1f",
                         key="p2_phase_boundaries",
                         help="拖动滑块微调自动检测的阶段分界点",
                     )
 
-                # Phase quality cards
+                # Phase quality cards — show duration + avg score per phase
                 st.subheader("阶段质量")
                 phase_cols = st.columns(len(report.phases))
                 for phase, pcol in zip(report.phases, phase_cols):
                     with pcol:
                         phase_duration = phase["end"] - phase["start"]
+                        zone = phase.get("zone_color", "#09AB3B")
+                        if zone == "#09AB3B":
+                            quality_label = "良好"
+                        elif zone == "#FACA2B":
+                            quality_label = "一般"
+                        else:
+                            quality_label = "需改进"
                         st.metric(
                             phase["name"],
-                            f"{phase_duration:.1f}s",
+                            quality_label,
+                            delta=f"{phase_duration:.1f}s",
                         )
 
             # ── Tab 2: Visual (keyframe comparison + skeleton overlay) ──
             with tab_visual:
                 video_path = os.path.join(selected["path"], "video.mp4")
-                if not os.path.exists(video_path):
-                    st.warning("该训练组无视频数据。骨架叠加和关键帧对比不可用。")
+                has_video_file = os.path.exists(video_path)
+                vision_df_visual = load_vision(selected["path"])
+                has_vision_csv = not vision_df_visual.empty
+
+                if not has_video_file and not has_vision_csv:
+                    st.warning("该训练组无视觉数据。骨架叠加和关键帧对比不可用。")
+                elif not has_video_file and has_vision_csv:
+                    st.info("该训练组无视频文件（旧版录制不保存 MP4）。骨架叠加不可用，但可查看视觉角度数据。")
+                    # Show vision angle timeline from CSV
+                    st.subheader("视觉关节角度")
+                    vis_t_rel = (vision_df_visual["timestamp_local"] - vision_df_visual["timestamp_local"].iloc[0]).values
+                    vis_angles_plot = vision_df_visual["angle_deg"].values
+                    import plotly.graph_objects as go_vis
+                    angle_fig = go_vis.Figure()
+                    angle_fig.add_trace(go_vis.Scatter(
+                        x=vis_t_rel, y=vis_angles_plot,
+                        name="关节角度", line={"color": "#09AB3B", "width": 2},
+                    ))
+                    angle_fig.update_layout(
+                        height=300, xaxis_title="时间 (秒)", yaxis_title="角度 (°)",
+                        margin={"l": 48, "r": 16, "t": 24, "b": 48},
+                        template=CHART_THEME["template"],
+                        font_family=CHART_THEME["font_family"],
+                        paper_bgcolor=CHART_THEME["paper_bgcolor"],
+                        plot_bgcolor=CHART_THEME["plot_bgcolor"],
+                    )
+                    st.plotly_chart(angle_fig, use_container_width=True, config={"displayModeBar": False})
                 else:
                     st.subheader("关键帧对比")
                     total_frames = get_total_frames(video_path)

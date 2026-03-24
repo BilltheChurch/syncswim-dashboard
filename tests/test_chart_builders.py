@@ -73,10 +73,10 @@ class TestBuildGauge:
         fig = build_gauge(_sample_metric(), _sample_config())
         assert fig.data[0].type == "indicator"
 
-    def test_build_gauge_height_200(self):
+    def test_build_gauge_height(self):
         from dashboard.components.gauge_chart import build_gauge
         fig = build_gauge(_sample_metric(), _sample_config())
-        assert fig.layout.height == 200
+        assert fig.layout.height == 220
 
     def test_build_gauge_three_steps(self):
         from dashboard.components.gauge_chart import build_gauge
@@ -118,10 +118,10 @@ class TestBuildPhaseTimeline:
         for trace in fig.data:
             assert trace.orientation == "h"
 
-    def test_build_phase_timeline_height_40(self):
+    def test_build_phase_timeline_height(self):
         from dashboard.components.timeline_chart import build_phase_timeline
         fig = build_phase_timeline(_sample_phases())
-        assert fig.layout.height == 40
+        assert fig.layout.height == 80
 
 
 # ---------------------------------------------------------------------------

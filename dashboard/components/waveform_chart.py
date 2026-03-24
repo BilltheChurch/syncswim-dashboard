@@ -17,7 +17,10 @@ def build_imu_waveform(
     gyro_mag: np.ndarray,
     tilt_angle: np.ndarray,
 ) -> go.Figure:
-    """Build an IMU waveform chart with 3 traces.
+    """Build an IMU waveform chart with 3 traces on dual Y axes.
+
+    Accelerometer and tilt share the left Y axis (small values in G/degrees).
+    Gyroscope uses the right Y axis (large values in deg/s).
 
     Args:
         time: Time array in seconds.
@@ -26,33 +29,36 @@ def build_imu_waveform(
         tilt_angle: Fused tilt angle array.
 
     Returns:
-        Plotly Figure with 3 scatter traces.
+        Plotly Figure with dual-axis scatter traces.
     """
-    fig = go.Figure()
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     fig.add_trace(
         go.Scatter(
             x=time,
             y=accel_mag,
-            name="加速度",
+            name="加速度 (G)",
             line={"color": "#0068C9", "width": 1.5},
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=gyro_mag,
-            name="角速度",
-            line={"color": "#FF8C00", "width": 1.5},
-        )
+        ),
+        secondary_y=False,
     )
     fig.add_trace(
         go.Scatter(
             x=time,
             y=tilt_angle,
-            name="倾斜角",
+            name="倾斜角 (°)",
             line={"color": "#7D44CF", "width": 2},
-        )
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=time,
+            y=gyro_mag,
+            name="角速度 (°/s)",
+            line={"color": "#FF8C00", "width": 1.5},
+        ),
+        secondary_y=True,
     )
 
     fig.update_layout(
@@ -65,6 +71,19 @@ def build_imu_waveform(
         paper_bgcolor=CHART_THEME["paper_bgcolor"],
         plot_bgcolor=CHART_THEME["plot_bgcolor"],
         margin=CHART_THEME["margin"],
+    )
+
+    fig.update_yaxes(
+        title_text="加速度 (G) / 倾斜角 (°)",
+        title_font_size=12,
+        title_font_color="#0068C9",
+        secondary_y=False,
+    )
+    fig.update_yaxes(
+        title_text="角速度 (°/s)",
+        title_font_size=12,
+        title_font_color="#FF8C00",
+        secondary_y=True,
     )
 
     return fig
