@@ -67,7 +67,7 @@ def test_build_sessions_index():
 
     sessions = build_sessions_index(DATA_DIR)
     assert isinstance(sessions, list)
-    assert len(sessions) == 6  # 6 set directories
+    assert len(sessions) == 7  # 7 set directories
     # Each session has expected keys
     for s in sessions:
         assert "name" in s

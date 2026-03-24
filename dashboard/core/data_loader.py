@@ -82,6 +82,8 @@ def build_sessions_index(data_dir: str) -> list[dict]:
 
         has_imu = os.path.exists(os.path.join(set_dir, "imu_NODE_A1.csv"))
         has_vision = os.path.exists(os.path.join(set_dir, "vision.csv"))
+        has_video = os.path.exists(os.path.join(set_dir, "video.mp4"))
+        has_landmarks = os.path.exists(os.path.join(set_dir, "landmarks.csv"))
 
         imu_rows = 0
         vis_rows = 0
@@ -117,6 +119,8 @@ def build_sessions_index(data_dir: str) -> list[dict]:
             "vision_rows": vis_rows,
             "has_imu": has_imu,
             "has_vision": has_vision,
+            "has_video": has_video,
+            "has_landmarks": has_landmarks,
         })
     return sessions
 
