@@ -1,17 +1,56 @@
-# SyncSwim Dashboard Configuration
-# Edit via dashboard settings page or directly in this file.
-
 [fina]
 clean_threshold_deg = 15
 minor_deduction_deg = 30
 clean_deduction = 0.0
 minor_deduction = 0.2
-major_deduction = 0.5
+major_deduction = 0.9
+
+[fina.leg_deviation]
+clean = 5
+minor = 15
+major = 30
+clean_ded = 0.0
+minor_ded = 0.2
+major_ded = 1.0
+
+[fina.knee_extension]
+clean = 170
+minor = 155
+major = 140
+clean_ded = 0.0
+minor_ded = 0.2
+major_ded = 0.5
+
+[fina.leg_symmetry]
+clean = 5
+minor = 15
+major = 30
+clean_ded = 0.0
+minor_ded = 0.2
+major_ded = 0.5
+
+[fina.shoulder_knee_alignment]
+clean = 170
+minor = 155
+major = 140
+clean_ded = 0.0
+minor_ded = 0.2
+major_ded = 0.5
+
+[fina.trunk_vertical]
+clean = 10
+minor = 20
+major = 35
+clean_ded = 0.0
+minor_ded = 0.2
+major_ded = 0.5
 
 [hardware]
 camera_url = "http://192.168.66.169:4747/video"
 ble_device_name = "NODE_A1"
 ble_char_uuid = "abcd1234-ab12-cd34-ef56-abcdef123456"
+imu_nodes = ["NODE_A1", "NODE_L1"]
+node_placement = { NODE_A1 = "forearm", NODE_L1 = "shin" }
 
 [dashboard]
 default_role = "Coach"

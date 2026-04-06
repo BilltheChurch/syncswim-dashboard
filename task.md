@@ -59,6 +59,36 @@ data/
     ...
 ```
 
+## 阶段五：花泳姿态检测升级（双IMU + 视觉融合） ✅ 已完成
+- [x] 双 IMU 数据加载器（NODE_A1 前臂 + NODE_L1 小腿）
+  - [x] load_imu(set_dir, node=) 支持按节点加载
+  - [x] load_all_imus(set_dir) 扫描所有 IMU 文件
+  - [x] build_sessions_index 自动检测所有 IMU 节点
+  - [x] config.toml 新增 imu_nodes 和 node_placement
+- [x] 视觉角度计算模块 (vision_angles.py)
+  - [x] calc_leg_deviation_vision — Hip→Ankle 与垂直线夹角
+  - [x] calc_knee_extension — Hip→Knee→Ankle 膝盖伸直度
+  - [x] calc_shoulder_knee_angle — Shoulder→Hip→Knee 身体对齐
+  - [x] calc_leg_symmetry — 左右腿偏差角之差
+  - [x] calc_trunk_vertical — Shoulder→Hip 躯干垂直度
+- [x] 分指标 FINA 扣分阈值
+  - [x] compute_deduction 支持 metric= 参数
+  - [x] 正向指标（偏差越小越好）和反向指标（角度越大越好）自动识别
+  - [x] config.toml 新增 5 个分指标阈值配置
+- [x] 8 指标评分引擎
+  - [x] compute_set_report 支持 4 路数据源（前臂IMU、小腿IMU、视觉、骨骼）
+  - [x] 新增指标：knee_extension、trunk_vertical、leg_symmetry
+  - [x] 缺失数据源优雅降级（代理值 / 默认值）
+  - [x] 双 IMU 融合：smoothness 和 stability 合并双节点数据
+- [x] 双节点 IMU 波形图
+  - [x] build_imu_waveform 支持第二节点叠加（虚线 + 不同颜色）
+- [x] 训练页面 4-Tab 重构
+  - [x] 概览：8 指标仪表盘（2行×4列）+ 阶段时间线
+  - [x] 腿部分析：偏差角/伸直度/对称性时序图 + 小腿IMU融合
+  - [x] 手臂分析：肩膝对齐/躯干垂直 + 骨骼叠加 + 前臂IMU融合
+  - [x] 传感器融合：双节点波形叠加 + 数据质量 + 高级融合预留
+- **测试覆盖**：91 个测试全部通过
+
 ## 硬件配置
 - M5StickC Plus2 x1 (NODE_A1)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）

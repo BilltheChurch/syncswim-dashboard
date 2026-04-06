@@ -178,6 +178,52 @@ class TestBuildImuWaveform:
 
 
 # ---------------------------------------------------------------------------
+# IMU waveform dual-node tests
+# ---------------------------------------------------------------------------
+
+class TestBuildImuWaveformDualNode:
+    """Tests for dual-node overlay in build_imu_waveform."""
+
+    def test_dual_node_returns_figure(self):
+        """Dual node waveform returns a valid figure."""
+        from dashboard.components.waveform_chart import build_imu_waveform
+        t = np.linspace(0, 2, 50)
+        fig = build_imu_waveform(
+            time=t, accel_mag=np.ones(50), gyro_mag=np.ones(50) * 2,
+            tilt_angle=np.ones(50) * 45, node_label="forearm",
+            time2=t, accel_mag2=np.ones(50) * 0.8,
+            tilt_angle2=np.ones(50) * 60, node_label2="shin",
+        )
+        assert fig is not None
+
+    def test_dual_node_more_traces_than_single(self):
+        """Dual node should have more traces than single node."""
+        from dashboard.components.waveform_chart import build_imu_waveform
+        t = np.linspace(0, 2, 50)
+        fig_single = build_imu_waveform(
+            time=t, accel_mag=np.ones(50), gyro_mag=np.ones(50) * 2,
+            tilt_angle=np.ones(50) * 45,
+        )
+        fig_dual = build_imu_waveform(
+            time=t, accel_mag=np.ones(50), gyro_mag=np.ones(50) * 2,
+            tilt_angle=np.ones(50) * 45, node_label="forearm",
+            time2=t, accel_mag2=np.ones(50) * 0.8,
+            tilt_angle2=np.ones(50) * 60, node_label2="shin",
+        )
+        assert len(fig_dual.data) > len(fig_single.data)
+
+    def test_single_node_backward_compat(self):
+        """Without dual node params, behaves same as before."""
+        from dashboard.components.waveform_chart import build_imu_waveform
+        t = np.linspace(0, 2, 50)
+        fig = build_imu_waveform(
+            time=t, accel_mag=np.ones(50), gyro_mag=np.ones(50) * 2,
+            tilt_angle=np.ones(50) * 45,
+        )
+        assert len(fig.data) == 3  # accel, tilt, gyro
+
+
+# ---------------------------------------------------------------------------
 # Fusion dual-axis chart tests
 # ---------------------------------------------------------------------------
 

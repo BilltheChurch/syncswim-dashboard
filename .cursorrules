@@ -1,0 +1,55 @@
+# Artistic Swimming Training Analysis System — Cursor Rules
+
+## Project Context
+This is an Artistic Swimming (synchronized swimming) training analysis dashboard.
+It uses Streamlit + MediaPipe + dual IMU sensors to analyze swimming technique
+and provide FINA-standard scoring feedback to coaches and athletes.
+
+## Tech Stack
+- Python 3.12, Streamlit, Plotly, MediaPipe, NumPy, pandas, scipy
+- Testing: pytest (TDD workflow)
+- Data format: CSV (IMU sensor data + vision pose data)
+- Hardware: M5StickC Plus2 (IMU nodes), DroidCam iOS (camera)
+
+## Development Rules
+- Write tests first, then implementation (TDD)
+- Run `python -m pytest tests/ -v` after every change to ensure nothing breaks
+- Chart builder components are pure functions (no streamlit imports) for testability
+- All configurable parameters go in config.toml, never hardcoded
+- UI text in Chinese (this is for Chinese coaching teams)
+- Update task.md after completing features
+
+## Key Files
+- `task.md` — Task tracker, your compass for what to do next
+- `config.toml` — FINA thresholds and hardware configuration
+- `dashboard/core/scoring.py` — Scoring engine (8 biomechanical metrics)
+- `dashboard/core/vision_angles.py` — Vision angle calculations from MediaPipe landmarks
+- `dashboard/core/analysis.py` — IMU signal analysis (tilt, smoothing)
+- `dashboard/core/data_loader.py` — CSV data loading (dual IMU support)
+- `dashboard/pages/training.py` — Main training analysis page (4 tabs)
+- `dashboard/components/` — Plotly chart builders (gauge, timeline, waveform)
+- `docs/plans/` — Design documents explaining architecture decisions
+
+## Data Formats
+- IMU CSV columns: `timestamp_local, timestamp_device, node, state, set, ax, ay, az, gx, gy, gz`
+- Vision CSV columns: `timestamp_local, frame, joint, angle_deg, visible, fps`
+- Landmarks CSV: `timestamp_local, frame`, then 33 landmarks x 4 columns each (`{name}_x, {name}_y, {name}_z, {name}_vis`)
+- Two IMU nodes: NODE_A1 (forearm), NODE_L1 (shin)
+
+## Architecture Patterns
+- `dashboard/core/` — Pure Python logic, no UI dependencies
+- `dashboard/components/` — Plotly chart builders, return Figure objects
+- `dashboard/pages/` — Streamlit page files, compose core + components
+- `dashboard/config.py` — Config load/save (toml format)
+- Graceful degradation: missing data sources produce partial results, never crash
+
+## Common Tasks for Cursor
+- "Add a new chart" → Create in `dashboard/components/`, test in `tests/test_chart_builders.py`, use in `dashboard/pages/`
+- "Add a new metric" → Add calculation in `dashboard/core/`, add to scoring engine, add gauge in training page
+- "Change FINA thresholds" → Edit `config.toml`, per-metric section under `[fina.metric_name]`
+- "Fix a bug" → Reproduce with a test first, then fix
+
+## References
+- FINA Artistic Swimming Figures Manual 2022-2025
+- MediaPipe Pose Landmarks: 33 points, indices 0-32
+- Key landmarks: shoulder(11/12), hip(23/24), knee(25/26), ankle(27/28)

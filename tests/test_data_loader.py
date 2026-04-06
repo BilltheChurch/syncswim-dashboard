@@ -67,7 +67,7 @@ def test_build_sessions_index():
 
     sessions = build_sessions_index(DATA_DIR)
     assert isinstance(sessions, list)
-    assert len(sessions) == 7  # 7 set directories
+    assert len(sessions) == 9  # 9 set directories
     # Each session has expected keys
     for s in sessions:
         assert "name" in s
@@ -86,16 +86,17 @@ def test_build_sessions_index_nonexistent():
 
 
 def test_build_sessions_index_set_002_metadata():
-    """set_002 should have both IMU and vision data."""
+    """set_002 entries should have both IMU and vision data."""
     from dashboard.core.data_loader import build_sessions_index
 
     sessions = build_sessions_index(DATA_DIR)
     set_002 = [s for s in sessions if s["set_number"] == 2]
-    assert len(set_002) == 1
-    assert set_002[0]["has_imu"] is True
-    assert set_002[0]["has_vision"] is True
-    assert set_002[0]["imu_rows"] > 0
-    assert set_002[0]["vision_rows"] > 0
+    assert len(set_002) == 2  # two set_002 recordings
+    for s in set_002:
+        assert s["has_imu"] is True
+        assert s["has_vision"] is True
+        assert s["imu_rows"] > 0
+        assert s["vision_rows"] > 0
 
 
 def test_load_or_rebuild_index():
@@ -113,3 +114,66 @@ def test_load_or_rebuild_index_nonexistent():
 
     result = load_or_rebuild_index("/tmp/nonexistent_data_12345")
     assert result == []
+
+
+# --- Dual-IMU tests ---
+
+
+def test_load_imu_with_node_param(tmp_path):
+    """load_imu with explicit node='NODE_L1' loads the correct file."""
+    from dashboard.core.data_loader import load_imu
+
+    csv = tmp_path / "imu_NODE_L1.csv"
+    csv.write_text("timestamp_local,ax,ay,az,gx,gy,gz\n1.0,0,0,0,0,0,0\n")
+    df = load_imu(str(tmp_path), node="NODE_L1")
+    assert not df.empty
+    assert "ax" in df.columns
+    assert len(df) == 1
+
+
+def test_load_imu_default_node_backward_compat(tmp_path):
+    """load_imu without node param still defaults to NODE_A1."""
+    from dashboard.core.data_loader import load_imu
+
+    csv = tmp_path / "imu_NODE_A1.csv"
+    csv.write_text("timestamp_local,ax,ay,az,gx,gy,gz\n2.0,1,1,1,1,1,1\n")
+    df = load_imu(str(tmp_path))
+    assert not df.empty
+    assert len(df) == 1
+
+
+def test_load_imu_missing_node_returns_empty(tmp_path):
+    """load_imu for a node with no file returns empty DataFrame."""
+    from dashboard.core.data_loader import load_imu
+
+    df = load_imu(str(tmp_path), node="NODE_X9")
+    assert isinstance(df, pd.DataFrame)
+    assert df.empty
+
+
+def test_load_all_imus(tmp_path):
+    """load_all_imus returns dict with all detected nodes."""
+    from dashboard.core.data_loader import load_all_imus
+
+    header = "timestamp_local,ax,ay,az,gx,gy,gz\n"
+    (tmp_path / "imu_NODE_A1.csv").write_text(header + "1.0,0,0,0,0,0,0\n")
+    (tmp_path / "imu_NODE_L1.csv").write_text(header + "1.0,1,1,1,1,1,1\n")
+
+    result = load_all_imus(str(tmp_path))
+    assert isinstance(result, dict)
+    assert set(result.keys()) == {"NODE_A1", "NODE_L1"}
+    assert len(result["NODE_A1"]) == 1
+    assert len(result["NODE_L1"]) == 1
+
+
+def test_load_all_imus_partial(tmp_path):
+    """load_all_imus with only one node file returns single-entry dict."""
+    from dashboard.core.data_loader import load_all_imus
+
+    header = "timestamp_local,ax,ay,az,gx,gy,gz\n"
+    (tmp_path / "imu_NODE_A1.csv").write_text(header + "1.0,0,0,0,0,0,0\n")
+
+    result = load_all_imus(str(tmp_path))
+    assert isinstance(result, dict)
+    assert list(result.keys()) == ["NODE_A1"]
+    assert len(result["NODE_A1"]) == 1
