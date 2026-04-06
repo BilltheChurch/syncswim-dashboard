@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncSwim Coach Station</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>SyncSwim Coach Station</h1>
+        </div>
+        <nav>
+            <button class="tab active" data-view="live">实时</button>
+            <button class="tab" data-view="analysis">分析</button>
+            <button class="tab" data-view="settings">设置</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Live View -->
+        <div id="view-live" class="view active">
+            <div class="live-layout">
+                <div class="video-container">
+                    <canvas id="video-canvas" width="640" height="480"></canvas>
+                    <div class="controls">
+                        <button id="btn-start" class="btn btn-rec">开始录制</button>
+                        <button id="btn-stop" class="btn btn-stop" disabled>停止</button>
+                        <button id="btn-rotate" class="btn btn-secondary">旋转</button>
+                    </div>
+                </div>
+                <div class="side-panel">
+                    <div class="panel-section">
+                        <h3>BLE 状态</h3>
+                        <div id="ble-status">
+                            <div class="ble-node" id="node-NODE_A1">
+                                <span class="dot"></span>
+                                <span class="node-name">A1 前臂</span>
+                                <span class="node-rate">--Hz</span>
+                            </div>
+                            <div class="ble-node" id="node-NODE_A2">
+                                <span class="dot"></span>
+                                <span class="node-name">A2 小腿</span>
+                                <span class="node-rate">--Hz</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <h3>实时指标</h3>
+                        <div id="live-metrics">
+                            <div class="metric-row" id="metric-leg_deviation">
+                                <span class="metric-label">腿部垂直</span>
+                                <span class="metric-value">--°</span>
+                            </div>
+                            <div class="metric-row" id="metric-knee_extension">
+                                <span class="metric-label">膝盖伸直</span>
+                                <span class="metric-value">--°</span>
+                            </div>
+                            <div class="metric-row" id="metric-trunk_vertical">
+                                <span class="metric-label">躯干垂直</span>
+                                <span class="metric-value">--°</span>
+                            </div>
+                            <div class="metric-row" id="metric-elbow">
+                                <span class="metric-label">肘关节</span>
+                                <span class="metric-value">--°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <div id="rec-status">
+                            <span class="rec-indicator">IDLE</span>
+                            <span class="rec-time"></span>
+                            <span class="rec-set"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis View -->
+        <div id="view-analysis" class="view">
+            <div class="analysis-header">
+                <select id="set-selector"><option value="">加载中...</option></select>
+            </div>
+            <div id="analysis-content">
+                <p class="placeholder">选择数据集查看分析报告</p>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="view">
+            <div class="settings-form">
+                <h3>相机设置</h3>
+                <label>URL: <input type="text" id="camera-url" value=""></label>
+                <div class="rotation-btns">
+                    <span>旋转:</span>
+                    <button class="btn-rot" data-rot="0">0°</button>
+                    <button class="btn-rot" data-rot="90">90°</button>
+                    <button class="btn-rot" data-rot="180">180°</button>
+                    <button class="btn-rot" data-rot="270">270°</button>
+                </div>
+                <button id="btn-save-camera" class="btn btn-secondary">保存</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

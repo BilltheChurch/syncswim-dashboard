@@ -67,7 +67,7 @@ def test_build_sessions_index():
 
     sessions = build_sessions_index(DATA_DIR)
     assert isinstance(sessions, list)
-    assert len(sessions) == 9  # 9 set directories
+    assert len(sessions) >= 9  # at least 9 set directories (grows with recordings)
     # Each session has expected keys
     for s in sessions:
         assert "name" in s
