@@ -49,8 +49,8 @@ major_ded = 0.5
 camera_url = "http://192.168.66.169:4747/video"
 ble_device_name = "NODE_A1"
 ble_char_uuid = "abcd1234-ab12-cd34-ef56-abcdef123456"
-imu_nodes = ["NODE_A1", "NODE_L1"]
-node_placement = { NODE_A1 = "forearm", NODE_L1 = "shin" }
+imu_nodes = ["NODE_A1", "NODE_A2"]
+node_placement = { NODE_A1 = "forearm", NODE_A2 = "shin" }
 
 [dashboard]
 default_role = "Coach"

@@ -103,7 +103,9 @@ else:
 
             # ── Load all 4 data sources ──────────────────────────────
             arm_imu_df = load_imu(set_dir, node="NODE_A1")
-            leg_imu_df = load_imu(set_dir, node="NODE_L1")
+            leg_imu_df = load_imu(set_dir, node="NODE_A2")
+            if leg_imu_df.empty:
+                leg_imu_df = load_imu(set_dir, node="NODE_L1")
             vision_df = load_vision(set_dir)
             landmarks_df = load_landmarks_csv(set_dir)
 

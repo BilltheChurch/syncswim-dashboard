@@ -24,7 +24,8 @@ import numpy as np
 from bleak import BleakClient, BleakScanner
 
 # ─── Config ───────────────────────────────────────────────
-TARGET_NAME = "NODE_A1"
+BLE_NODES = ["NODE_A1", "NODE_A2"]  # NODE_A1=forearm(master), NODE_A2=shin
+MASTER_NODE = "NODE_A1"  # controls recording start/stop via Button A
 CHAR_UUID = "abcd1234-ab12-cd34-ef56-abcdef123456"
 CAMERA_URL = "http://192.168.66.169:4747/video"
 DATA_DIR = "data"
@@ -64,26 +65,44 @@ def get_landmark_csv_header():
     return header
 
 # ─── Shared State ─────────────────────────────────────────
-class SyncState:
-    def __init__(self):
-        self.lock = threading.Lock()
-        # BLE
-        self.ble_connected = False
-        self.ble_rate = 0.0
-        self.ble_total_packets = 0
-        self.ble_set_packets = 0
-        self.ble_lost = 0
+class NodeState:
+    """Per-node BLE state tracking."""
+    def __init__(self, name):
+        self.name = name
+        self.connected = False
+        self.rate = 0.0
+        self.total_packets = 0
+        self.set_packets = 0
+        self.lost = 0
         self.last_device_ts = None
         self.last_imu_parts = None
         self._rate_window = []
-        # Recording (controlled by device Button A)
+        self.imu_file = None
+        self.imu_writer = None
+
+    def calc_rate(self):
+        now = time.time()
+        self._rate_window.append(now)
+        cutoff = now - 2.0
+        self._rate_window = [t for t in self._rate_window if t > cutoff]
+        if len(self._rate_window) > 1:
+            span = self._rate_window[-1] - self._rate_window[0]
+            self.rate = (len(self._rate_window) - 1) / span if span > 0 else 0
+        else:
+            self.rate = 0.0
+
+
+class SyncState:
+    def __init__(self):
+        self.lock = threading.Lock()
+        # Per-node BLE state
+        self.nodes = {name: NodeState(name) for name in BLE_NODES}
+        # Recording (controlled by master device Button A)
         self.recording = False
         self.set_number = 0
         self.set_start_time = None
         self.set_dir = None
-        # CSV writers
-        self.imu_file = None
-        self.imu_writer = None
+        # Vision CSV
         self.vision_file = None
         self.vision_writer = None
         self.vision_frame_count = 0
@@ -99,16 +118,26 @@ class SyncState:
         self.running = True
         self.rotation = 0
 
-    def calc_ble_rate(self):
-        now = time.time()
-        self._rate_window.append(now)
-        cutoff = now - 2.0
-        self._rate_window = [t for t in self._rate_window if t > cutoff]
-        if len(self._rate_window) > 1:
-            span = self._rate_window[-1] - self._rate_window[0]
-            self.ble_rate = (len(self._rate_window) - 1) / span if span > 0 else 0
-        else:
-            self.ble_rate = 0.0
+    @property
+    def ble_connected(self):
+        """Backward compat: True if master node connected."""
+        return self.nodes[MASTER_NODE].connected
+
+    @property
+    def ble_rate(self):
+        return self.nodes[MASTER_NODE].rate
+
+    @property
+    def ble_total_packets(self):
+        return sum(n.total_packets for n in self.nodes.values())
+
+    @property
+    def ble_lost(self):
+        return sum(n.lost for n in self.nodes.values())
+
+    @property
+    def last_imu_parts(self):
+        return self.nodes[MASTER_NODE].last_imu_parts
 
 state = SyncState()
 
@@ -119,18 +148,19 @@ def start_recording(set_n):
     os.makedirs(set_dir, exist_ok=True)
     state.set_dir = set_dir
     state.set_start_time = time.time()
-    state.ble_set_packets = 0
-    state.ble_lost = 0
     state.vision_frame_count = 0
-    state.last_device_ts = None
 
-    # IMU CSV
-    f1 = open(os.path.join(set_dir, f"imu_{TARGET_NAME}.csv"), "w", newline="")
-    w1 = csv.writer(f1)
-    w1.writerow(["timestamp_local", "timestamp_device", "node", "state", "set",
-                 "ax", "ay", "az", "gx", "gy", "gz"])
-    state.imu_file = f1
-    state.imu_writer = w1
+    # Per-node IMU CSVs
+    for node in state.nodes.values():
+        node.set_packets = 0
+        node.lost = 0
+        node.last_device_ts = None
+        f = open(os.path.join(set_dir, f"imu_{node.name}.csv"), "w", newline="")
+        w = csv.writer(f)
+        w.writerow(["timestamp_local", "timestamp_device", "node", "state", "set",
+                     "ax", "ay", "az", "gx", "gy", "gz"])
+        node.imu_file = f
+        node.imu_writer = w
 
     # Vision CSV
     f2 = open(os.path.join(set_dir, "vision.csv"), "w", newline="")
@@ -150,12 +180,18 @@ def start_recording(set_n):
     state.video_writer_pending = True
 
 def stop_recording():
-    for f in [state.imu_file, state.vision_file]:
-        if f:
-            f.flush()
-            f.close()
-    state.imu_file = None
-    state.imu_writer = None
+    # Close per-node IMU files
+    for node in state.nodes.values():
+        if node.imu_file:
+            node.imu_file.flush()
+            node.imu_file.close()
+            node.imu_file = None
+            node.imu_writer = None
+
+    # Close vision file
+    if state.vision_file:
+        state.vision_file.flush()
+        state.vision_file.close()
     state.vision_file = None
     state.vision_writer = None
 
@@ -173,79 +209,89 @@ def stop_recording():
         state.landmarks_writer = None
 
 # ─── BLE Handler ──────────────────────────────────────────
-def handle_ble_notification(sender, data):
-    if len(data) < HEADER_SIZE:
-        return
+def make_ble_handler(node_name):
+    """Create a BLE notification handler for a specific node."""
+    def handle_ble_notification(sender, data):
+        if len(data) < HEADER_SIZE:
+            return
 
-    dev_state = "REC" if data[0] == 1 else "IDLE"
-    set_n = data[1]
-    count = data[2]
-    local_ts = time.time()
+        dev_state = "REC" if data[0] == 1 else "IDLE"
+        set_n = data[1]
+        count = data[2]
+        local_ts = time.time()
 
-    if len(data) < HEADER_SIZE + count * READING_SIZE:
-        return
+        if len(data) < HEADER_SIZE + count * READING_SIZE:
+            return
 
-    with state.lock:
-        is_rec = (dev_state == "REC")
+        node = state.nodes[node_name]
 
-        # State transitions
-        if is_rec and not state.recording:
-            state.recording = True
-            state.set_number = set_n
-            start_recording(set_n)
-        elif not is_rec and state.recording:
-            state.recording = False
-            stop_recording()
+        with state.lock:
+            # Only master node controls recording state transitions
+            if node_name == MASTER_NODE:
+                is_rec = (dev_state == "REC")
+                if is_rec and not state.recording:
+                    state.recording = True
+                    state.set_number = set_n
+                    start_recording(set_n)
+                elif not is_rec and state.recording:
+                    state.recording = False
+                    stop_recording()
 
-        # Process readings
-        for i in range(count):
-            offset = HEADER_SIZE + i * READING_SIZE
-            ts, ax_i, ay_i, az_i, gx_i, gy_i, gz_i = struct.unpack_from(
-                READING_FMT, data, offset)
-            ax = ax_i / 1000.0
-            ay = ay_i / 1000.0
-            az = az_i / 1000.0
-            gx = gx_i / 10.0
-            gy = gy_i / 10.0
-            gz = gz_i / 10.0
+            # Process readings
+            for i in range(count):
+                offset = HEADER_SIZE + i * READING_SIZE
+                ts, ax_i, ay_i, az_i, gx_i, gy_i, gz_i = struct.unpack_from(
+                    READING_FMT, data, offset)
+                ax = ax_i / 1000.0
+                ay = ay_i / 1000.0
+                az = az_i / 1000.0
+                gx = gx_i / 10.0
+                gy = gy_i / 10.0
+                gz = gz_i / 10.0
 
-            state.ble_total_packets += 1
-            state.calc_ble_rate()
+                node.total_packets += 1
+                node.calc_rate()
 
-            # Packet loss
-            if state.last_device_ts is not None:
-                gap = ts - state.last_device_ts
-                if gap > 100:
-                    state.ble_lost += max(0, int(gap / 12) - 1)
-            state.last_device_ts = ts
+                # Packet loss
+                if node.last_device_ts is not None:
+                    gap = ts - node.last_device_ts
+                    if gap > 100:
+                        node.lost += max(0, int(gap / 12) - 1)
+                node.last_device_ts = ts
 
-            # Display data
-            state.last_imu_parts = [
-                f"{ax:.3f}", f"{ay:.3f}", f"{az:.3f}",
-                f"{gx:.1f}", f"{gy:.1f}", f"{gz:.1f}"
-            ]
-
-            # Write CSV
-            if state.recording and state.imu_writer:
-                state.imu_writer.writerow([
-                    f"{local_ts:.6f}", ts, TARGET_NAME, dev_state, set_n,
+                # Display data
+                node.last_imu_parts = [
                     f"{ax:.3f}", f"{ay:.3f}", f"{az:.3f}",
                     f"{gx:.1f}", f"{gy:.1f}", f"{gz:.1f}"
-                ])
-                state.ble_set_packets += 1
-                if state.ble_set_packets % 100 == 0:
-                    state.imu_file.flush()
+                ]
+
+                # Write CSV
+                if state.recording and node.imu_writer:
+                    node.imu_writer.writerow([
+                        f"{local_ts:.6f}", ts, node_name, dev_state, set_n,
+                        f"{ax:.3f}", f"{ay:.3f}", f"{az:.3f}",
+                        f"{gx:.1f}", f"{gy:.1f}", f"{gz:.1f}"
+                    ])
+                    node.set_packets += 1
+                    if node.set_packets % 100 == 0:
+                        node.imu_file.flush()
+
+    return handle_ble_notification
 
 # ─── BLE Thread ───────────────────────────────────────────
-def ble_thread_func():
+def ble_thread_func(node_name):
+    """BLE connection thread for a specific node."""
+    handler = make_ble_handler(node_name)
+    node = state.nodes[node_name]
+
     async def ble_loop():
         while state.running:
             try:
-                state.ble_connected = False
+                node.connected = False
                 devices = await BleakScanner.discover(5.0, return_adv=True)
                 target = None
                 for addr, (d, adv) in devices.items():
-                    if d.name == TARGET_NAME:
+                    if d.name == node_name:
                         target = d
                         break
 
@@ -254,8 +300,8 @@ def ble_thread_func():
                     continue
 
                 async with BleakClient(target.address) as client:
-                    state.ble_connected = True
-                    await client.start_notify(CHAR_UUID, handle_ble_notification)
+                    node.connected = True
+                    await client.start_notify(CHAR_UUID, handler)
                     while client.is_connected and state.running:
                         await asyncio.sleep(0.25)
                     await client.stop_notify(CHAR_UUID)
@@ -263,11 +309,13 @@ def ble_thread_func():
             except Exception:
                 pass
             finally:
-                state.ble_connected = False
-                with state.lock:
-                    if state.recording:
-                        state.recording = False
-                        stop_recording()
+                node.connected = False
+                # Only master node disconnection stops recording
+                if node_name == MASTER_NODE:
+                    with state.lock:
+                        if state.recording:
+                            state.recording = False
+                            stop_recording()
 
             if state.running:
                 await asyncio.sleep(3)
@@ -338,44 +386,56 @@ def draw_osd(frame):
     cv2.rectangle(overlay, (0, 0), (w, 60), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
 
-    # Line 1: Recording + BLE status
+    # Line 1: Recording + BLE status for all nodes
     rec_text = "REC" if state.recording else "IDLE"
     rec_color = (0, 0, 255) if state.recording else (0, 255, 0)
-    ble_text = "BLE:ON" if state.ble_connected else "BLE:--"
-    ble_color = (0, 255, 0) if state.ble_connected else (0, 0, 255)
-
     cv2.putText(frame, rec_text, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, rec_color, 2)
     cv2.putText(frame, f"Set#{state.set_number}", (80, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-    cv2.putText(frame, ble_text, (170, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, ble_color, 1)
+
+    # Show connection status for each node
+    x_pos = 170
+    for node in state.nodes.values():
+        tag = node.name[-2:]  # "A1" or "A2"
+        color = (0, 255, 0) if node.connected else (0, 0, 255)
+        cv2.putText(frame, f"{tag}:{'ON' if node.connected else '--'}", (x_pos, 22),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1)
+        x_pos += 65
 
     if state.recording and state.set_start_time:
         elapsed = time.time() - state.set_start_time
         mins, secs = int(elapsed) // 60, int(elapsed) % 60
         cv2.putText(frame, f"{mins:02d}:{secs:02d}", (w - 80, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
-    # Line 2: Rates + angle
-    cv2.putText(frame, f"IMU:{state.ble_rate:.0f}Hz", (10, 48),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
-    cv2.putText(frame, f"VIS:{state.vision_fps:.0f}fps", (120, 48),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
-    cv2.putText(frame, f"{JOINT_NAME}:{state.current_angle:.0f}deg", (230, 48),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
+    # Line 2: Rates for each node + angle
+    x_pos = 10
+    for node in state.nodes.values():
+        tag = node.name[-2:]
+        cv2.putText(frame, f"{tag}:{node.rate:.0f}Hz", (x_pos, 48),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+        x_pos += 85
+    cv2.putText(frame, f"VIS:{state.vision_fps:.0f}fps", (x_pos, 48),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+    cv2.putText(frame, f"{JOINT_NAME}:{state.current_angle:.0f}deg", (x_pos + 95, 48),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
     cv2.putText(frame, f"Lost:{state.ble_lost}", (w - 90, 48),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 180, 180), 1)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 180, 180), 1)
 
 # ─── Main ─────────────────────────────────────────────────
 def main():
     os.makedirs(DATA_DIR, exist_ok=True)
 
     print("=== Dual-Source Synchronized Recorder ===")
-    print(f"  BLE target: {TARGET_NAME}")
+    print(f"  BLE nodes: {', '.join(BLE_NODES)}")
+    print(f"  Master: {MASTER_NODE} (controls recording)")
     print(f"  Camera: {CAMERA_URL}")
     print()
 
-    # Start BLE thread
-    print("Starting BLE thread...")
-    ble_t = threading.Thread(target=ble_thread_func, daemon=True)
-    ble_t.start()
+    # Start BLE threads (one per node)
+    print("Starting BLE threads...")
+    for node_name in BLE_NODES:
+        t = threading.Thread(target=ble_thread_func, args=(node_name,), daemon=True)
+        t.start()
+        print(f"  {node_name} thread started")
 
     # Start camera
     print("Connecting to camera...")
@@ -555,7 +615,8 @@ def main():
 
         print(f"\n{'='*50}")
         print(f"Session Summary")
-        print(f"  BLE packets: {state.ble_total_packets}")
+        for node in state.nodes.values():
+            print(f"  {node.name}: {node.total_packets} packets, {node.lost} lost")
         print(f"  Sets recorded: {state.set_number}")
         if state.set_dir:
             print(f"  Last set: {state.set_dir}/")

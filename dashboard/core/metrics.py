@@ -24,7 +24,10 @@ def compute_all_metrics(set_dir: str) -> SetReport | None:
         SetReport with all metrics, or None if all DataFrames are empty.
     """
     arm_imu_df = load_imu(set_dir, node="NODE_A1")
-    leg_imu_df = load_imu(set_dir, node="NODE_L1")
+    # Try NODE_A2 first (actual device name), fall back to NODE_L1
+    leg_imu_df = load_imu(set_dir, node="NODE_A2")
+    if leg_imu_df.empty:
+        leg_imu_df = load_imu(set_dir, node="NODE_L1")
     vision_df = load_vision(set_dir)
     landmarks_df = load_landmarks_csv(set_dir)
 
