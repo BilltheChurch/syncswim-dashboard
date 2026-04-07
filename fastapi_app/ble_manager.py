@@ -147,8 +147,11 @@ class BleManager:
 
             with self.lock:
                 # Master node drives recording state transitions
+                # Only fire callback on actual state CHANGE (not every packet)
                 if node_name == self.master_node and self.on_state_change:
-                    self.on_state_change(dev_state, set_n)
+                    if not hasattr(node, '_last_dev_state') or node._last_dev_state != dev_state:
+                        node._last_dev_state = dev_state
+                        self.on_state_change(dev_state, set_n)
 
                 for i in range(count):
                     offset = HEADER_SIZE + i * READING_SIZE

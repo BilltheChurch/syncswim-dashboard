@@ -48,6 +48,12 @@ async def stop_recording():
     if _set_manual_recording:
         _set_manual_recording(False)
     _recorder.stop_recording()
+    # Clear sessions cache so new recording appears immediately
+    import os
+    try:
+        os.remove(os.path.join(_recorder._data_dir, "sessions.json"))
+    except OSError:
+        pass
     return {"status": "stopped", "set_dir": _recorder.last_set_dir}
 
 

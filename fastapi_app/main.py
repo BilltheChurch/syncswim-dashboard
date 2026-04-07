@@ -38,11 +38,23 @@ def on_ble_state_change(dev_state: str, set_number: int):
     Only a BLE REC->IDLE transition stops a BLE-initiated recording.
     """
     global _manual_recording
+    import logging
+    logging.info(f"BLE state: {dev_state}, set={set_number}, manual={_manual_recording}, recording={recorder.recording}")
+
+    # If manual recording is active, ignore all BLE state changes
+    if _manual_recording:
+        return
+
     if dev_state == "REC" and not recorder.recording:
-        _manual_recording = False
         recorder.start_recording(set_number)
-    elif dev_state == "IDLE" and recorder.recording and not _manual_recording:
+    elif dev_state == "IDLE" and recorder.recording:
         recorder.stop_recording()
+        # Clear sessions cache so new recording appears immediately
+        import os
+        try:
+            os.remove(os.path.join(recorder._data_dir, "sessions.json"))
+        except OSError:
+            pass
 
 
 def on_ble_imu_data(node_name: str, local_ts: float, readings: list):
