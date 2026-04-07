@@ -367,7 +367,13 @@ async function loadSetList() {
         return;
     }
 
-    sets.sort((a, b) => b.name.localeCompare(a.name));
+    // Sort by date+time descending (extract YYYYMMDD_HHMMSS from name)
+    sets.sort((a, b) => {
+        const da = a.name.match(/(\d{8}_\d{6})/);
+        const db = b.name.match(/(\d{8}_\d{6})/);
+        if (da && db) return db[1].localeCompare(da[1]);
+        return b.name.localeCompare(a.name);
+    });
     sets.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.name;
