@@ -4,105 +4,233 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyncSwim Coach Station</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header>
-        <div class="header-left">
-            <h1>SyncSwim Coach Station</h1>
+        <div class="header-brand">
+            <div class="brand-mark"></div>
+            <span class="brand-name">SyncSwim</span>
+            <span class="brand-sub">Coach Station</span>
         </div>
-        <nav>
-            <button class="tab active" data-view="live">实时</button>
-            <button class="tab" data-view="analysis">分析</button>
-            <button class="tab" data-view="settings">设置</button>
+        <nav class="tab-nav">
+            <button class="tab active" data-view="live">
+                <span class="tab-dot"></span>实时
+            </button>
+            <button class="tab" data-view="analysis">
+                <span class="tab-dot"></span>分析
+            </button>
+            <button class="tab" data-view="settings">
+                <span class="tab-dot"></span>设置
+            </button>
         </nav>
+        <div class="header-status">
+            <span class="sys-label">SYS</span>
+            <span class="sys-dot active"></span>
+        </div>
     </header>
 
     <main>
-        <!-- Live View -->
+
+        <!-- ═══════════════ VIEW: LIVE ═══════════════ -->
         <div id="view-live" class="view active">
             <div class="live-layout">
-                <div class="video-container">
-                    <canvas id="video-canvas" width="640" height="480"></canvas>
-                    <div class="controls">
-                        <button id="btn-start" class="btn btn-rec">开始录制</button>
-                        <button id="btn-stop" class="btn btn-stop" disabled>停止</button>
-                        <button id="btn-rotate" class="btn btn-secondary">旋转</button>
+
+                <!-- Video Column -->
+                <div class="video-col">
+                    <div class="video-wrapper">
+                        <canvas id="video-canvas" width="640" height="480"></canvas>
+                        <div class="video-overlay-tl">
+                            <span class="overlay-label">CAMERA</span>
+                        </div>
+                        <div class="video-overlay-tr" id="rec-overlay">
+                            <span class="rec-dot" id="rec-dot"></span>
+                            <span class="rec-label" id="rec-label">IDLE</span>
+                            <span class="rec-time" id="rec-time"></span>
+                        </div>
+                        <div class="video-overlay-bl" id="set-overlay"></div>
+                    </div>
+                    <div class="controls-bar">
+                        <button id="btn-start" class="ctrl-btn ctrl-btn-rec">
+                            <span class="ctrl-icon ctrl-icon-rec"></span>开始录制
+                        </button>
+                        <button id="btn-stop" class="ctrl-btn ctrl-btn-stop" disabled>
+                            <span class="ctrl-icon ctrl-icon-stop"></span>停止
+                        </button>
+                        <button id="btn-rotate" class="ctrl-btn ctrl-btn-secondary">
+                            <span class="ctrl-icon ctrl-icon-rotate"></span>旋转
+                        </button>
                     </div>
                 </div>
+
+                <!-- Side Panel -->
                 <div class="side-panel">
-                    <div class="panel-section">
-                        <h3>BLE 状态</h3>
-                        <div id="ble-status">
+
+                    <!-- BLE Status -->
+                    <div class="panel-card">
+                        <div class="card-header">
+                            <span class="card-title">BLE 节点</span>
+                            <span class="card-badge" id="ble-badge">离线</span>
+                        </div>
+                        <div class="ble-nodes">
                             <div class="ble-node" id="node-NODE_A1">
-                                <span class="dot"></span>
-                                <span class="node-name">A1 前臂</span>
-                                <span class="node-rate">--Hz</span>
+                                <div class="node-indicator">
+                                    <div class="node-dot"></div>
+                                </div>
+                                <div class="node-info">
+                                    <span class="node-name">A1 — 前臂</span>
+                                    <span class="node-rate" id="rate-NODE_A1">-- Hz</span>
+                                </div>
+                                <div class="node-tilt" id="tilt-NODE_A1">--°</div>
                             </div>
                             <div class="ble-node" id="node-NODE_A2">
-                                <span class="dot"></span>
-                                <span class="node-name">A2 小腿</span>
-                                <span class="node-rate">--Hz</span>
+                                <div class="node-indicator">
+                                    <div class="node-dot"></div>
+                                </div>
+                                <div class="node-info">
+                                    <span class="node-name">A2 — 小腿</span>
+                                    <span class="node-rate" id="rate-NODE_A2">-- Hz</span>
+                                </div>
+                                <div class="node-tilt" id="tilt-NODE_A2">--°</div>
                             </div>
                         </div>
                     </div>
-                    <div class="panel-section">
-                        <h3>实时指标</h3>
-                        <div id="live-metrics">
-                            <div class="metric-row" id="metric-leg_deviation">
-                                <span class="metric-label">腿部垂直</span>
-                                <span class="metric-value">--°</span>
+
+                    <!-- Live Metrics -->
+                    <div class="panel-card">
+                        <div class="card-header">
+                            <span class="card-title">实时指标</span>
+                            <span class="card-hint">视觉检测</span>
+                        </div>
+                        <div class="live-metrics-list">
+                            <div class="live-metric-row" id="metric-leg_deviation">
+                                <div class="lm-label">腿部垂直</div>
+                                <div class="lm-value">--</div>
+                                <div class="lm-unit">°</div>
+                                <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
-                            <div class="metric-row" id="metric-knee_extension">
-                                <span class="metric-label">膝盖伸直</span>
-                                <span class="metric-value">--°</span>
+                            <div class="live-metric-row" id="metric-knee_extension">
+                                <div class="lm-label">膝盖伸直</div>
+                                <div class="lm-value">--</div>
+                                <div class="lm-unit">°</div>
+                                <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
-                            <div class="metric-row" id="metric-trunk_vertical">
-                                <span class="metric-label">躯干垂直</span>
-                                <span class="metric-value">--°</span>
+                            <div class="live-metric-row" id="metric-trunk_vertical">
+                                <div class="lm-label">躯干垂直</div>
+                                <div class="lm-value">--</div>
+                                <div class="lm-unit">°</div>
+                                <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
-                            <div class="metric-row" id="metric-elbow">
-                                <span class="metric-label">肘关节</span>
-                                <span class="metric-value">--°</span>
+                            <div class="live-metric-row" id="metric-elbow">
+                                <div class="lm-label">肘关节</div>
+                                <div class="lm-value">--</div>
+                                <div class="lm-unit">°</div>
+                                <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
                         </div>
                     </div>
-                    <div class="panel-section">
-                        <div id="rec-status">
-                            <span class="rec-indicator">IDLE</span>
-                            <span class="rec-time"></span>
-                            <span class="rec-set"></span>
+
+                    <!-- Recording Info -->
+                    <div class="panel-card panel-card-rec">
+                        <div class="card-header">
+                            <span class="card-title">录制状态</span>
+                        </div>
+                        <div class="rec-status-block">
+                            <div class="rec-status-row">
+                                <span class="rs-label">状态</span>
+                                <div class="rs-value-wrap">
+                                    <span class="rs-dot" id="rs-dot"></span>
+                                    <span class="rs-status" id="rs-status">待机</span>
+                                </div>
+                            </div>
+                            <div class="rec-status-row">
+                                <span class="rs-label">时长</span>
+                                <span class="rs-value mono" id="rs-time">--:--</span>
+                            </div>
+                            <div class="rec-status-row">
+                                <span class="rs-label">组号</span>
+                                <span class="rs-value mono" id="rs-set">--</span>
+                            </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- Analysis View -->
+        <!-- ═══════════════ VIEW: ANALYSIS ═══════════════ -->
         <div id="view-analysis" class="view">
-            <div class="analysis-header">
-                <select id="set-selector"><option value="">加载中...</option></select>
+
+            <div class="analysis-topbar">
+                <div class="selector-wrap">
+                    <label class="selector-label">数据集</label>
+                    <select id="set-selector"><option value="">加载中...</option></select>
+                </div>
+                <div class="analysis-score-inline" id="score-inline" style="display:none">
+                    <span class="si-label">综合评分</span>
+                    <span class="si-score" id="si-score">--</span>
+                    <span class="si-denom">/ 10</span>
+                </div>
             </div>
+
             <div id="analysis-content">
-                <p class="placeholder">选择数据集查看分析报告</p>
+                <div class="analysis-placeholder">
+                    <div class="placeholder-mark"></div>
+                    <p>选择数据集查看分析报告</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ═══════════════ VIEW: SETTINGS ═══════════════ -->
+        <div id="view-settings" class="view">
+            <div class="settings-layout">
+                <div class="settings-section">
+                    <div class="section-title">相机设置</div>
+                    <div class="settings-field">
+                        <label class="field-label">摄像头 URL</label>
+                        <input type="text" id="camera-url" class="field-input" placeholder="http://192.168.x.x:port/video">
+                    </div>
+                    <div class="settings-field">
+                        <label class="field-label">旋转角度</label>
+                        <div class="rotation-group">
+                            <button class="btn-rot active" data-rot="0">0°</button>
+                            <button class="btn-rot" data-rot="90">90°</button>
+                            <button class="btn-rot" data-rot="180">180°</button>
+                            <button class="btn-rot" data-rot="270">270°</button>
+                        </div>
+                    </div>
+                    <button id="btn-save-camera" class="save-btn">保存配置</button>
+                    <div class="save-feedback" id="save-feedback"></div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="section-title">设备信息</div>
+                    <div class="device-info-table">
+                        <div class="di-row">
+                            <span class="di-label">NODE_A1</span>
+                            <span class="di-value" id="di-a1">前臂传感器</span>
+                        </div>
+                        <div class="di-row">
+                            <span class="di-label">NODE_A2</span>
+                            <span class="di-value" id="di-a2">小腿传感器</span>
+                        </div>
+                        <div class="di-row">
+                            <span class="di-label">协议</span>
+                            <span class="di-value">BLE 5.0</span>
+                        </div>
+                        <div class="di-row">
+                            <span class="di-label">视觉</span>
+                            <span class="di-value">MediaPipe Pose</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Settings View -->
-        <div id="view-settings" class="view">
-            <div class="settings-form">
-                <h3>相机设置</h3>
-                <label>URL: <input type="text" id="camera-url" value=""></label>
-                <div class="rotation-btns">
-                    <span>旋转:</span>
-                    <button class="btn-rot" data-rot="0">0°</button>
-                    <button class="btn-rot" data-rot="90">90°</button>
-                    <button class="btn-rot" data-rot="180">180°</button>
-                    <button class="btn-rot" data-rot="270">270°</button>
-                </div>
-                <button id="btn-save-camera" class="btn btn-secondary">保存</button>
-            </div>
-        </div>
     </main>
 
     <script src="/static/app.js"></script>
