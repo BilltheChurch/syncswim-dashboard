@@ -112,11 +112,15 @@ function updateLiveMetrics(angles) {
     const metrics = ['leg_deviation', 'knee_extension', 'trunk_vertical', 'elbow'];
     metrics.forEach(name => {
         const el = document.querySelector(`#metric-${name} .metric-value`);
-        if (el && angles[name] !== undefined) {
-            const val = angles[name].toFixed(1);
-            el.textContent = val + '°';
-            el.className = 'metric-value ' + getZone(name, angles[name]);
+        if (!el) return;
+        if (!angles || angles[name] === undefined) {
+            el.textContent = '--°';
+            el.className = 'metric-value';
+            return;
         }
+        const val = angles[name].toFixed(1);
+        el.textContent = val + '°';
+        el.className = 'metric-value ' + getZone(name, angles[name]);
     });
 }
 

@@ -308,13 +308,7 @@ class CameraManager:
 
             # Build landmarks list and angles
             landmarks_list: list[list[float]] = []
-            angles: dict[str, float] = {
-                "leg_deviation": 0.0,
-                "knee_extension": 180.0,
-                "shoulder_knee_angle": 180.0,
-                "trunk_vertical": 0.0,
-                "elbow": 0.0,
-            }
+            angles: dict[str, float] | None = None
 
             if results.pose_landmarks and len(results.pose_landmarks) > 0:
                 lm = results.pose_landmarks[0]

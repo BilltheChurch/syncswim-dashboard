@@ -10,13 +10,15 @@ router = APIRouter(prefix="/api")
 _ble = None
 _camera = None
 _recorder = None
+_set_manual_recording = None  # callback to set manual recording flag
 
 
-def init(ble_manager, camera_manager, recorder):
-    global _ble, _camera, _recorder
+def init(ble_manager, camera_manager, recorder, set_manual_recording=None):
+    global _ble, _camera, _recorder, _set_manual_recording
     _ble = ble_manager
     _camera = camera_manager
     _recorder = recorder
+    _set_manual_recording = set_manual_recording
 
 
 @router.get("/health")
@@ -33,6 +35,8 @@ async def ble_status():
 async def start_recording():
     if _recorder.recording:
         return {"error": "Already recording"}
+    if _set_manual_recording:
+        _set_manual_recording(True)
     _recorder.start_manual()
     return {"status": "recording", "set_number": _recorder.set_number}
 
@@ -41,6 +45,8 @@ async def start_recording():
 async def stop_recording():
     if not _recorder.recording:
         return {"error": "Not recording"}
+    if _set_manual_recording:
+        _set_manual_recording(False)
     _recorder.stop_recording()
     return {"status": "stopped", "set_dir": _recorder.last_set_dir}
 

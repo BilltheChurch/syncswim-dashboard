@@ -29,11 +29,19 @@ camera_manager = CameraManager()
 
 
 # --- BLE callbacks ---
+_manual_recording = False  # True when recording started from web UI
+
 def on_ble_state_change(dev_state: str, set_number: int):
-    """Master node Button A triggers recording start/stop."""
+    """Master node Button A triggers recording start/stop.
+
+    Manual recordings (started from web UI) are not interrupted by BLE IDLE.
+    Only a BLE REC->IDLE transition stops a BLE-initiated recording.
+    """
+    global _manual_recording
     if dev_state == "REC" and not recorder.recording:
+        _manual_recording = False
         recorder.start_recording(set_number)
-    elif dev_state == "IDLE" and recorder.recording:
+    elif dev_state == "IDLE" and recorder.recording and not _manual_recording:
         recorder.stop_recording()
 
 
@@ -116,7 +124,10 @@ async def startup():
     ble_manager.on_state_change = on_ble_state_change
 
     # Init API routes with shared instances
-    api_routes.init(ble_manager, camera_manager, recorder)
+    def set_manual(val):
+        global _manual_recording
+        _manual_recording = val
+    api_routes.init(ble_manager, camera_manager, recorder, set_manual_recording=set_manual)
 
     # Start services
     ble_manager.start()
