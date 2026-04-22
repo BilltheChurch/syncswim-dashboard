@@ -89,8 +89,82 @@ data/
   - [x] 传感器融合：双节点波形叠加 + 数据质量 + 高级融合预留
 - **测试覆盖**：91 个测试全部通过
 
+## 阶段六：Coach Workstation 完善（Dashboard 大升级） ✅ 已完成
+
+目标：把 FastAPI "Coach Workstation" 打造成**专业级训练分析面板** — 实时监看、详细回放、多维评分、一站式管理。
+
+### 6.1 后端 API 扩展
+- [x] `/api/sets/{name}/report` 扩展字段：`imu_summary`, `duration`, `fps_mean`, `frame_count`, `vision_rows`, `score_breakdown`, `has_video`, `has_landmarks`
+- [x] `/api/sets/{name}/timeseries` 返回重采样曲线（IMU 倾角 × N 节点 + 视觉角度 × 5 指标 + 肘关节）
+- [x] `/api/sets/{name}/frame/{time_sec}` 按秒提取带骨架 JPEG
+- [x] `/api/sets/{name}/video` 视频流（HTTP Range 请求支持）
+- [x] `/api/sets/{name}/keyframes/{index}?count=3|6` 灵活关键帧
+- [x] `DELETE /api/sets/{name}` 删除 Set（路径越权保护）
+- [x] `/api/camera/snapshot?skeleton=0|1` 实时截图（服务端二次绘制骨架）
+- [x] `POST /api/camera/test` 摄像头连接诊断（探测 JPEG 起始标记）
+- [x] `/api/config` GET/POST 完整配置读写（三段深度合并）
+- [x] `/api/ble/reconnect` 手动触发重连
+- [x] `/api/data/stats` 数据目录统计（Set 数 / 总大小）
+
+### 6.2 前端实时页增强
+- [x] "快照"按钮（S 键，含 / 不含骨架，自动下载带时间戳文件名）
+- [x] BLE 详细统计（频率 · 包数 · 倾角，双节点 A1+A2）
+- [x] 实时综合评分环（SVG ring，动态渐变色）
+- [x] 迷你三维条（姿态 / 平稳 / 对称）
+- [x] 视频右下角「姿态检测中 / 无人」badge
+- [x] 视频左上角实时 FPS 显示
+- [x] 头部时钟 + BLE/CAM 状态点
+
+### 6.3 前端分析页大升级
+- [x] 5 格摘要头（时长 / 节点数 / 包数+丢包 / 帧数+FPS / 相关系数）
+- [x] 视频播放器（Range-aware 流） + 骨架叠加开关
+- [x] 时序折线图（Canvas 2D，多指标图例可点击切换）
+- [x] 关键帧 3 ⇄ 6 切换
+- [x] 多维评分分组卡（姿态 / 伸展 / 对称 / 运动）
+- [x] 详细指标 8 项（含 FINA 扣分显示）
+- [x] IMU 传感器数据卡（每节点 6 项统计 + 丢包率）
+- [x] 一键删除（带确认模态框）
+- [x] 加载骨架屏
+
+### 6.4 新增「历史」Tab — Set 管理
+- [x] Set 卡片网格（缩略图 / 评分 badge / 时长 / 日期 / 数据源 chips）
+- [x] 实时搜索 + 排序（日期 / 时长 升降）
+- [x] 单卡删除（模态框确认）
+- [x] 点击进入分析页
+
+### 6.5 前端设置页完善
+- [x] 预填当前值（GET /api/config + GET /api/data/stats）
+- [x] 相机「测试连接」按钮
+- [x] FINA 阈值可视化编辑器（5 × 3 阈值，正/反向自动标记）
+- [x] 数据目录统计（Set 数 / 总大小 / 路径）
+- [x] BLE 节点名编辑
+- [x] 键盘快捷键表
+
+### 6.6 UI 视觉升级
+- [x] 加载骨架屏（shimmer 动画）
+- [x] Toast 通知系统（success/error/warn/info 四色 + 自动消失 + 手动关闭）
+- [x] 模态框（Escape 取消 + 遮罩点击取消）
+- [x] 键盘快捷键：`1/2/3/4` 切 Tab、`R` 录制、`Space` 停止、`S` 快照、`Esc` 关模态
+- [x] 动画过渡：ring 填充 0.6s、bar 填充 0.4s、toast 滑入 0.3s、modal pop-in
+- [x] 响应式：≥1100 / 860 / 680px 三档断点
+
+### 6.7 文档
+- [x] task.md 阶段六（本节）
+- [x] DEVLOG 记录问题 #11（前后端契约）、#12（视频 Range）
+
+### 6.8 回放修复（2026-04-22）
+- [x] 修复分析页骨架比视频快的 drift（DEVLOG #13）
+  - 根因：`main.py` 在未检测到姿态时跳过 `write_landmarks`，但视频帧仍在写；导致 `landmarks.csv` 比 `video.mp4` 少若干行，按比例映射后骨架提前。
+  - 修复：`_vision_writer_loop` 现在每个视频帧都调用一次 `write_landmarks`（无姿态时写空行），保持 1:1 对齐。
+- [x] 分析页支持多人骨架回放
+  - 新增 `landmarks_multi.jsonl`：JSONL 格式，每行对应一帧，记录所有被检测到的运动员 landmarks。
+  - `/api/sets/{name}/landmarks` 扩展返回 `all_frames` 字段。
+  - 前端 `setupSkeletonOverlay` 使用与实时视图相同的 `TEAM_COLORS` 调色盘，绘制 P2/P3... 标签。
+- [x] 时长 0s 回退
+  - `/api/sets/{name}/report` 中若 IMU 无数据，依次回退到 vision.csv → landmarks.csv → `frame_count / fps`。无 IMU 的训练组也能显示真实时长。
+
 ## 硬件配置
-- M5StickC Plus2 x1 (NODE_A1)
+- M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）
 - BLE 协议: 二进制批量打包，3 读数/通知，52 字节/包
 - BLE UUID: SERVICE=12345678-1234-1234-1234-123456789abc, CHAR=abcd1234-ab12-cd34-ef56-abcdef123456

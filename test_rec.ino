@@ -7,9 +7,16 @@
 #define NODE_NAME "NODE_A1"
 #define SERVICE_UUID        "12345678-1234-1234-1234-123456789abc"
 #define CHARACTERISTIC_UUID "abcd1234-ab12-cd34-ef56-abcdef123456"
+// Secondary characteristic — server writes here to tell the M5 which
+// set number the server just allocated. Firmware uses the written
+// value on its display so the coach sees the same number the server
+// stored on disk (DEVLOG: B-protocol sync).
+#define SETNUM_CHARACTERISTIC_UUID "abcd5678-ab12-cd34-ef56-abcdef123456"
 
 BLECharacteristic *pCharacteristic;
+BLECharacteristic *pSetnumChar;
 BLEServer *pServer;
+volatile int displayedSetNumber = 0;   // value received from Python (server-truth)
 volatile bool deviceConnected = false;
 volatile bool recording = false;
 int setNumber = 0;
@@ -44,15 +51,42 @@ const uint16_t COL_RED      = 0xF800;  // red accent
 const uint16_t COL_REC_BG   = 0x8000;  // dark red for rec bar
 const uint16_t COL_IDLE_BG  = 0x0320;  // dark green for idle bar
 
+// Defer re-advertising to the main loop so BLE callbacks stay non-blocking.
+// Blocking in onDisconnect() (with delay(500)) can freeze the BLE stack and
+// has been observed to leave the device stuck — especially after an unclean
+// Python-side disconnect (DEVLOG #16).
+volatile bool needRestartAdvertising = false;
+
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer *s) { deviceConnected = true; }
     void onDisconnect(BLEServer *s) {
         deviceConnected = false;
-        // Restart advertising so device is discoverable again
-        delay(500);
-        pServer->getAdvertising()->start();
+        needRestartAdvertising = true;   // handled in loop()
     }
 };
+
+// Receive the server-assigned set number from Python.
+// Use raw-pointer API (getData/getLength) — newer ESP32 Arduino cores
+// (3.x) changed getValue() to return Arduino String instead of
+// std::string, which breaks std::string assignment. getData()/getLength()
+// has been stable across all ESP32 BLE versions.
+class MySetnumCallbacks : public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *c) {
+        uint8_t *data = c->getData();
+        size_t len = c->getLength();
+        if (data != nullptr && len >= 1) {
+            displayedSetNumber = data[0];
+        }
+    }
+};
+
+// Watchdog: if we're not connected AND haven't kicked advertising in a
+// while, force it on anyway. This is a self-heal in case onDisconnect
+// never fires (e.g. the central died ungracefully and our link layer is
+// stuck mid-supervision). After this window the host can find us again
+// without requiring a manual M5 power-cycle.
+unsigned long lastAdvCheck = 0;
+const unsigned long ADV_WATCHDOG_MS = 3000;  // check every 3 seconds
 
 void setup() {
     auto cfg = M5.config();
@@ -71,6 +105,16 @@ void setup() {
         BLECharacteristic::PROPERTY_NOTIFY
     );
     pCharacteristic->addDescriptor(new BLE2902());
+
+    // Server-assigned set-number characteristic (write from central)
+    pSetnumChar = pService->createCharacteristic(
+        SETNUM_CHARACTERISTIC_UUID,
+        BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ
+    );
+    pSetnumChar->setCallbacks(new MySetnumCallbacks());
+    uint8_t init_val = 0;
+    pSetnumChar->setValue(&init_val, 1);
+
     pService->start();
     pServer->getAdvertising()->start();
 }
@@ -191,7 +235,11 @@ void drawRecBar() {
         int mins = elapsed / 60;
         int secs = elapsed % 60;
         canvas.setTextSize(2);
-        canvas.printf("REC #%d", setNumber);
+        // Prefer the server-assigned number (authoritative: matches
+        // what's actually saved in data/). Fall back to local count
+        // if server hasn't told us yet (no BLE link, first 100ms).
+        int shownNum = displayedSetNumber > 0 ? displayedSetNumber : setNumber;
+        canvas.printf("REC #%d", shownNum);
         canvas.setTextSize(1);
         canvas.setTextColor(COL_GRAY);
         canvas.setCursor(180, y0 + 8);
@@ -212,6 +260,22 @@ void drawRecBar() {
 
 void loop() {
     StickCP2.update();
+
+    // Handle deferred re-advertising (from onDisconnect)
+    if (needRestartAdvertising) {
+        needRestartAdvertising = false;
+        pServer->getAdvertising()->start();
+    }
+
+    // Watchdog: force-restart advertising every ADV_WATCHDOG_MS while
+    // not connected. Covers the case where onDisconnect never fires
+    // because the host vanished ungracefully (Python crash, laptop sleep).
+    unsigned long tNow = millis();
+    if (!deviceConnected && (tNow - lastAdvCheck > ADV_WATCHDOG_MS)) {
+        lastAdvCheck = tNow;
+        pServer->getAdvertising()->stop();
+        pServer->getAdvertising()->start();
+    }
 
     if (StickCP2.BtnA.wasPressed()) {
         recording = !recording;

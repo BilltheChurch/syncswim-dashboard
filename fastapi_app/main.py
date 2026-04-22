@@ -46,9 +46,17 @@ def on_ble_state_change(dev_state: str, set_number: int):
         return
 
     if dev_state == "REC" and not recorder.recording:
-        recorder.start_recording(set_number)
+        # Don't trust M5's set_number — the firmware resets its counter
+        # to 0 on every power-cycle, so every session would start at
+        # set_001 and clash with prior ones. The server is the source
+        # of truth: scan data/ for the next free number.
+        recorder.start_manual()
+        # Push the authoritative number back to the M5 so its display
+        # shows what the server actually saved (B-protocol).
+        ble_manager.write_set_number(recorder.set_number)
     elif dev_state == "IDLE" and recorder.recording:
         recorder.stop_recording()
+        ble_manager.write_set_number(0)  # 0 = "no active set" on M5 display
         # Clear sessions cache so new recording appears immediately
         import os
         try:
@@ -111,15 +119,31 @@ def _vision_writer_loop():
             local_ts, frame_count, "R_Elbow", elbow, 1 if has_pose else 0, 25.0
         )
 
-        # Write landmarks CSV
-        # camera_manager returns landmarks as [[x, y, vis], ...] (lists)
+        # Write landmarks CSV — ALWAYS one row per video frame, even
+        # when no pose is detected. Keeping the landmark row count 1:1
+        # with the video frame count is what lets the analysis page
+        # map ``video.currentTime`` → skeleton index by linear ratio
+        # without drift. Previously we skipped the row on no-pose
+        # frames, which made landmarks.csv shorter than video.mp4 and
+        # caused the skeleton to race ahead during playback. (DEVLOG #13)
+        #
         # recorder.write_landmarks expects [{'x': .., 'y': .., 'z': .., 'visibility': ..}, ...]
-        if data["landmarks"] and len(data["landmarks"]) == 33:
+        lm_list = data.get("landmarks") or []
+        if lm_list and len(lm_list) == 33:
             lm_dicts = [
                 {"x": l[0], "y": l[1], "z": 0.0, "visibility": l[2]}
-                for l in data["landmarks"]
+                for l in lm_list
             ]
-            recorder.write_landmarks(local_ts, frame_count, lm_dicts)
+        else:
+            lm_dicts = []
+        recorder.write_landmarks(local_ts, frame_count, lm_dicts)
+
+        # Multi-person landmarks (JSONL) — persist every athlete per
+        # frame so the analysis page can render dual-/team-person
+        # skeletons, not just the primary swimmer.
+        recorder.write_landmarks_multi(
+            local_ts, frame_count, data.get("all_landmarks") or []
+        )
 
         # Write video frame
         if data.get("raw_frame") is not None:
@@ -157,7 +181,13 @@ async def shutdown():
 
     _vision_writer_running = False
     camera_manager.stop()
-    ble_manager.stop()
+    # 6 s grace is a compromise: long enough to cover a BleakScanner
+    # scan round (5 s) + a BleakClient disconnect (~1 s), short enough
+    # that uvicorn doesn't look hung. Every clean disconnect here means
+    # the M5 gets its onDisconnect callback immediately and resumes
+    # advertising — so the next server start finds it without a manual
+    # device reboot (DEVLOG #5 / #16).
+    ble_manager.stop(grace=6.0)
     if recorder.recording:
         recorder.stop_recording()
 

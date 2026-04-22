@@ -7,6 +7,8 @@ Ported from sync_recorder.py into a reusable class for the FastAPI backend.
 """
 
 import asyncio
+import atexit
+import logging
 import math
 import struct
 import threading
@@ -18,10 +20,27 @@ from bleak import BleakClient, BleakScanner
 
 from dashboard.config import load_config
 
+# Log BLE events to stderr so they appear in uvicorn's terminal output.
+# Makes "why didn't it reconnect?" diagnosable without a debugger.
+log = logging.getLogger("ble_manager")
+if not log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s [BLE %(levelname)s] %(message)s",
+                                      datefmt="%H:%M:%S"))
+    log.addHandler(_h)
+    log.setLevel(logging.INFO)
+
 # BLE binary protocol constants
 HEADER_SIZE = 4
 READING_SIZE = 16
 READING_FMT = "<Ihhhhhh"
+
+# Characteristic the server writes the authoritative set number to.
+# Firmware displays this value on the M5 screen (see test_rec.ino,
+# MySetnumCallbacks). Lets the coach see the same number that's being
+# stored on disk, even after M5 power-cycles (which reset M5's own
+# local setNumber counter).
+SETNUM_CHAR_UUID = "abcd5678-ab12-cd34-ef56-abcdef123456"
 
 
 @dataclass
@@ -30,6 +49,11 @@ class NodeState:
 
     name: str
     connected: bool = False
+    # "scanning" | "connected" | "waiting" | "stopped" — surfaced to the
+    # frontend via /api/ble/status so the dashboard can show what each
+    # node is actually doing right now.
+    phase: str = "scanning"
+    scan_attempts: int = 0
     rate: float = 0.0
     total_packets: int = 0
     set_packets: int = 0
@@ -37,6 +61,14 @@ class NodeState:
     last_device_ts: Optional[int] = None
     last_imu: Optional[dict] = None
     tilt: float = 0.0
+    # Set to True by the /api/ble/reconnect endpoint to force the
+    # node's asyncio loop to drop the current client and rescan.
+    force_reconnect: bool = False
+    # Pending set-number write. Set by BleManager.write_set_number();
+    # the node's asyncio loop consumes it on its next tick by writing
+    # to SETNUM_CHAR_UUID so the M5's display shows the authoritative
+    # server-assigned number.
+    pending_set_number: Optional[int] = None
     _rate_window: list = field(default_factory=list, repr=False)
 
     def calc_rate(self) -> None:
@@ -90,7 +122,15 @@ class BleManager:
     # ── public API ────────────────────────────────────────────
 
     def start(self) -> None:
-        """Launch one daemon thread per BLE node."""
+        """Launch one daemon thread per BLE node.
+
+        Registers an atexit hook that signals stop() — this runs even
+        when FastAPI's own shutdown event doesn't fire (e.g., SIGKILL
+        or uncaught exception at module-import time). With this, every
+        clean-ish exit lets the BLE thread disconnect properly so the
+        firmware's onDisconnect callback fires and advertising resumes
+        immediately (see DEVLOG #5).
+        """
         self.running = True
         for name in self.node_names:
             t = threading.Thread(
@@ -98,21 +138,58 @@ class BleManager:
             )
             t.start()
             self._threads.append(t)
+        atexit.register(self._atexit_cleanup)
+        log.info("started — %d nodes: %s", len(self.node_names), self.node_names)
 
-    def stop(self) -> None:
-        """Signal all node threads to stop."""
+    def _atexit_cleanup(self) -> None:
+        """Last-ditch cleanup if no other code called stop()."""
+        if self.running:
+            log.info("atexit: forcing BLE disconnect")
+            try:
+                self.stop(grace=3.0)
+            except Exception as e:
+                log.warning("atexit: stop failed: %s", e)
+
+    def stop(self, grace: float = 4.0) -> None:
+        """Signal all node threads to stop.
+
+        Waits up to *grace* seconds so each node's asyncio loop can
+        drop out of ``async with BleakClient`` cleanly and send a
+        proper BLE disconnect.  Without this the firmware thinks the
+        link is still alive and refuses new connections until its
+        supervision timeout fires (~30 s).
+        """
         self.running = False
+        for t in self._threads:
+            if t.is_alive():
+                t.join(timeout=grace)
+        self._threads.clear()
+
+    def write_set_number(self, n: int) -> None:
+        """Queue a server-assigned set number for every connected node.
+
+        The node's asyncio loop picks this up on its next tick and
+        writes to SETNUM_CHAR_UUID. The firmware's BLE callback sets
+        its ``displayedSetNumber`` so the M5 screen shows what the
+        server actually saved on disk — not the M5's local counter.
+        """
+        n_clamped = max(0, min(255, int(n)))
+        with self.lock:
+            for node in self.nodes.values():
+                node.pending_set_number = n_clamped
 
     def get_status(self) -> dict:
         """Return a snapshot of every node's status.
 
-        Returns:
-            {node_name: {connected, rate, tilt, packets, lost}, ...}
+        ``phase`` tells the dashboard what the node's loop is doing
+        right now: "scanning", "connected", "waiting", "stopped".
         """
         with self.lock:
             return {
                 name: {
                     "connected": node.connected,
+                    "phase": node.phase,
+                    "scan_attempts": node.scan_attempts,
                     "rate": round(node.rate, 1),
                     "tilt": round(node.tilt, 1),
                     "packets": node.total_packets,
@@ -146,10 +223,18 @@ class BleManager:
             readings: list[dict] = []
 
             with self.lock:
-                # Master node drives recording state transitions
-                # Only fire callback on actual state CHANGE (not every packet)
+                # Master node drives recording state transitions.
+                # Two-step gate:
+                #   1. On the very first packet after connect, we DON'T
+                #      fire — we just remember the state. Otherwise a
+                #      device that reconnects while still in REC would
+                #      cause us to auto-start a recording the user
+                #      never asked for.
+                #   2. After that, fire only on actual state changes.
                 if node_name == self.master_node and self.on_state_change:
-                    if not hasattr(node, '_last_dev_state') or node._last_dev_state != dev_state:
+                    if not hasattr(node, '_last_dev_state'):
+                        node._last_dev_state = dev_state  # baseline, no fire
+                    elif node._last_dev_state != dev_state:
                         node._last_dev_state = dev_state
                         self.on_state_change(dev_state, set_n)
 
@@ -208,15 +293,39 @@ class BleManager:
         return handle_notification
 
     def _node_thread(self, node_name: str) -> None:
-        """Run the async scan-connect-subscribe loop for one node."""
+        """Run the async scan-connect-subscribe loop for one node.
+
+        Every state transition is logged to stderr so restart / reconnect
+        bugs can be diagnosed from the uvicorn terminal output.
+
+        Key timing constants (important for recovery after an unclean
+        shutdown, see DEVLOG #5 and #16):
+
+        * Initial scan is **6s** — long enough to catch an M5 that's
+          still inside its BLE supervision-timeout window (~6-20s)
+          after a prior process was killed.
+        * Every scan is **5s** — shorter rounds trip up bleak on macOS.
+        * Backoff between failed scans is 1s → 5s max.
+        * Keeps trying forever (no give-up) because the M5 will
+          eventually re-advertise once supervision-timeout fires.
+        """
         handler = self._make_handler(node_name)
         node = self.nodes[node_name]
 
         async def _loop() -> None:
+            backoff = 1.0
+            first_scan = True
             while self.running:
                 try:
                     node.connected = False
-                    devices = await BleakScanner.discover(5.0, return_adv=True)
+                    node.phase = "scanning"
+                    node.scan_attempts += 1
+                    scan_time = 6.0 if first_scan else 5.0
+                    first_scan = False
+                    log.info(
+                        "[%s] scan #%d (%.1fs)...", node_name, node.scan_attempts, scan_time,
+                    )
+                    devices = await BleakScanner.discover(scan_time, return_adv=True)
                     target = None
                     for _addr, (d, _adv) in devices.items():
                         if d.name == node_name:
@@ -224,22 +333,74 @@ class BleManager:
                             break
 
                     if not target:
-                        await asyncio.sleep(3)
+                        log.warning(
+                            "[%s] not advertising yet — retry in %.1fs "
+                            "(M5 BLE supervision timeout can last up to 20s "
+                            "after an unclean shutdown)",
+                            node_name, min(backoff, 5.0),
+                        )
+                        node.phase = "waiting"
+                        await asyncio.sleep(min(backoff, 5.0))
+                        backoff = min(backoff * 1.5, 5.0)
                         continue
+                    backoff = 1.0
+                    log.info("[%s] found %s — connecting", node_name, target.address)
 
                     async with BleakClient(target.address) as client:
                         node.connected = True
+                        node.phase = "connected"
+                        node.force_reconnect = False
+                        log.info("[%s] connected ✓", node_name)
                         await client.start_notify(self.char_uuid, handler)
-                        while client.is_connected and self.running:
-                            await asyncio.sleep(0.25)
-                        await client.stop_notify(self.char_uuid)
+                        while (
+                            client.is_connected
+                            and self.running
+                            and not node.force_reconnect
+                        ):
+                            # Flush any pending set-number write so the
+                            # firmware's display matches the server.
+                            if node.pending_set_number is not None:
+                                try:
+                                    await client.write_gatt_char(
+                                        SETNUM_CHAR_UUID,
+                                        bytes([node.pending_set_number]),
+                                        response=False,
+                                    )
+                                    log.info("[%s] set_number written: %d",
+                                             node_name, node.pending_set_number)
+                                    node.pending_set_number = None
+                                except Exception as e:
+                                    log.warning("[%s] set_number write failed: %s",
+                                                node_name, e)
+                                    node.pending_set_number = None
+                            await asyncio.sleep(0.2)
+                        log.info(
+                            "[%s] disconnecting (running=%s, force_reconnect=%s)",
+                            node_name, self.running, node.force_reconnect,
+                        )
+                        try:
+                            await client.stop_notify(self.char_uuid)
+                        except Exception as e:
+                            log.warning("[%s] stop_notify failed: %s", node_name, e)
+                        if client.is_connected:
+                            try:
+                                await client.disconnect()
+                            except Exception as e:
+                                log.warning("[%s] disconnect failed: %s", node_name, e)
+                    log.info("[%s] disconnected ✓", node_name)
 
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.warning("[%s] loop error: %s: %s", node_name, type(e).__name__, e)
                 finally:
                     node.connected = False
 
                 if self.running:
-                    await asyncio.sleep(3)
+                    node.phase = "waiting"
+                    await asyncio.sleep(1.0)
+            node.phase = "stopped"
+            log.info("[%s] loop exited", node_name)
 
-        asyncio.run(_loop())
+        try:
+            asyncio.run(_loop())
+        except Exception as e:
+            log.error("[%s] fatal loop crash: %s", node_name, e)

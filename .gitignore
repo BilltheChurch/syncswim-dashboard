@@ -3,3 +3,17 @@ __pycache__/
 *.pyc
 .pytest_cache/
 data/sessions.json
+
+# Recorded training sets — user-generated, not source
+data/set_*/
+
+# OMC / agent harness state (per-machine, volatile)
+.omc/
+
+# Large model weights — distribute out-of-band (documented in README)
+pose_landmarker_heavy.task
+pose_landmarker_full.task
+pose_landmarker_lite.task
+yolov8n-pose.pt
+*.pt
+*.task
