@@ -6,30 +6,47 @@
     <title>SyncSwim Coach Station</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <!-- ════════════════════ HEADER ════════════════════ -->
     <header>
         <div class="header-brand">
             <div class="brand-mark"></div>
-            <span class="brand-name">SyncSwim</span>
-            <span class="brand-sub">Coach Station</span>
+            <div class="brand-names">
+                <span class="brand-name">SyncSwim</span>
+                <span class="brand-sub">Coach Station</span>
+            </div>
         </div>
         <nav class="tab-nav">
             <button class="tab active" data-view="live">
                 <span class="tab-dot"></span>实时
+                <span class="tab-kbd">1</span>
             </button>
             <button class="tab" data-view="analysis">
                 <span class="tab-dot"></span>分析
+                <span class="tab-kbd">2</span>
+            </button>
+            <button class="tab" data-view="history">
+                <span class="tab-dot"></span>历史
+                <span class="tab-kbd">3</span>
             </button>
             <button class="tab" data-view="settings">
                 <span class="tab-dot"></span>设置
+                <span class="tab-kbd">4</span>
             </button>
         </nav>
         <div class="header-status">
-            <span class="sys-label">SYS</span>
-            <span class="sys-dot active"></span>
+            <div class="header-clock mono" id="header-clock">--:--:--</div>
+            <div class="status-group">
+                <span class="sys-label">BLE</span>
+                <span class="sys-dot" id="hd-ble-dot"></span>
+            </div>
+            <div class="status-group">
+                <span class="sys-label">CAM</span>
+                <span class="sys-dot" id="hd-cam-dot"></span>
+            </div>
         </div>
     </header>
 
@@ -45,6 +62,7 @@
                         <canvas id="video-canvas" width="640" height="480"></canvas>
                         <div class="video-overlay-tl">
                             <span class="overlay-label">CAMERA</span>
+                            <span class="overlay-fps mono" id="cam-fps">-- FPS</span>
                         </div>
                         <div class="video-overlay-tr" id="rec-overlay">
                             <span class="rec-dot" id="rec-dot"></span>
@@ -52,22 +70,76 @@
                             <span class="rec-time" id="rec-time"></span>
                         </div>
                         <div class="video-overlay-bl" id="set-overlay"></div>
+                        <div class="video-overlay-br" id="pose-badge">
+                            <span class="pose-indicator" id="pose-ind"></span>
+                            <span id="pose-text">无人</span>
+                        </div>
                     </div>
                     <div class="controls-bar">
-                        <button id="btn-start" class="ctrl-btn ctrl-btn-rec">
+                        <button id="btn-start" class="ctrl-btn ctrl-btn-rec" title="R">
                             <span class="ctrl-icon ctrl-icon-rec"></span>开始录制
+                            <kbd>R</kbd>
                         </button>
-                        <button id="btn-stop" class="ctrl-btn ctrl-btn-stop" disabled>
+                        <button id="btn-stop" class="ctrl-btn ctrl-btn-stop" disabled title="Space">
                             <span class="ctrl-icon ctrl-icon-stop"></span>停止
+                            <kbd>␣</kbd>
                         </button>
+                        <div class="ctrl-divider"></div>
+                        <button id="btn-snapshot" class="ctrl-btn ctrl-btn-secondary" title="S">
+                            <span class="ctrl-icon ctrl-icon-camera"></span>快照
+                            <kbd>S</kbd>
+                        </button>
+                        <button id="btn-snapshot-raw" class="ctrl-btn ctrl-btn-ghost" title="快照（无骨架）">
+                            <span class="ctrl-icon ctrl-icon-camera"></span>原图
+                        </button>
+                        <div class="ctrl-divider"></div>
                         <button id="btn-rotate" class="ctrl-btn ctrl-btn-secondary">
                             <span class="ctrl-icon ctrl-icon-rotate"></span>旋转
+                        </button>
+                        <button id="btn-annotate" class="ctrl-btn ctrl-btn-secondary active" title="切换详细标注（T）">
+                            <span class="ctrl-icon ctrl-icon-label"></span>详细标注
+                            <kbd>T</kbd>
+                        </button>
+                        <button id="btn-reconnect" class="ctrl-btn ctrl-btn-ghost">
+                            <span class="ctrl-icon ctrl-icon-refresh"></span>重连 BLE
                         </button>
                     </div>
                 </div>
 
                 <!-- Side Panel -->
                 <div class="side-panel">
+
+                    <!-- Live Score Ring -->
+                    <div class="panel-card panel-card-highlight">
+                        <div class="card-header">
+                            <span class="card-title">实时评分</span>
+                            <span class="card-hint">动态</span>
+                        </div>
+                        <div class="score-ring-wrap">
+                            <svg class="score-ring" viewBox="0 0 100 100">
+                                <circle class="ring-track" cx="50" cy="50" r="44"></circle>
+                                <circle class="ring-fill" id="live-ring" cx="50" cy="50" r="44"></circle>
+                            </svg>
+                            <div class="ring-label">
+                                <div class="ring-score mono" id="live-score">--</div>
+                                <div class="ring-denom mono">/10</div>
+                            </div>
+                        </div>
+                        <div class="live-mini-stats">
+                            <div class="mini-stat">
+                                <span class="ms-label">姿态</span>
+                                <span class="ms-bar"><span class="ms-fill" id="ms-fill-pose"></span></span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="ms-label">平稳</span>
+                                <span class="ms-bar"><span class="ms-fill" id="ms-fill-smooth"></span></span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="ms-label">对称</span>
+                                <span class="ms-bar"><span class="ms-fill" id="ms-fill-sym"></span></span>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- BLE Status -->
                     <div class="panel-card">
@@ -81,20 +153,20 @@
                                     <div class="node-dot"></div>
                                 </div>
                                 <div class="node-info">
-                                    <span class="node-name">A1 — 前臂</span>
-                                    <span class="node-rate" id="rate-NODE_A1">-- Hz</span>
+                                    <span class="node-name">A1 <span class="node-role">前臂</span></span>
+                                    <span class="node-meta" id="meta-NODE_A1">-- Hz · 0 包</span>
                                 </div>
-                                <div class="node-tilt" id="tilt-NODE_A1">--°</div>
+                                <div class="node-tilt mono" id="tilt-NODE_A1">--°</div>
                             </div>
                             <div class="ble-node" id="node-NODE_A2">
                                 <div class="node-indicator">
                                     <div class="node-dot"></div>
                                 </div>
                                 <div class="node-info">
-                                    <span class="node-name">A2 — 小腿</span>
-                                    <span class="node-rate" id="rate-NODE_A2">-- Hz</span>
+                                    <span class="node-name">A2 <span class="node-role">小腿</span></span>
+                                    <span class="node-meta" id="meta-NODE_A2">-- Hz · 0 包</span>
                                 </div>
-                                <div class="node-tilt" id="tilt-NODE_A2">--°</div>
+                                <div class="node-tilt mono" id="tilt-NODE_A2">--°</div>
                             </div>
                         </div>
                     </div>
@@ -103,31 +175,31 @@
                     <div class="panel-card">
                         <div class="card-header">
                             <span class="card-title">实时指标</span>
-                            <span class="card-hint">视觉检测</span>
+                            <span class="card-hint">视觉</span>
                         </div>
                         <div class="live-metrics-list">
-                            <div class="live-metric-row" id="metric-leg_deviation">
+                            <div class="live-metric-row leg-metric" id="metric-leg_deviation">
                                 <div class="lm-label">腿部垂直</div>
-                                <div class="lm-value">--</div>
-                                <div class="lm-unit">°</div>
+                                <div class="lm-value mono">--</div>
+                                <div class="lm-unit mono">°</div>
                                 <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
-                            <div class="live-metric-row" id="metric-knee_extension">
+                            <div class="live-metric-row leg-metric" id="metric-knee_extension">
                                 <div class="lm-label">膝盖伸直</div>
-                                <div class="lm-value">--</div>
-                                <div class="lm-unit">°</div>
+                                <div class="lm-value mono">--</div>
+                                <div class="lm-unit mono">°</div>
                                 <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
                             <div class="live-metric-row" id="metric-trunk_vertical">
                                 <div class="lm-label">躯干垂直</div>
-                                <div class="lm-value">--</div>
-                                <div class="lm-unit">°</div>
+                                <div class="lm-value mono">--</div>
+                                <div class="lm-unit mono">°</div>
                                 <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
                             <div class="live-metric-row" id="metric-elbow">
                                 <div class="lm-label">肘关节</div>
-                                <div class="lm-value">--</div>
-                                <div class="lm-unit">°</div>
+                                <div class="lm-value mono">--</div>
+                                <div class="lm-unit mono">°</div>
                                 <div class="lm-bar"><div class="lm-bar-fill"></div></div>
                             </div>
                         </div>
@@ -168,11 +240,19 @@
                 <div class="selector-wrap">
                     <label class="selector-label">数据集</label>
                     <select id="set-selector"><option value="">加载中...</option></select>
+                    <button id="btn-refresh-sets" class="icon-btn" title="刷新">
+                        <span class="ctrl-icon ctrl-icon-refresh"></span>
+                    </button>
+                    <button id="btn-delete-set" class="icon-btn icon-btn-danger" title="删除当前 Set">
+                        <span class="ctrl-icon ctrl-icon-trash"></span>
+                    </button>
                 </div>
-                <div class="analysis-score-inline" id="score-inline" style="display:none">
-                    <span class="si-label">综合评分</span>
-                    <span class="si-score" id="si-score">--</span>
-                    <span class="si-denom">/ 10</span>
+                <div class="analysis-topbar-right">
+                    <div class="analysis-score-inline" id="score-inline" style="display:none">
+                        <span class="si-label">综合评分</span>
+                        <span class="si-score mono" id="si-score">--</span>
+                        <span class="si-denom mono">/ 10</span>
+                    </div>
                 </div>
             </div>
 
@@ -185,14 +265,42 @@
 
         </div>
 
+        <!-- ═══════════════ VIEW: HISTORY ═══════════════ -->
+        <div id="view-history" class="view">
+            <div class="history-topbar">
+                <div class="history-search-wrap">
+                    <span class="history-search-icon"></span>
+                    <input type="text" id="history-search" class="history-search" placeholder="搜索训练组...">
+                </div>
+                <div class="history-filter-group">
+                    <label class="filter-label">排序</label>
+                    <select id="history-sort">
+                        <option value="date-desc">日期 ↓</option>
+                        <option value="date-asc">日期 ↑</option>
+                        <option value="duration-desc">时长 ↓</option>
+                        <option value="duration-asc">时长 ↑</option>
+                    </select>
+                </div>
+                <div class="history-stats" id="history-stats">-- 组</div>
+            </div>
+            <div id="history-grid" class="history-grid">
+                <div class="analysis-placeholder">
+                    <div class="placeholder-mark"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- ═══════════════ VIEW: SETTINGS ═══════════════ -->
         <div id="view-settings" class="view">
             <div class="settings-layout">
+
+                <!-- Camera Settings -->
                 <div class="settings-section">
                     <div class="section-title">相机设置</div>
                     <div class="settings-field">
                         <label class="field-label">摄像头 URL</label>
-                        <input type="text" id="camera-url" class="field-input" placeholder="http://192.168.x.x:port/video">
+                        <input type="text" id="camera-url" class="field-input mono" placeholder="http://192.168.x.x:port/video">
                     </div>
                     <div class="settings-field">
                         <label class="field-label">旋转角度</label>
@@ -203,35 +311,144 @@
                             <button class="btn-rot" data-rot="270">270°</button>
                         </div>
                     </div>
-                    <button id="btn-save-camera" class="save-btn">保存配置</button>
+                    <div class="settings-actions">
+                        <button id="btn-test-camera" class="btn-outline">测试连接</button>
+                        <button id="btn-save-camera" class="save-btn">保存配置</button>
+                    </div>
                     <div class="save-feedback" id="save-feedback"></div>
                 </div>
 
+                <!-- Device Info -->
                 <div class="settings-section">
                     <div class="section-title">设备信息</div>
                     <div class="device-info-table">
                         <div class="di-row">
                             <span class="di-label">NODE_A1</span>
-                            <span class="di-value" id="di-a1">前臂传感器</span>
+                            <input type="text" class="di-value-input mono" id="cfg-node-a1" value="NODE_A1">
+                            <span class="di-meta">前臂</span>
                         </div>
                         <div class="di-row">
                             <span class="di-label">NODE_A2</span>
-                            <span class="di-value" id="di-a2">小腿传感器</span>
+                            <input type="text" class="di-value-input mono" id="cfg-node-a2" value="NODE_A2">
+                            <span class="di-meta">小腿</span>
                         </div>
                         <div class="di-row">
                             <span class="di-label">协议</span>
-                            <span class="di-value">BLE 5.0</span>
+                            <span class="di-value">BLE 5.0 · 52 B/包</span>
                         </div>
                         <div class="di-row">
                             <span class="di-label">视觉</span>
-                            <span class="di-value">MediaPipe Pose</span>
+                            <span class="di-value">MediaPipe Pose (lite)</span>
+                        </div>
+                        <div class="di-row">
+                            <span class="di-label">采样率</span>
+                            <span class="di-value mono" id="cfg-imu-rate">72.5 Hz</span>
+                        </div>
+                    </div>
+                    <button id="btn-save-devices" class="save-btn">保存设备</button>
+                </div>
+
+                <!-- FINA thresholds editor -->
+                <div class="settings-section settings-wide">
+                    <div class="section-title">FINA 扣分阈值</div>
+                    <div class="fina-editor" id="fina-editor">
+                        <!-- populated by JS -->
+                    </div>
+                    <button id="btn-save-fina" class="save-btn">保存阈值</button>
+                </div>
+
+                <!-- Data Stats -->
+                <div class="settings-section">
+                    <div class="section-title">数据目录</div>
+                    <div class="data-stats-grid">
+                        <div class="ds-item">
+                            <span class="ds-label">训练组</span>
+                            <span class="ds-value mono" id="ds-count">--</span>
+                        </div>
+                        <div class="ds-item">
+                            <span class="ds-label">总大小</span>
+                            <span class="ds-value mono" id="ds-size">-- MB</span>
+                        </div>
+                        <div class="ds-item">
+                            <span class="ds-label">路径</span>
+                            <span class="ds-value mono" id="ds-path">data/</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Camera framing guide -->
+                <div class="settings-section settings-wide">
+                    <div class="section-title">相机摆位指南</div>
+                    <div class="guide-grid">
+                        <div class="guide-item">
+                            <div class="guide-icon">📐</div>
+                            <div class="guide-title">距离 2 米</div>
+                            <div class="guide-text">Edriss 2024 用 GoPro 放在池边 2 m 外、垂直立杆上（水面下 30 cm + 水面上 25 cm 双相机）。距离太近骨架会被裁切。</div>
+                        </div>
+                        <div class="guide-item">
+                            <div class="guide-icon">📸</div>
+                            <div class="guide-title">侧面拍摄</div>
+                            <div class="guide-text">裁判席一侧是标准视角（Edriss 2024 + Yue 2023 都用）。正面视角会掩盖腿部偏角。</div>
+                        </div>
+                        <div class="guide-item">
+                            <div class="guide-icon">🎯</div>
+                            <div class="guide-title">全身入镜</div>
+                            <div class="guide-text">初次检测需要完整身体（含头部）。锁定后可短暂遮挡部分躯干，但不要持续遮挡面部超过 2 秒。</div>
+                        </div>
+                        <div class="guide-item">
+                            <div class="guide-icon">💡</div>
+                            <div class="guide-title">光线均匀</div>
+                            <div class="guide-text">强逆光 / 闪光会让 MediaPipe 丢失关键点。让光线来自相机侧、身体正面。</div>
+                        </div>
+                        <div class="guide-item">
+                            <div class="guide-icon">👥</div>
+                            <div class="guide-title">多人支持</div>
+                            <div class="guide-text">本系统支持同时识别 1–8 位队员（团队自由自选）。主要评分针对人物 0（通常是离镜头最近 / 最大者）。</div>
+                        </div>
+                        <div class="guide-item">
+                            <div class="guide-icon">🧠</div>
+                            <div class="guide-title">模型</div>
+                            <div class="guide-text">当前使用 MediaPipe Pose Landmarker <b>heavy</b> 模型（30 MB，论文 r=0.93 vs AutoCAD）。需要更快可改 <code>pose_model_size = "lite"</code>。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis mode -->
+                <div class="settings-section">
+                    <div class="section-title">分析模式</div>
+                    <label class="toggle-row">
+                        <input type="checkbox" id="cfg-upper-body">
+                        <span class="toggle-switch"></span>
+                        <span class="toggle-label">仅上半身（花泳水上视角）</span>
+                    </label>
+                    <div class="setting-help">
+                        适用于从岸上拍摄、下半身在水下的花样游泳场景。开启后隐藏腿部、膝盖相关指标，综合评分仅按上半身四项计算。
+                    </div>
+                </div>
+
+                <!-- Keyboard shortcuts -->
+                <div class="settings-section">
+                    <div class="section-title">键盘快捷键</div>
+                    <div class="shortcut-table">
+                        <div class="sc-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> <span>切换 Tab</span></div>
+                        <div class="sc-row"><kbd>R</kbd> <span>开始录制</span></div>
+                        <div class="sc-row"><kbd>␣</kbd> <span>停止录制</span></div>
+                        <div class="sc-row"><kbd>S</kbd> <span>快照（带骨架）</span></div>
+                        <div class="sc-row"><kbd>T</kbd> <span>切换骨架详细标注</span></div>
+                        <div class="sc-row"><kbd>Esc</kbd> <span>关闭模态框</span></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
     </main>
+
+    <!-- ════════════════════ TOAST CONTAINER ════════════════════ -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ════════════════════ MODAL (confirm) ════════════════════ -->
+    <div id="modal-root" class="modal-root"></div>
 
     <script src="/static/app.js"></script>
 </body>

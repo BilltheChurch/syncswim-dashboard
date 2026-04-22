@@ -1,56 +1,102 @@
+# FINA 扣分阈值 — 基于 Edriss et al. 2024 (IJCSS 23/2) 对 Ballet Leg / Barracuda 的研究。
+# 论文 Figure 2 & 3 的扣分级联: 0-15° = -0.2, 15-30° = -0.5, >30° = -1.0
 [fina]
 clean_threshold_deg = 15
 minor_deduction_deg = 30
 clean_deduction = 0.0
-minor_deduction = 0.2
-major_deduction = 0.9
+minor_deduction = 0.5
+major_deduction = 1.0
 
 [fina.leg_deviation]
-clean = 5
-minor = 15
+clean = 15
+minor = 30
 major = 30
 clean_ded = 0.0
-minor_ded = 0.2
+minor_ded = 0.5
 major_ded = 1.0
 
 [fina.knee_extension]
+# inverted (larger = better): clean >170, minor 155-170, major <155
 clean = 170
 minor = 155
 major = 140
 clean_ded = 0.0
-minor_ded = 0.2
-major_ded = 0.5
+minor_ded = 0.3
+major_ded = 0.8
 
 [fina.leg_symmetry]
 clean = 5
 minor = 15
 major = 30
 clean_ded = 0.0
-minor_ded = 0.2
-major_ded = 0.5
+minor_ded = 0.3
+major_ded = 0.6
 
+# Edriss 2024 Finding: r=-0.444 between shoulder-knee angle and total score.
+# Upper-body-to-knee alignment matters more than isolated leg metrics.
 [fina.shoulder_knee_alignment]
 clean = 170
 minor = 155
 major = 140
 clean_ded = 0.0
-minor_ded = 0.2
-major_ded = 0.5
+minor_ded = 0.5
+major_ded = 1.0
 
 [fina.trunk_vertical]
 clean = 10
 minor = 20
 major = 35
 clean_ded = 0.0
-minor_ded = 0.2
-major_ded = 0.5
+minor_ded = 0.3
+major_ded = 0.6
 
 [hardware]
-camera_url = "http://192.168.66.195:4747/video"
+camera_url = "http://192.168.66.105:4747/video"
 ble_device_name = "NODE_A1"
 ble_char_uuid = "abcd1234-ab12-cd34-ef56-abcdef123456"
-imu_nodes = ["NODE_A1", "NODE_A2"]
-node_placement = { NODE_A1 = "forearm", NODE_A2 = "shin" }
+imu_nodes = [
+    "NODE_A1",
+    "NODE_A2",
+]
+camera_rotation = 270
+# Pose detection backend:
+#   "yolo"      → YOLOv8-pose (recommended for multi-person — reliable,
+#                 handles 2-10 swimmers; ultralytics required)
+#   "mediapipe" → MediaPipe Pose Landmarker (single-person solid,
+#                 multi-person unstable; kept as fallback)
+pose_backend = "yolo"
+# YOLO-specific options (ignored for mediapipe backend):
+yolo_model = "yolov8n-pose.pt"    # "yolov8n-pose.pt" (6MB, fast) or "yolov8s-pose.pt" (22MB, more accurate)
+yolo_conf = 0.35                   # detection confidence threshold
+yolo_device = "mps"                # "mps" (Apple Metal), "cuda", or "cpu"
+# MediaPipe pose model size: "heavy" (30 MB, highest accuracy),
+# "full" (10 MB, balanced), or "lite" (6 MB, fastest). Only used when
+# pose_backend = "mediapipe".
+pose_model_size = "heavy"
+# num_poses: how many swimmers to detect simultaneously (1–10). 8 for team
+# free routines, 1 for solo.
+num_poses = 8
+# pose_mode: "video" = fast, smooth, tracks through frames (may fail if face
+#            gets occluded since re-detection uses face cues);
+#            "image" = every-frame independent detection (slightly jittery
+#            but more robust to face occlusion).
+pose_mode = "video"
+# Detection/tracking confidence thresholds (0.0–1.0).
+#   pose_det_conf   = minimum confidence to START a detection
+#   pose_pres_conf  = minimum confidence for a detected pose to be kept
+#                     (lower = MediaPipe keeps exploring for extra
+#                     persons; raise for single-athlete sessions)
+#   pose_track_conf = minimum confidence to KEEP tracking across frames
+# Defaults tuned for multi-person (num_poses>1) scenarios: looser
+# presence so a second swimmer entering frame gets picked up within a
+# second or two.
+pose_det_conf = 0.4
+pose_pres_conf = 0.3
+pose_track_conf = 0.3
+
+[hardware.node_placement]
+NODE_A1 = "forearm"
+NODE_A2 = "shin"
 
 [dashboard]
 default_role = "Coach"

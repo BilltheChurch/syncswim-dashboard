@@ -361,4 +361,1339 @@ Python 生态的**依赖地狱**是真实存在的工程问题。当多个大型
 
 ---
 
+## 问题 #11：前后端契约不匹配 —— UI 永远空白的"静默失败"
+
+**时间**：阶段六 Coach Workstation 完善阶段
+
+**现象**：
+训练分析页面上有一块漂亮的「传感器数据」卡片——HTML 结构完整、CSS 样式到位、前端函数 `buildSensorSection(report)` 也正确实现，却**永远显示空白**。用户投诉说"这个卡片看起来是假的"。
+
+**分析过程**：
+
+初看以为是 CSS 的 `display: none` 或 z-index 问题，但 DOM 检查显示卡片元素存在，只是内容为空。打开浏览器开发者工具看网络请求：
+```
+GET /api/sets/set_002_20260319_165319/report  → 200 OK
+```
+返回数据：
+```json
+{
+  "overall_score": 7.9,
+  "metrics": [...],
+  "phases": [...],
+  "correlation": -0.497
+}
+```
+发现问题了——**后端根本没有返回 `imu_summary` 字段**。
+
+再看前端代码：
+```js
+function buildSensorSection(report) {
+    const imuData = report.imu_summary || {};   // ← {} 
+    const nodeBlocks = Object.entries(imuData).map(...).join('');
+    if (!nodeBlocks) return '';                  // ← 直接返回空字符串
+    // ...
+}
+```
+
+前端代码非常"友好"——遇到缺失字段时静默退化为空字符串，不报错、不警告。这是典型的**防御式编程掩盖了契约缺口**。
+
+**根本原因**：
+前端 UI 设计（预留了 IMU 卡片布局）和后端 API 实现（只返回核心评分字段）**在不同时间由不同目标推进**，没有共享的数据契约文档。前端开发时想象"未来会有"，后端实现时优先"当前必要"，两边各自 OK，合在一起就是 UI 空壳。
+
+**解决方案**：
+
+**1. 服务端补齐 `imu_summary` 计算（fastapi_app/api_routes.py）**：
+```python
+def _imu_summary(set_dir: str) -> dict:
+    summary = {}
+    for node, df in load_all_imus(set_dir).items():
+        if df.empty:
+            continue
+        packets = len(df)
+        duration = float(df["timestamp_local"].iloc[-1] - df["timestamp_local"].iloc[0])
+        rate = packets / duration
+        tilt = calc_imu_tilt(df[["ax", "ay", "az"]].to_dict("records"))
+        
+        # 丢包率估算：设备时间戳间隔 > 3× 中位数 视为丢包窗口
+        dev_ts = df["timestamp_device"].values.astype(float)
+        intervals = np.diff(dev_ts)
+        med = float(np.median(intervals))
+        lost = int(np.sum(np.round(intervals[intervals > med * 3] / med) - 1))
+        
+        summary[node] = {
+            "packets": packets, "rate": round(rate, 1), "duration": round(duration, 2),
+            "tilt_mean": float(np.mean(tilt)), "tilt_std": float(np.std(tilt)),
+            "lost": lost, "loss_pct": round(100 * lost / max(packets + lost, 1), 2),
+        }
+    return summary
+```
+
+**2. 把 `imu_summary` 加入 `/report` 响应** —— 一个字段，前端瞬间有了数据。
+
+**3. 顺便补齐其他缺失字段**：`duration` / `frame_count` / `fps_mean` / `score_breakdown` / `has_video`，把 API 契约一次性对齐。
+
+**收获**：
+
+这个 bug 的教训不是代码层面的（实现都对），而是**工程流程层面**的：
+1. **防御式编程是双刃剑**：`report.imu_summary || {}` 让代码不崩溃，但也让问题不可见。真正重要的契约缺失应该**响亮地失败**（fail loud）或者**明确地降级**（显示"数据缺失"占位符），而不是静默吞掉。
+2. **前后端的真正契约是 TypeScript / Pydantic / OpenAPI，而不是口头约定**：如果这个 API 响应定义为 Pydantic 模型，字段缺失在 serialization 阶段就会报错。
+3. **UI 的"空态"设计比"正常态"更值得投入**：当数据缺失时给出明确反馈（"此训练组无 IMU 数据"）比什么都不显示有用得多。
+
+这类"UI 看起来正常但功能实际失效"的问题在实际产品中极其常见，**一次前后端接口审查（把实际响应和 UI 期望对一遍）**就能找到一堆。
+
+---
+
+## 问题 #12：视频 MP4 下载而非流式播放 —— 必须支持 HTTP Range 请求
+
+**时间**：阶段六 分析页视频播放器开发
+
+**现象**：
+分析页加入 `<video>` 元素播放录制的 `video.mp4`，想让教练可以回放。第一版路由：
+```python
+@router.get("/sets/{name}/video")
+async def stream_video(name: str):
+    return FileResponse(f"data/{name}/video.mp4", media_type="video/mp4")
+```
+
+在 Chrome / Safari 中：
+- 视频可以播放
+- **但是进度条不能拖动**（拖到任意位置就回到开头）
+- **10MB+ 视频在移动端流量爆炸**（每次切换 Set 都重新下载整个文件）
+
+**分析过程**：
+
+HTML5 `<video>` 元素依赖 **HTTP Range 请求** 实现 seek（跳转）：
+- 用户拖进度条到 50% 时，浏览器发 `Range: bytes=5242880-` 请求
+- 服务器应该返回 `206 Partial Content` + 从该字节开始的数据
+- 不支持 Range 的服务器返回完整文件，浏览器只能回到开头
+
+`FastAPI.FileResponse` 默认**不解析 Range header**，直接 200 返回整个文件。对于图片、小文件没问题，对视频就是 UX 灾难。
+
+另外，完整下载 10MB 视频：
+- 首屏加载延迟高（要等整个视频下载完才能开始播放）
+- 移动流量浪费（用户可能只想看前 5 秒）
+- 服务器内存压力（多个客户端同时下载会占用大量 RAM）
+
+**解决方案**：
+
+手动实现 HTTP Range 响应：
+```python
+@router.get("/sets/{name}/video")
+async def stream_video(name: str, request: Request):
+    video_path = f"data/{name}/video.mp4"
+    file_size = os.path.getsize(video_path)
+    range_header = request.headers.get("range")
+    
+    if range_header:
+        # 解析 "bytes=START-END"
+        m = range_header.replace("bytes=", "").split("-")
+        start = int(m[0]) if m[0] else 0
+        end   = int(m[1]) if len(m) > 1 and m[1] else file_size - 1
+        end   = min(end, file_size - 1)
+        length = end - start + 1
+        
+        # 流式读取（避免把整个分片加载到内存）
+        def iterfile(s, ln):
+            with open(video_path, "rb") as f:
+                f.seek(s)
+                remaining = ln
+                while remaining > 0:
+                    chunk = f.read(min(64 * 1024, remaining))
+                    if not chunk: break
+                    remaining -= len(chunk)
+                    yield chunk
+        
+        return StreamingResponse(
+            iterfile(start, length),
+            status_code=206,
+            media_type="video/mp4",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(length),
+            },
+        )
+    return FileResponse(video_path, media_type="video/mp4")
+```
+
+关键点：
+1. **状态码 206** 而不是 200：告诉浏览器这是分片响应
+2. **`Content-Range` header** 声明分片范围和总大小
+3. **`Accept-Ranges: bytes`** 让浏览器知道可以继续发 Range 请求
+4. **生成器 + 64KB chunks**：边读边发，内存占用恒定
+
+**结果**：
+- Chrome / Safari / Firefox 进度条可以任意拖动
+- 首屏只下载前几百 KB（视频的 moov atom 和开头几秒）
+- 服务器内存使用恒定（不受视频大小影响）
+
+**收获**：
+
+这是一个典型的**"高层抽象的代价"问题**：`FileResponse` 是 FastAPI 提供的便利抽象，覆盖了 90% 的小文件场景，但在视频、大文件、断点续传等场景下**抽象的泄漏**就显现了。
+
+**知道底层协议（HTTP Range）永远比只会用高层 API 更有价值**：
+- `FileResponse` 只是 `open(file).read()` + 设置 Content-Type 的封装
+- Range 请求是 HTTP/1.1 标准（RFC 7233），任何视频播放场景都会用到
+- 一旦理解协议，手动实现只需要 20 行代码
+
+这个问题的姊妹问题是 #8（OpenCV 拉 MJPEG）——**当高层 API 失效时，底层协议理解让你不至于束手无策**。软件工程中真正值钱的不是 API 熟练度，而是对下面一层的理解。
+
+---
+
+## 问题 #13：MediaPipe 在遮挡部位"假装看得见" —— visibility 门控的必要性
+
+**时间**：阶段六上线后真机测试
+
+**现象**：
+用户把 M5Stick 戴在手臂上，相机只拍到上半身（腿完全不在画面内），却发现分析页面上仍然有「腿部垂直偏差」、「双腿对称性」等"正常数值"。更诡异的是这些数值还会**随动作变化而变化**——看起来像真数据。
+
+**分析过程**：
+
+翻 `landmarks.csv`，每行 134 列（33 关键点 × 4 字段），每个点除 x/y/z 外还有 `_vis` 列——这是 MediaPipe 给的**可见度置信度**（0.0–1.0）。抽查发现，画面中没腿的帧里，`right_ankle_vis` 只有 0.05–0.15（远低于正常可见的 0.9+）。但 `right_ankle_x` / `right_ankle_y` 并不是 NaN 或 0——**MediaPipe 根据人体先验给了一个"推测坐标"**（大约在画面下方某处）。
+
+这是 MediaPipe 设计上的取舍：对被遮挡/出画的关键点，它选择**继续"猜"一个合理位置**，而不是抛出 null。目的是保证骨骼连通性（对渲染友好），但对下游**做几何计算的业务逻辑是陷阱**。
+
+核心代码 `dashboard/core/vision_angles.py`：
+```python
+def calc_leg_deviation_vision(df, side="right"):
+    cols = [f"{side}_hip_x", f"{side}_hip_y", f"{side}_ankle_x", f"{side}_ankle_y"]
+    # ...
+    for _, row in df.iterrows():
+        angle = _angle_from_vertical(row[cols[0]], row[cols[1]], row[cols[2]], row[cols[3]])
+        results.append(angle)
+```
+**它完全没读 `*_vis` 列**。MediaPipe 推测的坐标被当成真数据，算出一个"腿部垂直偏差"给教练看。教练据此调整训练——**这是真正的坑**。
+
+**解决方案**：
+
+三层修复：
+
+**1. 底层几何计算加 visibility 门控**（`dashboard/core/vision_angles.py`）：
+```python
+VIS_THRESHOLD = 0.5
+
+def _vis(row, key):
+    vc = f"{key}_vis"
+    if vc not in row.index:
+        return 1.0  # 旧 CSV 没这列，保持兼容
+    return float(row[vc])
+
+def calc_leg_deviation_vision(df, side="right"):
+    # ...
+    for i, (_, row) in enumerate(df.iterrows()):
+        if _vis(row, f"{side}_hip") < VIS_THRESHOLD or _vis(row, f"{side}_ankle") < VIS_THRESHOLD:
+            results[i] = np.nan     # ← 遮挡帧返回 NaN
+            continue
+        results[i] = _angle_from_vertical(...)
+```
+
+**2. 聚合层用 nan-safe 统计**（`dashboard/core/scoring.py`）：
+```python
+# 旧：
+dev_val = float(np.mean(calc_leg_deviation_vision(landmarks_df)))
+# 新：
+_a = calc_leg_deviation_vision(landmarks_df)
+dev_val = float(np.nanmean(_a)) if np.any(~np.isnan(_a)) else 0.0
+```
+`np.nanmean` 忽略 NaN；如果全部帧都遮挡，用安全默认值（腿部偏差 → 0°，膝伸直 → 180°，即"没问题"）。
+
+**3. API 输出 JSON 安全**（`fastapi_app/api_routes.py`）：
+```python
+series[key] = [None if np.isnan(arr[i]) else round(float(arr[i]), 2) for i in idx]
+```
+JSON 规范不支持 NaN，必须转成 `null`。
+
+**4. 前端折线图在 null 处断线**（`fastapi_app/static/app.js`）：
+```js
+let pen = false;
+s.data.forEach((v, i) => {
+    if (v == null || Number.isNaN(v)) { pen = false; return; }
+    if (!pen) { c.moveTo(x, y); pen = true; }
+    else c.lineTo(x, y);
+});
+```
+遮挡期间曲线出现**明显断口**，教练一眼看出"这段没拍到腿"。
+
+**收获**：
+
+1. **机器学习库的输出不是"上帝真理"**。MediaPipe 设计者有他们的优化目标（渲染平滑），我们的目标是**严谨的几何计算**。对 ML 输出做**下游可信度检查**是工程师的责任。
+2. **缺失数据的三种表达**：null（不知道）、0（已知为零）、猜测值（可能是真，也可能是假）。混淆这三者会让整个数据分析都靠不住。
+3. **断链比假数据安全**：宁可折线上断一段让教练看到"这里没数据"，也不要画一条假曲线骗教练做出错误判断。
+4. **API 契约必须 JSON-safe**：NumPy 的 NaN/Inf 直接序列化成 JSON 会报错或变成非法 token。跨语言边界时统一用 `None` → `null`。
+
+---
+
+## 问题 #14：页面状态不持久 —— rotation 是最小但最典型的样本
+
+**时间**：阶段六上线后用户首次真机使用
+
+**现象**：
+教练每次打开 dashboard，视频默认显示是"侧倒"的（手机竖放 DroidCam 推出来的流就是竖向）。他必须每次点一下"旋转 90°"才能看到正方向。调整好之后，下次重新打开——又是侧倒。
+
+**分析过程**：
+
+翻前端代码：
+```js
+let currentRotation = 0;  // ← 硬编码初始值
+```
+翻后端 `POST /api/camera/config`：
+```python
+if req.rotation is not None and req.rotation in (0, 90, 180, 270):
+    _camera.rotation = req.rotation
+    # URL 保存了 → hw["camera_url"] = req.url
+    # 但 rotation 忘了持久化！
+```
+`CameraManager.__init__` 里也是：
+```python
+self._rotation = 0  # ← 每次重启又是 0
+```
+
+所以链条：**前端发 POST → 后端更新内存 → 没写 config.toml → 重启内存丢失 → CameraManager 默认 0**。三个环节任何一个持久化了都不会出问题，但三个都漏了。
+
+**解决方案**：
+
+把 rotation 作为一等配置字段穿三层：
+
+```python
+# camera_manager.py
+def __init__(self, camera_url=None, rotation=None):
+    cfg_hw = load_config().get("hardware", {})
+    if camera_url is None:
+        camera_url = cfg_hw.get("camera_url", "http://...")
+    if rotation is None:
+        rotation = int(cfg_hw.get("camera_rotation", 0))
+    self._rotation = rotation if rotation in (0, 90, 180, 270) else 0
+```
+
+```python
+# api_routes.py  POST /api/camera/config
+if req.rotation is not None and req.rotation in (0, 90, 180, 270):
+    _camera.rotation = req.rotation
+    hw["camera_rotation"] = req.rotation   # ← 持久化到 config.toml
+```
+
+```js
+// app.js — 页面启动时读配置，让 UI 和后端状态对齐
+async function preloadCameraState() {
+    const cfg = await fetch('/api/config').then(r => r.json());
+    const hw = cfg.hardware || {};
+    if (hw.camera_rotation !== undefined) {
+        currentRotation = parseInt(hw.camera_rotation, 10) || 0;
+        $$('.btn-rot').forEach(b =>
+            b.classList.toggle('active', parseInt(b.dataset.rot, 10) === currentRotation));
+    }
+}
+preloadCameraState();
+```
+
+**收获**：
+
+这是个**"小而典型"的状态持久化 bug**——单一字段，但暴露了三层架构之间的**状态一致性**问题：
+1. UI 状态（浏览器 `currentRotation`）
+2. 服务器内存状态（`CameraManager._rotation`）
+3. 持久化存储（`config.toml`）
+
+任何改动用户偏好的操作都必须**三层同步**，否则某个层级重启就会"穿帮"。做后端的工程师很容易漏掉第 3 步——因为内存改了"看起来就是对的"，不做长时间 kill-restart 测试发现不了。
+
+**教训**：**一切用户可见的偏好都要默认持久化**。把"持久化"当成状态机的必经步骤，而不是事后的"功能增强"。
+
+---
+
+## 问题 #15：视频区域挤掉录制按钮 —— flex 布局的经典陷阱
+
+**时间**：阶段六真机测试（手机竖向 DroidCam 流）
+
+**现象**：
+用户报告"页面大小不统一，需要滚动才能看到下面的按钮"。屏幕录像显示：打开 dashboard 时，视频区域把整屏撑满，"开始录制"按钮被推到视口下方，必须滚动才能点到。
+
+**分析过程**：
+
+原 CSS：
+```css
+.live-layout {
+    display: flex;
+    gap: 14px;
+    min-height: calc(100vh - 84px);   /* ← min-height，不是 height */
+}
+
+.video-wrapper { flex: 1; }
+
+#video-canvas {
+    width: 100%;
+    max-height: 60vh;                  /* ← 60vh 在横屏 OK，竖屏太高 */
+}
+```
+
+问题链：
+1. `.live-layout` 用 `min-height`——视频大时可以**突破视口**撑开页面
+2. 视频是 canvas，`canvas.width = img.width; canvas.height = img.height;` 每帧用真实分辨率。竖屏手机流 480×640 被放到 `width: 100%` → 按屏幕宽度缩放 → 高度按比例变成屏宽的 4/3
+3. 1920px 宽屏上，视频高度可以轻松超过 1000px，控制栏被挤到 1500px 往下
+
+这是 flex 布局里经典的"**子元素内容撑爆容器**"问题。**`flex: 1` 只保证占满剩余空间，不限制最大尺寸**。
+
+**解决方案**：
+
+三处联动改：
+```css
+.live-layout {
+    display: flex;
+    gap: 14px;
+    height: calc(100vh - 84px);      /* 从 min-height 改成 height — 锁死视口 */
+    overflow: hidden;
+}
+
+.video-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;                    /* 关键！允许 flex 子项收缩到小于内容高度 */
+}
+
+.video-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;                    /* 同上 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#video-canvas {
+    max-width: 100%;
+    max-height: 100%;                 /* 不再用 60vh，跟随容器 */
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+```
+
+关键点：**`min-height: 0` 是破解这个问题的魔法**。Flex item 默认 `min-height: auto`，意思是"最小高度 = 内容自然高度"。如果 canvas 里有个 640px 的图片，flex item 就至少 640px，无论父容器多小。`min-height: 0` 让它可以收缩到任意尺寸，再配合 `max-height: 100%` 让 canvas 按比例缩放。
+
+**收获**：
+
+`min-height: 0` 是 flex 布局最反直觉的坑之一：
+- 初学者以为 `flex: 1` 就能控制大小
+- 实际上 flex 算法有个"内容高度下限"保护
+- 需要显式 `min-height: 0` / `min-width: 0` 才能真正让子项按 flex 比例分配，而不是被内容撑大
+
+这个坑之所以隐蔽，是因为**大部分测试环境是横屏**，内容自然高度不超过 60vh，症状不出现；一上竖屏相机/真实用户设备就炸。**写响应式布局必须测至少 3 种纵横比**：16:9 桌面、9:16 手机竖向、1:1 Instagram 式。
+
+---
+
+## 问题 #16：BLE 重启后必须重启 M5 —— BLE 状态机的"失联不失约"
+
+**时间**：阶段六真机多次开发调试后
+
+**现象**：
+教练每次 `Ctrl+C` 停掉 dashboard 服务、重启之后，M5Stick 的 BLE 就**连不上了**——必须按 M5 的电源键重启硬件，Python 才能再次扫描到它。对开发迭代体验极差：每改一行代码重启都要按 2 次硬件电源键。
+
+**分析过程**：
+
+BLE 是**有状态的双方协议**。建立连接时，中央（Python/macOS CoreBluetooth）和外设（M5）各自维护一份"连接状态"。正常断开需要一方发 `LL_TERMINATE_IND`，另一方收到后才会清理状态并重新进入广播模式。
+
+问题链条：
+1. `Ctrl+C` → Python 主进程收到 SIGINT → FastAPI shutdown 被触发
+2. `shutdown()` 调 `ble_manager.stop()` → 设置 `self.running = False`
+3. 后台 daemon 线程中的 asyncio 循环**还没来得及检测到 running=False**，主进程就退出了
+4. 守护线程（`daemon=True`）被操作系统**强行终止**
+5. `async with BleakClient(...)` 的 `__aexit__` 没机会执行 → **没发送断开请求**
+6. M5 端依然认为"连接存活"——**等待 30 秒的 BLE 链路超时**才会发 onDisconnect → 重启广播
+7. 用户在 30 秒内重启服务 → 扫描不到 M5 → 以为挂了 → 手动重启 M5
+
+**解决方案**：
+
+两端配合修：
+
+**Python 端 (`ble_manager.py`)**：
+```python
+def stop(self, grace: float = 4.0) -> None:
+    """Signal all node threads to stop with grace period."""
+    self.running = False
+    for t in self._threads:
+        if t.is_alive():
+            t.join(timeout=grace)  # ← 等待 asyncio 优雅清理
+    self._threads.clear()
+```
+
+并在 asyncio 循环中显式断开：
+```python
+async with BleakClient(target.address) as client:
+    node.connected = True
+    await client.start_notify(...)
+    while (client.is_connected and self.running and not node.force_reconnect):
+        await asyncio.sleep(0.2)
+    try:
+        await client.stop_notify(...)
+    except Exception:
+        pass
+    if client.is_connected:
+        try:
+            await client.disconnect()   # ← 主动发断开，不等 __aexit__
+        except Exception:
+            pass
+```
+
+**force_reconnect 机制** — `/api/ble/reconnect` 设置每个节点的 `force_reconnect=True`：
+```python
+@router.post("/ble/reconnect")
+async def ble_reconnect():
+    for node in _ble.nodes.values():
+        node.force_reconnect = True
+    return {"status": "reconnecting"}
+```
+内循环观测这个 flag → 立即 `disconnect()` → 外层重新 scan。这样即使万一进入"死连接"状态，用户点一下"重连 BLE"按钮就能强制修复，不用重启硬件。
+
+**退避算法** — 扫描失败不再固定 3 秒：
+```python
+backoff = 1.0
+while self.running:
+    devices = await BleakScanner.discover(4.0, return_adv=True)
+    if not target:
+        await asyncio.sleep(min(backoff, 4.0))
+        backoff = min(backoff * 1.5, 4.0)
+        continue
+    backoff = 1.0
+```
+找不到时快速重试（1→1.5→2.25→3.4→4s 封顶），找到后重置。
+
+**收获**：
+
+1. **daemon 线程是开发陷阱**：方便启动时不管它，但进程退出时**没有任何清理机会**。对于有持久外部连接（BLE、TCP、数据库）的线程，应该用非守护线程或显式 join。
+2. **协议状态机必须双向对齐**：只管自己那头的"我断开了"，不管对端的"你收到了吗"，就会留下僵尸连接。BLE 尤其严重，因为 supervision timeout 可以长达 30 秒。
+3. **graceful shutdown 不是可选项**：在嵌入式/IoT 系统里，"进程死掉了" ≠ "资源释放了"。把 shutdown 流程写对和把启动流程写对一样重要。
+4. **给用户手动兜底**：即使自动重连逻辑完美，硬件物理故障（wifi 干扰、电池弱）仍会卡住。提供"重连"按钮让用户 5 秒内自助解决，远好于每次叫教练重启设备。
+
+---
+
+## 问题 #17：实时页"眼盲手不盲" —— visibility 门控在前后两层都必须做
+
+**时间**：阶段六 visibility 修复（问题 #13）上线后
+
+**现象**：
+问题 #13 修好分析页对遮挡关节的伪数据后，**实时页（dashboard 上方的"实时指标"面板）还在显示**：相机里只有上半身，但"腿部垂直 2.2°、膝盖伸直 179.5°"照样跳动。
+
+**分析过程**：
+
+问题 #13 修复的是 `dashboard/core/vision_angles.py` ——这是**分析已录制数据**的路径。而实时页的角度数据来自另一条路径：
+
+```
+CameraManager._run() [后台线程]
+  → landmarker.detect(mp_image)
+  → _compute_angles(landmarks, w, h)
+  → self._latest = {..., angles: {...}}
+  → ws_video.py → WebSocket → 浏览器
+  → updateLiveMetrics(data.angles)
+```
+
+核心代码 `fastapi_app/camera_manager.py` 的 `_compute_angles`：
+```python
+def _compute_angles(landmarks, w, h):
+    # ...
+    angles["leg_deviation"] = _angle_from_vertical(...)   # ← 不检查 visibility
+    angles["knee_extension"] = calc_angle(pt(24), pt(26), pt(28))
+```
+
+一模一样的疏漏——**MediaPipe 对被遮挡关节的猜测坐标被直接当数据**。问题 #13 只修了录制后分析那路，这个实时路没改。
+
+**解决方案**：
+
+把同样的 visibility 门控搬到实时路径，加上侧面视角的对侧补充（`elbow_left` / `knee_extension_left` / `shoulder_line`）：
+
+```python
+LIVE_VIS_THRESHOLD = 0.5
+
+def _compute_angles(landmarks, w, h):
+    lm = landmarks
+    def v(idx):
+        return getattr(lm[idx], "visibility", 1.0)
+    def ok(*idxs):
+        return all(v(i) >= LIVE_VIS_THRESHOLD for i in idxs)
+    
+    angles = {}
+    if ok(24, 28):          # 髋 + 踝
+        angles["leg_deviation"] = ...
+    if ok(24, 26, 28):      # 髋 + 膝 + 踝
+        angles["knee_extension"] = ...
+    if ok(12, 24):          # 肩 + 髋
+        angles["trunk_vertical"] = ...
+    # 对侧（侧面拍摄时）
+    if ok(11, 13, 15):
+        angles["elbow_left"] = ...
+    # ...
+    return angles
+```
+
+前端 `updateLiveMetrics` 看到 `undefined` 会显示 "--"，用户一眼看出"这段没检测到"而不是"数值是 0.0"。
+
+**收获**：
+
+这是**"同一个 bug 在两条代码路径上都得修"** 的典型案例。很多团队有这样的结构：
+- 实时路径 / 事后分析路径
+- 客户端路径 / 服务端路径
+- Web 路径 / 移动端路径
+
+相同的业务规则（比如"遮挡关节不算"）如果没有**集中抽象**，就会散落在多处，修一处漏一处。
+
+**经验**：
+1. **写新代码时**，警惕"这个判断在另一个文件我已经写过了"的感觉——很可能意味着应该抽成共享函数
+2. **修 bug 时**，问"还有哪些地方可能有同样的问题"——`grep` 找所有相同模式的代码
+3. **做 code review 时**，优先看"这个改动有没有对称的遗漏"——往往并发/异步路径会被遗忘
+
+对这个项目而言，我给两条路径都加了 `VIS_THRESHOLD` 常量（分析路径是 `VIS_THRESHOLD`，实时路径是 `LIVE_VIS_THRESHOLD`），未来如果需要可以合并成一个配置项。
+
+---
+
+## 问题 #18：Canvas 不听 object-fit —— 视频在巨大黑框中心变小
+
+**时间**：阶段六 UI 审查
+
+**现象**：
+修完 `min-height: 0` flex 陷阱（问题 #15）后，画面不再挤掉按钮，但竖屏手机流（480×720）在 1500px 宽的桌面容器中显示时，**左右各有约 500px 的黑边**——视频看起来"又小又孤独"。
+
+**分析过程**：
+
+尝试过的 CSS：
+```css
+#video-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;  /* ← 无效 */
+}
+```
+
+这里的核心认知错误：**`object-fit` 只适用于 `<img>`、`<video>`、`<object>` 这种"有真实内容"的替换元素**。`<canvas>` 是个"画板"——它有两种尺寸：
+1. **像素缓冲区尺寸**（`canvas.width` / `canvas.height` HTML 属性）：决定绘图坐标系
+2. **CSS 显示尺寸**（`style.width` / `style.height`）：决定视觉呈现
+
+`object-fit` 对 canvas 无效 —— 浏览器会把 canvas 的像素缓冲区内容**拉伸**填满 CSS 显示区域。
+
+如果我们在 JS 里做 `canvas.width = img.width; canvas.height = img.height;` 然后 CSS `width: 100%; height: 100%`，drawing 被按容器比例拉伸——**画面变形**。
+
+如果 CSS 用 `width: auto; height: auto`，canvas 按像素缓冲尺寸渲染（480×720），`max-*: 100%` 会约束不超过容器，但**不会保持宽高比**——会压缩其中一维导致变形。
+
+**解决方案**：
+
+既然 CSS 自动机制不够，直接用 JS 测量**一次**图像尺寸，**显式计算**wrapper 应有的 CSS 宽高：
+
+```js
+let _lastAspect = 0;
+
+function fitVideoWrapper(aspect) {
+    if (Math.abs(aspect - _lastAspect) < 0.01) return;
+    _lastAspect = aspect;
+
+    const wrap = canvas.parentElement;
+    const col = wrap.parentElement;
+    const controlsH = col.querySelector('.controls-bar').offsetHeight;
+    const availH = col.clientHeight - controlsH - 10;
+    const availW = col.clientWidth;
+
+    let targetH = availH;
+    let targetW = targetH * aspect;
+    if (targetW > availW) {
+        targetW = availW;
+        targetH = availW / aspect;
+    }
+    wrap.style.width  = Math.floor(targetW) + 'px';
+    wrap.style.height = Math.floor(targetH) + 'px';
+}
+
+img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    // ...draw...
+    fitVideoWrapper(img.width / img.height);
+};
+```
+
+同时把 CSS 改成让 wrapper 承担"宽高比容器"职责：
+```css
+.video-wrapper {
+    flex: 0 1 auto;
+    max-width: 100%;
+    max-height: 100%;
+    /* JS 会写入 inline width/height 来控制比例 */
+}
+#video-canvas {
+    width: 100%;
+    height: 100%;
+    /* 像素缓冲仍由 JS 按图像尺寸设置 */
+}
+```
+
+然后把 side panel 从 260 → 340 px，让两侧黑边更窄。
+
+**收获**：
+
+1. **Canvas 和 img 虽然都能显示图像，但在 CSS 语义上完全不同**：canvas 是"有内部坐标系的块级元素"，没有原生 aspect 保持机制。
+2. **`object-fit` / `aspect-ratio` 这类"浏览器智能"不是银弹**——看文档 caniuse，确认你的元素类型支持
+3. **"前后端分工"的另一种版本**：CSS 做 90% 的布局，但最后 10% 的精确控制往往需要 JS 测量 DOM + 计算 + 赋值。做响应式设计不要纠结"要不要用 JS"，工具选最简单够用的
+4. **把一次性计算结果缓存**（`_lastAspect` 只有变化时重算）是小优化但重要——不做这个，每一帧都会触发 layout thrashing
+
+---
+
+## 问题 #19：骨架标注信息量不足 —— 专家期望看到所有可测量维度
+
+**时间**：阶段六真机用户反馈（教练视角）
+
+**现象**：
+教练看到原版骨架叠加图只有"肘 155°、膝 178°"两个角度 + 简单的骨骼连线。他的反馈是："我想看到所有关节都有名字、所有角度都有数值，而且骨架要牢牢锁住人的身体。"
+
+**分析过程**：
+
+这不是 bug，是**专家用户对数据密度的期望 vs 普通用户对简洁的期望**的冲突。教练作为专业用户：
+- 需要看到每个关键点的名称（以便用专业术语和学生交流："你左肘张角小了"）
+- 需要看到所有可计算角度的当前值（多个角度同时评估动作协调性）
+- 需要看到置信度（判断标注可靠性）
+
+但普通用户看到 33 个点 + 10+ 个角度 pill 会觉得画面"过载"。
+
+**解决方案**：
+
+不选边站，两者都要 —— 加一个"详细标注"开关（按钮 + 快捷键 `T`，localStorage 持久化）：
+
+**Normal 模式（默认简洁）**：
+- 12 条骨骼连线
+- 12 个主要关节的圆点
+- 3 个关键角度标签（肘、膝、腿）
+
+**Detailed 模式（专家详细）**：
+- 全部 33 个关键点圆点（大小随置信度变化，低置信度用半透明）
+- 12 个主要关节的**中文名称**标签（左肩、右肩、左肘、右肘……）
+- 所有已计算角度的标签（右肘/左肘、右膝/左膝、右髋、右腿/左腿、躯干、肩线）
+
+关键实现：
+```js
+const JOINT_LABELS = {
+    11: '左肩', 12: '右肩', 13: '左肘', 14: '右肘',
+    15: '左腕', 16: '右腕', 23: '左髋', 24: '右髋',
+    25: '左膝', 26: '右膝', 27: '左踝', 28: '右踝',
+};
+
+const ANGLE_MARKERS = [
+    { key: 'elbow',               joint: 14, label: 'R肘' },
+    { key: 'elbow_left',          joint: 13, label: 'L肘' },
+    { key: 'knee_extension',      joint: 26, label: 'R膝' },
+    { key: 'knee_extension_left', joint: 25, label: 'L膝' },
+    // ...
+    { key: 'trunk_vertical',      joint: [23, 24], label: '躯干' },  // 中点
+    { key: 'shoulder_line',       joint: [11, 12], label: '肩线' },
+];
+
+function drawSkeletonOnCanvas(c, cv, landmarks, angles) {
+    const detailed = _annotationMode === 'detailed';
+    // ...
+    const jointSet = detailed
+        ? Array.from({ length: 33 }, (_, i) => i)    // 全部 33 个
+        : [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];  // 13 个关键
+    // ...
+}
+```
+
+伴生：
+- 置信度映射点大小：`r = 3 + vis * 2`（低置信度 3px，高置信度 5px）
+- 低可见度点用半透明颜色 `rgba(59,130,246,0.6)`，提醒"这个点不太靠得住"
+
+**收获**：
+
+1. **专家用户 vs 普通用户的分歧**是产品设计的永恒话题，一般解法：**默认简洁、专家模式明确开关**
+2. **UI 开关要同时满足**"记得住偏好"（localStorage）+ "一键切换"（快捷键 `T`）+ "视觉可识别"（按钮的 active 状态）
+3. **数据可视化里，置信度不应该被隐藏**——把置信度编码到视觉维度（颜色深浅、圆点大小）比把它藏在文本里更有效
+4. **中文标注胜过英文缩写**——用户是中国教练，看到"左肘"比看到"L_Elbow"反应更快
+
+## 问题 #20：打开页面就自动开始录制 —— "首包即状态"的陷阱
+
+**时间**：阶段六真机测试，教练反馈"服务一启动就录了"
+
+**现象**：
+教练启动服务器、打开浏览器，发现 dashboard 在**一秒钟内**就从 IDLE 跳到 REC，开始录制。他根本没有按 M5 的 A 键、也没点页面上的"开始录制"按钮。
+
+**分析过程**：
+
+BLE 二进制协议每个包都带 state 字节（0=IDLE, 1=REC）。[ble_manager.py](fastapi_app/ble_manager.py) 用"状态变化检测"防止重复触发：
+```python
+if node_name == self.master_node and self.on_state_change:
+    if not hasattr(node, '_last_dev_state') or node._last_dev_state != dev_state:
+        node._last_dev_state = dev_state
+        self.on_state_change(dev_state, set_n)
+```
+
+看起来正确——"变化时才触发"。但问题在**第一个包**上：此时 `_last_dev_state` 还不存在，条件里的 `or` 短路后直接进 `if`，调用 `on_state_change(dev_state, set_n)` — 且 `dev_state` 可能是 "REC"（如果 M5 上次录制结束时忘了切回 IDLE，或者上个调试会话残留）。
+
+`main.py` 的回调：
+```python
+if dev_state == "REC" and not recorder.recording:
+    recorder.start_recording(set_number)
+```
+
+→ **自动启动录制**。用户毫无察觉。
+
+**根本原因**：
+"边缘触发（edge-triggered）"的检测逻辑用 `!hasattr` 作为初始值，把**首次观测**也当成"变化"，从而在程序启动时把设备的**既有状态**误判为"新事件"。
+
+**解决方案**：
+
+两步 gate：
+```python
+if node_name == self.master_node and self.on_state_change:
+    if not hasattr(node, '_last_dev_state'):
+        node._last_dev_state = dev_state     # 只记录基线，不触发
+    elif node._last_dev_state != dev_state:
+        node._last_dev_state = dev_state
+        self.on_state_change(dev_state, set_n)  # 真实变化才触发
+```
+
+第一步"静默建立基线"，之后才响应变化。
+
+**收获**：
+
+这个 bug 在软件里叫做 **"首帧特殊处理"（first-frame special case）**。几乎所有做事件/状态机/传感器融合的系统都会撞一次。经典表现：
+- 游戏引擎的 `isButtonPressedThisFrame`：第一帧 `was` 是 undefined，所有已按下按键都"算新按"
+- React 的 `useEffect` 依赖数组：第一次渲染依赖都"变化了"
+- 自动驾驶的目标追踪：从 nothing → something，每个目标都是"新出现"
+
+**设计原则**：**状态机的边沿检测必须显式区分"初始化"和"状态跳变"两种情况**。不要用 `!hasattr` / `undefined` / `None` 作为"可能变化"的占位——它们的语义是"未知"，不是"旧状态"。
+
+---
+
+## 问题 #21：空数据也给满分 —— 诚实比优雅更重要
+
+**时间**：阶段六真机使用后发现
+
+**现象**：
+教练按 Button A 很快又切回，录了一个 0 秒的空 set。进入分析页，看到：
+- 综合评分：**10.0 / 10**
+- 姿态评分：**10.0**，伸展：**10.0**，对称：**10.0**，运动：**10.0**
+- 详细指标每一项都是"达标 · -0.0"
+
+**他以为是界面 bug — 实际上是算法在"编故事"**。
+
+**分析过程**：
+
+翻 `scoring.py` 的老实现：
+```python
+# 当没有数据时用"安全默认值"
+else:
+    height_val = 0.0         # assume ok
+    knee_val = 180.0          # assume straight, no penalty
+    align_val = 180.0         # assume aligned
+    trunk_val = 0.0           # assume vertical
+    sym_val = 0.0             # assume symmetric
+```
+
+这些"安全默认值"的语义全部是"完美"——然后经过 `compute_deduction` 全部得到 `zone="clean"`，deduction = 0。最后 `overall_score = 10.0 - sum(deductions) = 10.0`。
+
+代码里的每个决策都有"设计理由"（"数据没到，先默认满分，总不能凭空扣分吧？"），但**合在一起就是骗教练**。真正的信息——"我们根本没测到这个指标"——在每一层都被"合理默认值"吞掉了。
+
+**解决方案**：
+
+引入 `zone="no_data"` 语义 + 禁用默认值：
+
+```python
+@dataclass
+class MetricResult:
+    name: str
+    value: float | None      # None == "no data"
+    unit: str
+    deduction: float
+    zone: str                # "clean" | "minor" | "major" | "no_data"
+    max_value: float
+
+
+def _no_data(name, unit, max_value):
+    return MetricResult(name=name, value=None, unit=unit,
+                        deduction=0.0, zone="no_data", max_value=max_value)
+
+
+def _nanmean_or_none(arr, min_samples=1):
+    """Return nan-safe mean, or None if nothing usable."""
+    if arr is None or len(arr) == 0:
+        return None
+    valid = np.asarray(arr, dtype=float)[~np.isnan(arr)]
+    if len(valid) < min_samples:
+        return None
+    return float(np.mean(valid))
+```
+
+每个指标改成：
+```python
+trunk_val = _nanmean_or_none(calc_trunk_vertical(landmarks_df), min_samples=3) if has_landmarks else None
+if trunk_val is None:
+    metrics.append(_no_data("trunk_vertical", "deg", 90.0))
+else:
+    d, z = compute_deduction(trunk_val, config, metric="trunk_vertical")
+    metrics.append(MetricResult("trunk_vertical", trunk_val, "deg", d, z, 90.0))
+```
+
+**综合评分改由"可用指标"计算**：
+```python
+real_metrics = [m for m in metrics if m.zone != "no_data"]
+if len(real_metrics) < 2:
+    overall_score = None                         # 干脆不给分
+else:
+    overall_score = max(0.0, 10.0 - sum(m.deduction for m in real_metrics))
+```
+
+**前端的相应改动**：
+```js
+if (zone === 'no_data' || m.value === null) {
+    return `<div class="metric-card no-data">
+              <span class="mc-value">—</span>
+              <div class="mc-zone zone-no_data">无数据</div>
+            </div>`;
+}
+```
+
+综合评分为 null 时显示"—"并附横幅解释："本训练组数据不足，无法给出综合评分。"
+
+**验证**：
+一个只有 IMU / 没有视频的 set，以前显示 10.0，现在显示 8.3（= IMU 三项实测值的扣分结果），视觉指标全部显示"无数据"，雷达图说"数据不足，无法绘制"。
+
+**收获**：
+
+这个 bug 的教训是**"合理的默认值可能比没有值更糟糕"**：
+
+1. **空态设计（empty-state design）是产品设计的核心**——教练看到"这里没数据"会知道要去解决采集问题；教练看到"满分 10.0"会以为系统在工作，运动员在跳"完美"动作。后者的危害**大于没有系统**。
+
+2. **默认值有"信息性"和"非信息性"两种**。`price = 0` 在购物车里是非信息的（0 = 免费），但 `leg_deviation = 0°` 是强信息的（0 = 完美垂直）——**不应该把"缺失"映射到有语义的默认值**。
+
+3. **Python/JavaScript 的 `0` / `None` / `NaN` / `undefined` 最好不要混用**。`0` 是真值，`None/null` 是"无"，`NaN` 是"计算失败"。在数据管线里必须一致地区分，**跨边界（CSV → Python → JSON → JS）时尤其小心**。
+
+---
+
+## 问题 #22：分析页骨架叠加按钮无效 —— 占位符代码的后果
+
+**时间**：阶段六上线后用户测试
+
+**现象**：
+分析页的视频播放器上有"骨架叠加" toggle，默认开启，图标有反馈，但**视频画面上从来没看到任何骨架**。关掉再开也一样。
+
+**分析过程**：
+
+直接看 [app.js:setupSkeletonOverlay](fastapi_app/static/app.js) 的当时实现：
+```js
+const drawOverlay = async () => {
+    if (!tgl.classList.contains('active')) {
+        c2.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+    const rect = video.getBoundingClientRect();
+    canvas.width  = Math.max(1, rect.width);
+    canvas.height = Math.max(1, rect.height);
+    // No client-side landmark data — just overlay a thin "REC OVERLAY"...
+    const c2 = canvas.getContext('2d');
+    c2.clearRect(0, 0, canvas.width, canvas.height);
+    c2.strokeStyle = 'rgba(59,130,246,0.0)'; // no-op; placeholder
+};
+```
+
+**是我自己当初写的 placeholder！** 注释上写着 `// no-op; placeholder` —— 意思是"骨架叠加暂不实现，等我后面补上"。但 UI 已经放好了按钮、CSS 做了状态，这段"暂空"的代码就永远堆在那里。
+
+这是典型的**"半成品 UI"**：功能入口存在（按钮能点、能亮），但后端没填，用户以为在工作。
+
+**解决方案**：
+
+1. **后端**：新增 `/api/sets/{name}/landmarks` 返回压缩 JSON：
+```json
+{
+    "fps": 25.0,
+    "duration": 16.3,
+    "times": [0.0, 0.04, 0.08, ...],
+    "frames": [[[x, y, v], ... 33 点], ...]
+}
+```
+
+2. **前端** `setupSkeletonOverlay` 重写：
+```js
+async function setupSkeletonOverlay(name) {
+    // 加载 landmarks
+    const landmarks = await fetch(`/api/sets/${name}/landmarks`).then(r => r.json());
+
+    // 二分查找最接近当前时间的帧
+    function findFrameIdx(t) {
+        const times = landmarks.times;
+        let lo = 0, hi = times.length - 1;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (times[mid] < t) lo = mid + 1; else hi = mid;
+        }
+        return lo;
+    }
+
+    // 处理 video + object-fit:contain 的 letterbox 偏移
+    function resizeCanvas() {
+        const rect = video.getBoundingClientRect();
+        const vw = video.videoWidth, vh = video.videoHeight;
+        const scale = Math.min(rect.width/vw, rect.height/vh);
+        const drawW = vw * scale, drawH = vh * scale;
+        const x = (rect.width - drawW) / 2;
+        const y = (rect.height - drawH) / 2;
+        canvas.width = rect.width; canvas.height = rect.height;
+        return { x, y, w: drawW, h: drawH };
+    }
+
+    function drawOverlay() {
+        const box = resizeCanvas();
+        c2.clearRect(0, 0, canvas.width, canvas.height);
+        if (!tgl.classList.contains('active')) return;
+        const idx = findFrameIdx(video.currentTime);
+        const pts = landmarks.frames[idx];
+        // 画骨骼连线 + 关节点
+        // 坐标：box.x + p[0] * box.w, box.y + p[1] * box.h
+    }
+
+    // 播放时 rAF，暂停时单次
+    let rafId = null;
+    function loop() {
+        drawOverlay();
+        if (!video.paused) rafId = requestAnimationFrame(loop);
+    }
+    video.addEventListener('play', () => loop());
+    video.addEventListener('seeked', drawOverlay);
+    video.addEventListener('loadedmetadata', drawOverlay);
+}
+```
+
+关键细节：
+- **Letterbox 计算**：`<video>` 元素用 `object-fit: contain`，实际画面在容器中居中带黑边。canvas 覆盖在上方时，骨骼坐标要按画面实际位置（带 x/y 偏移 + 实际 w/h）映射，不能直接用容器尺寸。
+- **二分查找**：landmarks 一秒 25 帧，200 秒的视频就有 5000 帧。每次 timeupdate (~4Hz) 如果线性扫描会卡。二分查找 O(log n)。
+- **rAF 节流**：播放时用 requestAnimationFrame 跟视频刷新率同步（一般 60fps），暂停时画一次省电。
+
+**收获**：
+
+1. **Placeholder 代码是债务**。标记 `// TODO` 就会忘；放上看起来"能跑"的空实现就会**骗自己+骗用户**。更好的做法：**要么不放 UI，要么报错**：
+   ```js
+   const drawOverlay = () => {
+       throw new Error('Skeleton overlay not yet implemented');
+   };
+   ```
+   至少在控制台会看到红色警告。
+
+2. **"UI 先行"要么 all-in，要么 none**。写 HTML 时留好空位很容易，但你放了一个"漂亮的按钮"就等同于**签下了一份功能契约**——用户会假设它工作。
+
+3. **坐标系转换是 overlay 类代码的最大坑**：视频、canvas、DOM 的坐标系不一定对齐，加上 CSS 的 `object-fit` / transform 就更复杂。**写 overlay 前画一张"坐标系映射图"是值得的**。
+
+---
+
+## 阶段六最后一轮 — 应用论文研究成果
+
+**时间**：读了两篇花样游泳相关论文后，做系统升级
+
+论文：
+- **Edriss et al. 2024** (IJCSS 23/2) — MediaPipe 验证 vs AutoCAD 黄金标准（r=0.93, ICC=0.92）
+- **Yue et al. 2023** (Scientific Reports 13:21303) — 从 11 届国际比赛 105 队视频归纳出 5 个显著得分预测变量
+
+**吸收并落实的三点**：
+
+### 1. FINA 扣分尺度校准
+论文 Figure 2 & 3 明确：偏差 0–15° = -0.2，15–30° = -0.5，>30° = -1.0。项目之前的 `config.toml` 是拍脑袋定的。现在改成：
+```toml
+[fina.leg_deviation]
+clean = 15
+minor = 30
+clean_ded = 0.0
+minor_ded = 0.5
+major_ded = 1.0
+```
+这样系统给出的扣分跟真实比赛的裁判判罚同尺度。
+
+### 2. 新增 Yue 2023 的显著变量
+论文回归分析出 5 个显著预测变量。我们新增：
+- **`leg_height_index`**（腿高指数）%：thigh above water / total leg length。国际队平均 30.8%，顶级队 32.7%。评分档位按论文：≥32 clean、25–32 minor、<25 major。
+- **`movement_frequency`**（动作频率）Hz：IMU 加速度包络峰值/秒。**Yue 2023 里 β=0.345, p<0.001 是最强正向预测变量**。评分档位按国际队典型值（1.6–2.2 Hz 为 clean）。
+
+### 3. 升级到 Heavy 模型
+论文用的是 MediaPipe Holistic（全身+脸+手），精度最高。我们之前用 lite 模型（6 MB），现在下载 heavy（30 MB，精度 ~30% 提升）并设为默认：
+```toml
+pose_model_size = "heavy"  # 或 "lite" 换速度
+```
+
+`camera_manager.py` 加 `_resolve_model_path()` 函数，按 config 优先级查找本地文件，找不到自动降级。
+
+**收获**：
+
+**论文指引"测什么"，工程决定"怎么测"**。系统层面的启示：
+1. 跟真实比赛裁判体系对齐的扣分尺度 → 教练用系统的反馈可以**无缝翻译成比赛环境下的调整建议**。
+2. 单一关节角度（膝、肘）是**入门级指标**；真正对评分有预测力的是**动作动力学指标**（频率、节律、图形持续时间）。把这些指标做进系统，从"看姿态"上升到"看策略"。
+3. 读论文不是脱离工程的学术活动——**论文里的效应量（β、r、p）就是特征工程的先验**。想知道哪个指标最值得做？把标准化回归系数按绝对值排序就是。
+
+---
+
+## 问题 #23：MediaPipe Pose 的"面部依赖"错觉 —— 两阶段检测流水线的陷阱
+
+**时间**：阶段六真机测试后，教练用笔记本挡住脸，身体还在画面内
+
+**现象**：
+教练把笔记本电脑放在身前挡住脸部，**身体明明完整可见**，但骨架整体消失 / 反复闪烁 / 跳跃到错误位置。取下笔记本，骨架立刻稳定。
+
+教练的直觉是"系统在依赖面部识别"。这个直觉**部分正确**，但理解它为什么正确需要深入 MediaPipe 的架构。
+
+**分析过程**：
+
+MediaPipe Pose Landmarker 是一个**两阶段流水线**：
+```
+Frame → [Person Detector]  →  ROI bbox  →  [Landmark Model]  →  33 keypoints
+```
+
+1. **Person Detector (BlazePose)** 的训练数据**大量依赖头部/面部特征**作为"人"的信号。这个检测器的作用是找到图像中的人并给出 ROI。当面部被遮挡：
+   - 检测分数降低
+   - 若低于 `min_pose_detection_confidence` → 整个帧判为"没人" → 没有后续 landmark 提取
+   - 即使有 ROI，也可能给到错误位置（比如挡住脸的笔记本）
+
+2. **VIDEO mode 的"tracking 继续"** 原本是优势：首帧检测到后，后续帧用上一帧的 ROI 继续提取 landmarks，省去重检测。但此模式有**退出条件**：当 tracking confidence 低于 `min_tracking_confidence`，会触发重新检测。重新检测失败（面部遮挡）→ 又退回 tracking → 又失败 → **振荡循环**。用户看到的就是"闪烁跳跃"。
+
+3. 两篇论文没遇到这个问题是因为**池边拍摄全景**，整个身体永远在画面内、面部永远可见。**实验室 bench testing 暴露了论文方法论的盲区**。
+
+**这是 MediaPipe 的架构限制，不是我们的代码 bug**。想要"面部无关"的骨架检测，需要换模型（YOLOv8-pose、RTMPose、mmpose）——工程量大，暂不做。
+
+**可以改善的三个方向**：
+
+**方向 1 — 降低置信度阈值**
+让追踪在部分遮挡时更持久：
+```toml
+pose_det_conf = 0.5      # 原 0.6：更容易开始检测
+pose_pres_conf = 0.5     # 姿态存在置信度
+pose_track_conf = 0.4    # 原 0.6：追踪在遮挡时不立即掉线
+```
+
+**方向 2 — 用户可切 IMAGE 模式**
+`VIDEO` 每 N 帧才做一次完整检测（之间都是 tracking）；`IMAGE` 每帧都独立检测。后者慢且抖，但**遮挡恢复更快**（不会卡在"失败 tracking"里出不来）：
+```toml
+pose_mode = "video"  # or "image"
+```
+切到 image 后可能 FPS 从 25 掉到 15 左右，但面部遮挡场景恢复性能变好。
+
+**方向 3 — UI 引导**
+设置页新增"相机摆位指南"面板，明确告诉教练：**初次识别需要完整身体入镜**，锁定后可短暂遮挡部分躯干但不要持续遮挡面部 > 2s。
+
+**收获**：
+
+1. **"库的直觉"和"库的实现"往往不同**。MediaPipe 的文档说"detect 33 pose keypoints"，让人以为这是纯粹的身体几何模型。但 **实现上它先检测人**，而人的检测器又偏好面部信号。这种隐藏依赖只有在边界场景才暴露。
+2. **两阶段流水线的失败会"级联放大"**。Stage 1 失败 → Stage 2 无数据 → 用户看到整个系统失效。这在 ML 系统里非常常见，比如：
+   - OCR：版面分析失败 → 识别全错
+   - 语音识别：端点检测失败 → 文本全错
+   - 检索：召回失败 → 排序全错
+3. **论文的 "limitation" 小节值得认真读**。Edriss 2024 明确说："variations in lighting and background can affect the accuracy of the system"。这不是 "免责声明"，而是**系统真实的失败模式**。如果想把研究成果产品化，必须设计"当 limitation 触发时怎么办"的 fallback。
+4. **给用户"模式开关"比"自动决策"更好**。我们不知道每个场景的最优参数——让教练自己按场景切换 `video` / `image` 模式，比我们自作主张强制一种方案健康。
+
+---
+
+## 阶段六收尾 — 多人支持 + 6 个新指标 + 论文研究的系统落地
+
+### 1. 多人识别 (num_poses=1 → 8)
+
+MediaPipe Pose Landmarker 从 0.10.x 开始原生支持 `num_poses` 参数。**我之前没开**。现在默认 8 人（花样游泳团体自由自选）：
+
+```python
+options = PoseLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=_MODEL_PATH),
+    running_mode=RunningMode.VIDEO,
+    num_poses=8,
+    ...
+)
+```
+
+WebSocket payload 增加 `all_landmarks`（全部识别到的人）和 `person_count`（人数）。主评分人依然是 `landmarks[0]`（primary），其他人用紫色淡化线条画骨架（`drawSecondaryPose`），右下角徽章从"检测中 / 无人"升级为"N 人"。
+
+### 2. 论文里显著但还没实现的 3 个变量全部补齐
+
+Yue 2023 Table 3 列出 8 个变量 + 5 个显著预测值。之前只实现了 `movement_frequency` 和 `leg_height_index`。这次补上剩余 3 个：
+
+| 指标 | 计算方式 | 黄金范围 |
+|---|---|---|
+| `rotation_frequency` | `‖gyroscope‖` 的均值（deg/s），IMU 陀螺仪直接输出 | 顶级队 44.95 ± 10.07 deg/s |
+| `mean_pattern_duration` | 加速度包络峰值间的平均间隔（秒） | 顶级队 5.45 s |
+| `last_hf_duration` | 最后一个峰值到录制结束的时长 | 顶级队 16.98 s |
+
+`rotation_frequency` 这里有个**关键优势**：论文用 Kinovea 人工点标从视频估计旋转，误差大；**我们用 IMU 陀螺仪直接测，精度高一个数量级**。
+
+### 3. 我们独有的 3 个 IMU 指标（论文没有）
+
+论文只有视频，我们有 **IMU + 视频**。这是我们的独有信息，应该充分利用：
+
+| 指标 | 物理含义 | 公式 |
+|---|---|---|
+| `explosive_power` | 爆发力 | 95% 分位数 ‖accel - 1g‖ |
+| `energy_index` | 代谢消耗代理 | ∫‖accel - 1g‖ dt / duration |
+| `motion_complexity` | 动作复杂度 | 加速度幅值谱的 Shannon 熵 |
+
+这三个指标：
+- 单独使用意义模糊（每个技术动作的"正确爆发力"不同）
+- **横向对比时才放光**：同一运动员在两次训练中，`energy_index` 上升 = 同样的动作花了更多能量 = 疲劳 / 动作不经济
+- Coach 的实用场景：**训练前后对比**，判断进步 / 倦怠
+
+### 4. FINA 扣分尺度与 Edriss 2024 对齐
+
+论文 Figure 2/3 明确给出扣分梯度（0-15° = -0.2, 15-30° = -0.5, >30° = -1.0）。我重写 `config.toml`，让系统扣分与裁判判罚同尺度，这样教练用系统的反馈可以**直接翻译成比赛场景**。
+
+### 5. 面部遮挡的三层改善（见问题 #23）
+
+降低检测置信度阈值 + 新增 `pose_mode = video/image` 切换 + 设置页添加"相机摆位指南"。
+
+### 6. 综合效果
+
+以 `data/set_002_20260319_165319` 为例（31s 前臂 IMU + 无视觉）：
+
+```
+overall_score: 7.7             (之前 10.0 伪满分)
+  leg_deviation         value=—     zone=no_data      (诚实：没视觉数据)
+  leg_height_index      value=—     zone=no_data
+  knee_extension        value=—     zone=no_data
+  smoothness            value=20.3  zone=minor  -0.5
+  stability             value=44.9  zone=major  -1.0
+  movement_frequency    value=2.30  zone=minor  -0.2
+  rotation_frequency    value=283.7 zone=major  -0.3   (新！IMU 专属)
+  mean_pattern_duration value=0.83  zone=major  -0.3   (新！)
+  last_hf_duration      value=0.18  zone=clean  0.0    (新！)
+  explosive_power       value=1.71  zone=clean  0.0    (新！我们独有)
+  energy_index          value=0.57  zone=clean  0.0    (新！我们独有)
+  motion_complexity     value=8.55  zone=major  0.0    (新！我们独有)
+```
+
+从 8 个指标扩展到 15 个指标（9 个真实数据 + 6 个 no_data 诚实报告）。教练能看到的训练维度**翻倍**，且每个维度都有**明确的研究引用或物理意义**。
+
+---
+
+**最终收获 — 论文与工程的互操作**：
+
+1. **论文是工程的先验**：β / ICC / p-value 这些统计量**直接告诉你哪些特征值得做**。不看论文拍脑袋加指标 = 做一堆"听起来合理但实际无效"的东西。
+2. **工程是论文的乘数**：论文限于"用什么测"的层面（camera、软件），但**怎么测、怎么呈现给用户、怎么对比训练前后、怎么处理缺失**这些都是工程问题。把论文结论产品化，比复现论文本身有价值得多。
+3. **把论文的"局限性"当 TODO 来做**：Edriss 2024 结尾建议"与 Xsens IMU 对比"——我们正好有 IMU。这种"论文没做但建议做"的方向是最好的产品机会点。
+
+---
+
+## 问题 #24：回放三连错 —— 骨架快半拍、分析页没有队友、时长显示 0 秒
+
+### 症状
+
+教练拿到 `set_008_20260422_142249` 这一段：
+
+1. **分析页不显示第二个人的骨架**。明明实时预览能看到 P2、P3，回放时只剩主要运动员那一根蓝色骨架。
+2. **回放骨架比视频快半拍**：滑动进度条没事，按下 Play 之后眼看着骨架已经做下一个动作了，视频还在上一帧。
+3. **时长显示 `--:-- · 0.0s`**：明明录了 27 秒的视频，分析页的"时长"卡却显示 0。
+
+### 分析过程
+
+先看第 3 条，这是最容易复现的。`data/set_008_*/` 里：
+
+```
+imu_NODE_A1.csv    67B   ← 只有一行 header，BLE 没连上
+imu_NODE_A2.csv    67B
+landmarks.csv      749 KB
+video.mp4          9.3 MB
+vision.csv         30 KB
+```
+
+`api_routes.py::set_report` 里 `duration` 的计算只看 IMU：
+
+```python
+for df in load_all_imus(set_dir).values():
+    if not df.empty and "timestamp_local" in df.columns:
+        ts = df["timestamp_local"].values.astype(float)
+        if len(ts) > 1:
+            duration = max(duration, float(ts[-1] - ts[0]))
+```
+
+IMU CSV 是空的（只有 header），`len(ts) == 0`，duration 始终是 0。**IMU-only 的假设在"只拍了视频"的场景里是错的**。
+
+再看第 2 条（骨架 drift）。用 `ffprobe` 读 video 元信息：
+
+```
+video.mp4    691 frames @ 25 fps    duration = 27.64s
+vision.csv   692 rows (含 header) → 691 行数据  ✓
+landmarks.csv  654 rows (含 header) → 653 行数据  ✗ 少 38 行
+```
+
+691 vs 653。**landmarks.csv 比 video.mp4 少 38 帧**。
+
+翻到 `main.py::_vision_writer_loop`：
+
+```python
+recorder.write_vision(local_ts, frame_count, ...)    # 每帧都写
+
+if data["landmarks"] and len(data["landmarks"]) == 33:   # ← 门控
+    lm_dicts = [...]
+    recorder.write_landmarks(local_ts, frame_count, lm_dicts)
+
+if data.get("raw_frame") is not None:
+    recorder.write_video_frame(data["raw_frame"])        # 每帧都写
+```
+
+**姿态未检测到的帧，landmarks 被跳过，但 video 还在写**。长时间跑下来，两个文件行数就对不齐。
+
+前端 `findFrameIdx` 是按比例映射的：
+
+```js
+const ratio = video.currentTime / video.duration;
+return Math.round(ratio * (landmarks.frames.length - 1));
+```
+
+假设遮挡集中在录制末尾（运动员游出视野），landmarks 的密度就是"前密后疏"。按比例映射：video currentTime=50% → skeleton 取 landmarks[~326]，但这 326 行其实是前 ~85% 真实时间里录下的。**骨架显示的是"未来的姿势"，比视频快。这正是教练看到的半拍 drift**。
+
+最后第 1 条（没有 P2）。看 `recorder.write_landmarks`：签名只接受一个 `landmarks_list`，也就是主要运动员那一组。`CameraManager` 生产了 `all_landmarks`（所有人）和 `landmarks`（主），但 `_vision_writer_loop` 只把主要那组写盘。结果：**实时视图能看到 P2，录制完成后的 CSV 里只有 P1，回放时自然只画得出一个人**。
+
+### 根因（三合一）
+
+| 症状 | 根因 |
+|------|------|
+| 骨架快半拍 | `_vision_writer_loop` 对 landmarks 有"有姿态才写"的条件，对 video 没有 → 行数不对齐 → 比例映射错位 |
+| 没有 P2/P3 骨架 | 录制层从来没有持久化 `all_landmarks`，只写了主要运动员 |
+| 时长 0 秒 | `duration` 计算只依赖 IMU，无 IMU 的训练组没有回退 |
+
+三个问题都来自**同一个"只为主路径设计"的思维惯性** —— 当初写录制代码时假设 IMU 必连、假设主要运动员必可见、假设姿态必检测到，结果碰到边界情况就集体塌方。
+
+### 修复
+
+**1. landmarks.csv 与 video.mp4 强制 1:1 对齐**
+
+`main.py::_vision_writer_loop` 现在无条件写一行 landmarks，缺失时由 `recorder.write_landmarks` 自动填 0。
+
+```python
+lm_list = data.get("landmarks") or []
+lm_dicts = [
+    {"x": l[0], "y": l[1], "z": 0.0, "visibility": l[2]} for l in lm_list
+] if lm_list and len(lm_list) == 33 else []
+recorder.write_landmarks(local_ts, frame_count, lm_dicts)
+```
+
+这样每帧 `video.mp4` 都严格对应一行 `landmarks.csv`，比例映射再怎么算都不会漂移。
+
+**2. 新增 `landmarks_multi.jsonl` 保存多人数据**
+
+JSONL 格式，每行一帧 + 所有被检测到的运动员：
+
+```json
+{"ts":1713770569.123,"frame":42,"persons":[[[0.51,0.48,0.93],...×33], [[0.33,0.29,0.81],...×33]]}
+```
+
+`Recorder.write_landmarks_multi` 跟 `write_video_frame` 并行调用，天然保证行数一致。
+
+**3. `/api/sets/{name}/landmarks` 返回 `all_frames`**
+
+有 `landmarks_multi.jsonl` 的训练组额外返回 `all_frames: [persons_per_frame, ...]`，前端 `setupSkeletonOverlay` 用 `TEAM_COLORS` 画出 P1（蓝色主角）+ P2/P3...（其他颜色 + "P2" 标签）。
+
+**4. 时长回退链**
+
+`set_report` 的 duration 现在顺序尝试：
+
+```
+IMU timestamp 范围
+  → vision.csv timestamp 范围
+  → landmarks.csv timestamp 范围
+  → video frame_count / fps     （最后的兜底）
+```
+
+纯视频录制、纯 IMU 录制、纯视觉录制，都能得到一个合理的时长。
+
+### 收获
+
+1. **"1:1 对齐" 不是契约，是构造出来的**：如果两个文件期望严格同长，必须保证**同一个写循环里无条件各写一行**，别留"选择性跳过"的分支。否则对齐只是当下碰巧成立，而不是永远成立。
+2. **按比例映射是一把双刃剑**：`currentTime/duration` 这套比例映射优雅省事，但它**严格依赖两端采样密度一致**。一旦密度不一致（哪怕只是 5% 的 drift），视觉上就是"比过去更快"或"比未来更慢"。排查此类问题要先验证"两边到底有多少个样本"。
+3. **回退链是面向失败场景的设计**：`duration` 从 IMU 回退到 vision 再回退到 landmarks 再回退到 video container 的每一步，都对应一个真实场景（无 IMU / 无视觉 / 无姿态 / 什么都不全）。这不是过度设计，是"面向我们真实拿到的烂数据"的工程自觉。
+4. **用 ffprobe / wc -l 量化差异**：靠 "看着不对" 调不动这种 bug，必须把视频帧数、CSV 行数拿到手同框对比。一旦数字摆出来，根因立刻自解。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

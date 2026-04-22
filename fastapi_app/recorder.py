@@ -6,8 +6,11 @@ Ported from sync_recorder.py into a reusable class.
 """
 
 import csv
+import json
 import os
 import re
+import shutil
+import subprocess
 import threading
 import time
 from datetime import datetime
@@ -75,6 +78,11 @@ class Recorder:
         self._landmarks_file = None
         self._landmarks_writer = None
 
+        # Multi-person landmarks (JSONL: one line per video frame,
+        # captures every detected person — needed so the analysis
+        # page can replay team routines with a per-person skeleton).
+        self._landmarks_multi_file = None
+
         # Video
         self._video_writer = None
         self._video_writer_pending = False
@@ -121,6 +129,7 @@ class Recorder:
             set_dir = os.path.join(self._data_dir, f"set_{set_number:03d}_{ts}")
             os.makedirs(set_dir, exist_ok=True)
             self._set_dir = set_dir
+            print(f"[recorder] start set_{set_number:03d} → {set_dir}")
 
             # Per-node IMU CSVs
             for node_name in IMU_NODES:
@@ -145,6 +154,14 @@ class Recorder:
             self._landmarks_file = f3
             self._landmarks_writer = w3
 
+            # Multi-person landmarks — JSONL, one line per written
+            # video frame. Kept strictly 1:1 with video frames so the
+            # analysis page can map video.currentTime → exact frame
+            # index without drift (see DEVLOG #13).
+            self._landmarks_multi_file = open(
+                os.path.join(set_dir, "landmarks_multi.jsonl"), "w"
+            )
+
             # Video writer will be initialized on first frame
             self._video_writer_pending = True
 
@@ -160,6 +177,7 @@ class Recorder:
                 return
             self._recording = False
             self._last_set_dir = self._set_dir
+            set_dir_to_transcode = self._set_dir   # snapshot for the async worker
 
             # Close per-node IMU files
             for node_name in list(self._imu_files.keys()):
@@ -184,6 +202,12 @@ class Recorder:
             self._landmarks_file = None
             self._landmarks_writer = None
 
+            # Close multi-person landmarks JSONL
+            if self._landmarks_multi_file:
+                self._landmarks_multi_file.flush()
+                self._landmarks_multi_file.close()
+            self._landmarks_multi_file = None
+
             # Release video writer
             if self._video_writer:
                 self._video_writer.release()
@@ -191,6 +215,70 @@ class Recorder:
             self._video_writer_pending = False
 
             self._start_time = None
+
+        # Kick off background H.264 transcode OUTSIDE the lock so the
+        # HTTP /recording/stop response returns immediately. HTML5
+        # <video> in Chrome/Safari struggles with OpenCV's mp4v codec
+        # even though cv2.VideoCapture reads it fine. Re-encoding to
+        # H.264 with faststart makes every browser able to play and
+        # seek the recording.
+        if set_dir_to_transcode:
+            self._transcode_to_h264_async(set_dir_to_transcode)
+
+    def _transcode_to_h264_async(self, set_dir: str) -> None:
+        """Fire-and-forget: spawn a daemon thread that re-encodes
+        ``video.mp4`` from mp4v → H.264 (libx264). On success,
+        atomically replaces the original file; on failure keeps the
+        mp4v file so the recording is never lost.
+        """
+        src = os.path.join(set_dir, "video.mp4")
+        if not os.path.exists(src):
+            return
+        tmp = os.path.join(set_dir, "video.h264.tmp.mp4")
+
+        def _worker():
+            try:
+                result = subprocess.run(
+                    [
+                        "ffmpeg", "-y",
+                        "-i", src,
+                        "-c:v", "libx264",
+                        "-preset", "veryfast",
+                        "-crf", "23",
+                        "-pix_fmt", "yuv420p",       # max browser compat
+                        "-movflags", "+faststart",   # moov atom at head
+                        "-loglevel", "error",
+                        tmp,
+                    ],
+                    capture_output=True, timeout=600,
+                )
+                ok = (
+                    result.returncode == 0
+                    and os.path.exists(tmp)
+                    and os.path.getsize(tmp) > 1024
+                )
+                if ok:
+                    os.replace(tmp, src)
+                    print(f"[recorder] transcoded to H.264: {src} "
+                          f"({os.path.getsize(src) / 1024 / 1024:.1f} MB)")
+                else:
+                    err = result.stderr.decode(errors="ignore")[:200]
+                    print(f"[recorder] transcode failed (rc={result.returncode}): {err}")
+                    try:
+                        os.remove(tmp)
+                    except OSError:
+                        pass
+            except FileNotFoundError:
+                print("[recorder] ffmpeg not found — skipping H.264 transcode; "
+                      "browser may have trouble playing mp4v files")
+            except Exception as e:
+                print(f"[recorder] transcode error: {e}")
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+
+        threading.Thread(target=_worker, daemon=True, name="transcode").start()
 
     # ---- Write methods ----
 
@@ -268,11 +356,45 @@ class Recorder:
             if self._vision_frame_count % 30 == 0:
                 self._landmarks_file.flush()
 
+    def write_landmarks_multi(self, local_ts: float, frame_count: int,
+                              all_landmarks: list):
+        """Write one JSONL row per video frame with every detected person.
+
+        ``all_landmarks`` is a list of up to N persons; each person is a
+        list of 33 ``[x, y, visibility]`` triples (normalized coords).
+        Empty list is fine — we always write a row so the file stays
+        1:1 with ``video.mp4`` frames (see DEVLOG #13 sync fix).
+        """
+        with self._lock:
+            if not self._recording or self._landmarks_multi_file is None:
+                return
+            persons = []
+            for lm in (all_landmarks or []):
+                if not lm or len(lm) != 33:
+                    continue
+                persons.append([
+                    [round(float(p[0]), 4), round(float(p[1]), 4),
+                     round(float(p[2]), 3)]
+                    for p in lm
+                ])
+            row = {"ts": round(float(local_ts), 3),
+                   "frame": int(frame_count),
+                   "persons": persons}
+            self._landmarks_multi_file.write(json.dumps(row, separators=(",", ":")) + "\n")
+            if self._vision_frame_count % 30 == 0:
+                self._landmarks_multi_file.flush()
+
     def write_video_frame(self, frame):
         """Write a BGR numpy frame to video.mp4.
 
         Initializes VideoWriter on first frame using frame dimensions.
-        Codec: avc1, 25 fps.
+        Codec: **mp4v** (pure-software MPEG-4 encoder). We explicitly
+        avoid ``avc1`` / H.264 because on Apple Silicon the H.264
+        hardware path goes through Metal, and when YOLO is already
+        using MPS (Metal Performance Shaders) the two contend for the
+        same GPU context — recording a frame can block for seconds,
+        which stalls the vision writer and freezes the whole pipeline.
+        ``mp4v`` runs on CPU and is rock-solid.
         """
         with self._lock:
             if not self._recording:
@@ -280,9 +402,12 @@ class Recorder:
             # Initialize on first frame
             if self._video_writer_pending and self._set_dir:
                 video_path = os.path.join(self._set_dir, "video.mp4")
-                fourcc = cv2.VideoWriter_fourcc(*"avc1")
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
                 h, w = frame.shape[:2]
                 self._video_writer = cv2.VideoWriter(video_path, fourcc, 25.0, (w, h))
+                opened = self._video_writer.isOpened() if self._video_writer else False
+                print(f"[recorder] video writer init: {video_path} {w}x{h} "
+                      f"fourcc=mp4v opened={opened}")
                 self._video_writer_pending = False
 
             if self._video_writer:
