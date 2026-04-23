@@ -1,0 +1,48 @@
+# SyncSwim YOLOv8-pose dataset config
+#
+# Layout (after `tools/preannotate.py` + CVAT correction):
+#
+#   data/training/
+#     images/          # all extracted + corrected frames (jpg)
+#     labels/          # corresponding YOLO pose label files
+#     train.txt        # OPTIONAL — list of training images (one path per line)
+#     val.txt          # OPTIONAL — list of validation images
+#     syncswim.yaml    # this file
+#
+# When `train`/`val` point to a directory, ultralytics globs all
+# images and does an automatic 80/20 split based on filename hash.
+# That split is BAD for our use-case: adjacent frames from one
+# video end up in both halves, inflating val mAP. Override by
+# creating explicit train.txt / val.txt where val.txt contains
+# every frame from a video filmed in a venue / on a day that the
+# training set has never seen — see docs/fine-tuning.md §"第 3 步".
+
+# Path is resolved relative to ultralytics' dataset root, which by
+# default sits two levels up from the yaml. Going back to the repo
+# root and into data/training keeps things stable regardless of where
+# you launch the training command from.
+path: ../../data/training
+train: images
+val: images   # PLACEHOLDER — replace with val.txt before publishing
+
+# Single-class detection (matches COCO pose convention)
+nc: 1
+names:
+  0: person
+
+# COCO-17 keypoint shape (matches yolov8s-pose.pt that the project
+# already ships with — same indices fastapi_app/yolo_pose.py uses)
+kpt_shape: [17, 3]
+
+# Left/right keypoint pairs for horizontal-flip augmentation.
+# COCO-17:
+#   0  nose
+#   1  left_eye         ↔  2  right_eye
+#   3  left_ear         ↔  4  right_ear
+#   5  left_shoulder    ↔  6  right_shoulder
+#   7  left_elbow       ↔  8  right_elbow
+#   9  left_wrist       ↔ 10  right_wrist
+#  11  left_hip         ↔ 12  right_hip
+#  13  left_knee        ↔ 14  right_knee
+#  15  left_ankle       ↔ 16  right_ankle
+flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]

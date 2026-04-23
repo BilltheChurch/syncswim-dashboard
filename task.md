@@ -206,13 +206,15 @@ data/
 - [x] 键盘快捷键 1/2/3/4/5 映射更新；设置页快捷键文档同步
 - [x] DEVLOG #27
 
-### 7.4 微调 YOLO（依赖 7.0 素材到位后）
-- [ ] 用现有 `yolov8s-pose.pt` 半监督预标注真实素材
-- [ ] CVAT / Label-Studio 修正水下 / 翻身 / 遮挡帧（起步 200–500，正式 2000+）
-- [ ] `yolo pose train data=syncswim.yaml model=yolov8s-pose.pt epochs=100 imgsz=640 device=mps`
-- [ ] 在留出场地的 set 上测 OKS / mAP@50（守门：训练集没见过的场地）
-- [ ] `config.toml` 切换 `yolo_model` 到自训权重，热替换 pipeline
-- [ ] DEVLOG 记录微调前后对比
+### 7.4 微调 YOLO — 准备工作完成 ✅，实际训练等 7.0
+- [x] [tools/preannotate.py](tools/preannotate.py) — 半监督预标注（每 N 帧抽样、`--conf 0.3` 让 borderline 也进入预标）
+- [x] [tools/train_pose.py](tools/train_pose.py) — 包装 ultralytics yolo pose train，augmentation 已针对水中场景调（mosaic 0.5、degrees 5、hsv_v 0.5）
+- [x] [tools/eval_pose.py](tools/eval_pose.py) — 包装 yolo pose val，输出 mAP@50/50-95，注释里写明"评估集必须来自训练集没见过的场地"
+- [x] [data/training/syncswim.yaml](data/training/syncswim.yaml) — ultralytics 配置（17 个 COCO keypoints + flip_idx 左右镜像）
+- [x] [docs/fine-tuning.md](docs/fine-tuning.md) — 完整流程：囤素材 → 预标 → CVAT 修正 → 手动拆 train/val（避免 auto-split 把同视频相邻帧分两边）→ 训练 → 评估 → 部署
+- [x] `.gitignore` 排除 `data/raw_videos/`、`data/training/{images,labels}/`、`runs/` 但保留 `syncswim.yaml`
+- [x] DEVLOG #28
+- [ ] **等 7.0 真实素材**：跑一次完整流程出第一个 `best.pt`，然后切换 `config.toml` 部署
 
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
