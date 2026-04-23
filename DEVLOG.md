@@ -1696,4 +1696,457 @@ IMU timestamp 范围
 
 ---
 
+## 问题 #25：多人骨架的"脸盲" —— 颜色按数组顺序绑定，导致教练对不上人
+
+### 症状
+
+阶段六给多人录制做了 P1（蓝）/ P2（紫）/ P3（橙）的颜色区分，看上去挺像那么回事。直到我们脑补一个真实场景：
+
+> 两位运动员 A、B 同框。开始 A 离镜头近、area 大 → 系统判 A 是 P1（蓝）、B 是 P2（紫）。半秒后 B 翻身朝镜头扑近，area 反超 A → P1 变成 B（蓝突然变成另一个人）、A 沦为 P2（紫）。
+
+颜色和身份**完全是数组顺序的副产品**。教练眼里看到的是「蓝色那个人变身了」，但 IMU 还绑在 A 身上，分析就全错位。
+
+更糟的是，这个问题在阶段六的 demo 数据里看不出来 —— 当时只有一个人。它**只在真实多人训练里才会暴露**，而我们到目前为止还没去过真泳池。属于"离线设计的代码碰到真实使用必崩"的典型范本。
+
+### 这事儿为什么是阶段七的前置
+
+后续两件事都依赖"同一个人在所有帧里、所有 Set 之间，能被认出是同一个人"：
+
+1. **运动员名 ↔ ID 映射**（7.2）—— 教练手动给"#3"起名"张三"，之后看到 #3 就知道是张三
+2. **跨 Set 趋势对比**（7.3）—— 同一个张三的两次训练做对比图
+
+如果"#3"在帧之间会换人、会跨 Set 重新分配，上面两件事就是空中楼阁。所以阶段七必须先解决**身份**问题，再做名字、再做对比。
+
+### 实现：YOLOv8-pose 接 BYTETracker
+
+ultralytics 自带 ByteTrack 集成 —— 把 `model.predict()` 换成 `model.track(persist=True, tracker='bytetrack.yaml')` 即可。返回的 `result.boxes.id` 就是稳定 track_id（卡尔曼滤波 + IoU 关联）。
+
+#### 关键扩展：返回值变成 `(persons, track_ids)` 元组
+
+[fastapi_app/yolo_pose.py](fastapi_app/yolo_pose.py) 里 `detect()` 原本只返回 area-排序的 person 列表，现在多返回一个等长的 `track_ids: list[int|None]`。`None` 出现在两种情况：① BYTETracker 还没给新检测分配 ID（极罕见、就一帧）；② 用 MediaPipe backend（无追踪能力，全 None）。
+
+排序时要保证 ids 跟 persons 对齐 —— sort by area 之后用 `track_ids = [track_ids[i] for i in order]` 同步置换。
+
+#### 新增 `reset_tracking()`：跨 Set 隔离
+
+ByteTrack 的状态是 stateful 的 —— `predictor.trackers[0]` 持有一个对象，记录每个 ID 的卡尔曼状态、消失帧数等。如果不主动 reset，上一个 Set 用到 #5，下一个 Set 第一个被识别的人就成了 #6 —— 教练满脸问号"为什么我刚开始录就看到 #6 而不是 #1"。
+
+所以在 [fastapi_app/main.py](fastapi_app/main.py)（BLE 按钮触发）和 [fastapi_app/api_routes.py](fastapi_app/api_routes.py)（dashboard 按钮触发）两处 `start_recording()` 后都加一行 `camera_manager.reset_tracking()`。
+
+#### 持久化：`landmarks_multi.jsonl` 加 `ids` 字段
+
+不能改原本的 `persons` 数组结构，否则旧的 set_008 等录制无法回放。所以在每行 JSON 里**新增一个并行字段**：
+
+```json
+{"ts": 12.345, "frame": 308, "persons": [[[x,y,v]×33], ...], "ids": [3, 7]}
+```
+
+旧文件没有 `ids` 字段，[fastapi_app/api_routes.py](fastapi_app/api_routes.py) 的读取逻辑用 `obj.get("ids")` 兜底成 `[None]*N`，前端 fallback 到旧的"主角蓝 + 队友按 idx 配色"。**新旧文件回放都不坏**。
+
+#### 前端：`colourFor(arrayIdx, trackId)` 二级 fallback
+
+```js
+function colourFor(arrayIdx, trackId) {
+    if (trackId != null) return TEAM_COLORS[trackId % TEAM_COLORS.length];
+    if (arrayIdx === 0) return '#3B82F6';   // legacy primary blue
+    return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
+}
+function labelFor(arrayIdx, trackId) {
+    if (trackId != null) return `#${trackId}`;
+    if (arrayIdx === 0) return '';
+    return `P${arrayIdx + 1}`;
+}
+```
+
+实时页（`drawSkeletonOnCanvas` + `drawSecondaryPose`）和分析页（`drawPersonAt`）都走这套规则。教练现在看到的是「`#3` 永远是同一个人，颜色永远不变」，无论这个人是 area-第一还是第二。
+
+#### 防御性长度对齐
+
+[fastapi_app/camera_manager.py](fastapi_app/camera_manager.py) 在写出帧字典前做最后一次 sanity check：
+
+```python
+if len(track_ids) != len(all_landmarks):
+    track_ids = [None] * len(all_landmarks)
+```
+
+万一上游某个边缘情况让 `track_ids` 跟 `all_landmarks` 长度不齐（比如 ultralytics 升级后行为变化），降级到全 None 也好过让 `ids[i]` 取错人 —— 那种"silent misbinding"是最坏的 bug：颜色绑错人、IMU 也跟着绑错，分析数据全错但不会报错。
+
+### 验证
+
+1. **静态语法**：`python3 -c "import ast; [ast.parse(...)]"` 五个改动文件全过
+2. **recorder smoke**（mock cv2，6 个帧场景）：
+   - 正常多人 `[3, 7]` ✓
+   - 单人 `[3]` ✓
+   - 空帧 `[]` ✓
+   - 旧格式（无 ids）→ `[None, None]` ✓
+   - 混合（部分有 ID 部分 None）→ `[3, None]` ✓
+   - 畸形 person 被过滤时 ids 也对齐过滤 → 长度一致 ✓
+3. **测试套件回归**：`uv run pytest tests/` 改动前后均 9 failed / 94 passed（9 个失败全部 pre-existing，与本次改动无关）
+
+实地（多人 + 真实泳池）验证留到 **7.0 数据采集**完成后。
+
+### 收获
+
+1. **"颜色 = 身份" 不能是数组顺序的副产品**：当排序键（这里是 area）会随时间变化时，按数组下标绑色一定会出问题。要么固定一个稳定 key（这里就是 track_id），要么**就别让颜色承担身份信息**。
+2. **stateful 的库要把"reset"显式暴露**：BYTETracker 默认全程持有状态，不主动 reset 就会跨 Set 泄漏。这种"看不见的延续"是分布式系统/有状态服务里最常见的踩坑模式 —— 不是 bug，是默认行为不符合用户的心智模型。
+3. **加字段不改结构是良药**：JSONL 里加 `ids` 而不是改 `persons` 的形状，让旧录制无痛回放。这种"扩展点"思维在版本演进中省下大量返工成本。
+4. **silent misbinding 比 crash 更可怕**：长度不齐时 `track_ids[i]` 读错值，前端把蓝色画在了错的人头上，下游 IMU/视频/评分全错位但不会报错。这种 bug 一旦让教练用错了再被发现，信任度直接归零。defensive check 不是过度设计，是对"silent error"零容忍的纪律。
+5. **离线想象的产品必经实地验证**：阶段六全部 UI 没有真实多人数据校验过。`#25` 这一坑在阶段六代码合入主干那刻就埋下了，但因为没有真实场景去触发，一直没暴露。这印证了"7.0 实训数据采集"作为隐藏前置的必要性 —— 没有真数据，所有"我们觉得这样可以"的判断都是赌博。
+
+---
+
+## 问题 #26：从 `#3` 到「张三」 —— 给抽象 ID 一张人脸
+
+### 背景
+
+阶段 7.1 让 BYTETracker 给每个运动员发了一个稳定的整数 ID（`#3`、`#7`），骨架颜色也跟着 ID 走，**身份**问题解决了。但教练在屏幕上看到的还是 `#3` —— 一个抽象数字。要把这套系统真正交到教练手里，必须能说"这个 #3 是张三、那个 #7 是李四"，否则数据再准也只是"匿名运动员的优秀指标"，没法落到具体人头上。
+
+7.2 的目标只有一句话：**让骨架标签从 `#3` 升级为「张三」**。
+
+### 看似简单的两个设计决策
+
+#### 决策 1：绑定是「per-Set」还是「全局」？
+
+直觉上，「张三就是张三」，应该全局绑定一个 ID 就够了。但前一个 PR 的 7.1 决定了 BYTETracker 在每场录制开始时 reset，所以**张三今天是 #3，明天可能是 #7，后天可能是 #2**。如果做成"全局绑定 #3 = 张三"，明天就全错了。
+
+所以绑定必须是 `(set_name, track_id) → athlete_name` 三元组。同一个张三在不同 set 里有不同 binding，但都指向同一个 `athlete_id`。这正是 7.3 跨 Set 对比要用的"同一个人的多次训练"基础。
+
+数据 schema 在 [fastapi_app/athlete_store.py](fastapi_app/athlete_store.py) 里：
+
+```json
+{
+  "version": 1,
+  "athletes": [
+    {
+      "id": "ath_xxxxxxxx",
+      "name": "张三",
+      "color": "#A855F7",
+      "bindings": [
+        {"set": "set_009_…", "track_id": 3},
+        {"set": "set_010_…", "track_id": 5}
+      ]
+    }
+  ]
+}
+```
+
+#### 决策 2：bind 操作的冲突如何处理？
+
+如果教练已经绑了"set_009 的 #3 = 张三"，现在又要绑"set_009 的 #3 = 李四"，怎么办？
+
+三种选择：
+- **拒绝**：返回 409 Conflict，让教练先 unbind 张三 —— 最严格但 UX 最差
+- **共存**：允许同一个 (set, track_id) 同时绑给两个人 —— 数据不一致，下游要为每个 #3 都画两个名字
+- **覆盖**：自动从张三身上拿走，挂到李四身上 —— 体感最自然，符合"我刚才搞错了"的心智
+
+我选了**覆盖**。`bind_track` 的实现在写新绑定前，先扫一遍所有 athlete 把同 `(set, track_id)` 的 binding 都摘掉：
+
+```python
+for ath in data["athletes"]:
+    ath["bindings"] = [
+        b for b in ath.get("bindings", [])
+        if not (b["set"] == set_name and int(b["track_id"]) == int(track_id))
+    ]
+```
+
+这样 `lookup_for_set(set_name)` 永远返回唯一映射，前端不需要处理多对一的歧义。
+
+### 实现：从持久层到 UI 一条线
+
+#### 持久层：[fastapi_app/athlete_store.py](fastapi_app/athlete_store.py)
+
+JSON-backed CRUD store，关键设计：
+
+- **原子写**：`tmp + os.replace`，避免写到一半进程崩溃留下半截 JSON。
+- **forward-compat**：读到未知 schema version 或损坏文件直接返回空 store，**不抛异常**。教练操作时碰到"突然弹错误"的恐怖远大于"配置丢了重来一遍"。
+- **threading.Lock**：FastAPI worker thread 和 dashboard 并发请求都安全。
+- **lookup_for_set()**：`O(athletes × bindings)` 反查 —— 真实场景每个队最多十几个 athlete、每人几十个 binding，完全够。
+
+#### API 层：6 个端点（[fastapi_app/api_routes.py](fastapi_app/api_routes.py)）
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/api/athletes` | 列出所有 athlete |
+| POST | `/api/athletes` | 新建（`name` 必填，`color` 可选） |
+| PATCH | `/api/athletes/{id}` | 改名 / 改色 |
+| DELETE | `/api/athletes/{id}` | 删除 athlete（连带所有 binding） |
+| POST | `/api/athletes/{id}/bind` | 绑定 `(set, track_id)` |
+| POST | `/api/athletes/{id}/unbind` | 解绑 |
+
+**为什么 unbind 是 POST 不是 DELETE-with-body？** 第一版我写成 `DELETE /bind`，结果 `httpx.Client.delete()` **不接受** `json=` kwarg —— 这是 httpx 的明确限制。这是个红旗：如果连同进程的 TestClient 都嫌弃 DELETE-with-body，生产环境的代理 / CDN / curl-脚本里更不可控。所以改成 `POST /unbind` 是更稳健的语义选择，也符合"unbind 不是真正的 idempotent delete"（解绑一个不存在的 binding 我返回 404）。
+
+**phantom set 拦截**：`bind` 端点会先检查 `os.path.isdir(_set_dir(req.set))`。让一个不存在的 set 进入 binding 列表，`lookup_for_set` 永远找不到它 —— 看起来 binding 在但用不上，是最坏的"看似工作但实则失效"的 silent bug。
+
+#### 数据流：`/api/sets/{name}/landmarks` 加 `athlete_map` 字段
+
+```python
+if _athletes is not None:
+    athlete_map = _athletes.lookup_for_set(name)
+    payload["athlete_map"] = {str(k): v for k, v in athlete_map.items()}
+```
+
+key 必须 stringify —— JSON 没有 int key。前端读取时用 `aMap[String(track_id)]` 复原。
+
+#### 前端：三层 fallback 的 `colourFor` / `labelFor`
+
+```js
+function colourFor(arrayIdx, trackId, athleteMap) {
+    if (trackId != null) {
+        const ath = athleteMap && athleteMap[String(trackId)];
+        if (ath && ath.color) return ath.color;          // ① athlete pinned colour
+        return TEAM_COLORS[trackId % TEAM_COLORS.length]; // ② track-id colour
+    }
+    if (arrayIdx === 0) return '#3B82F6';                 // ③ legacy primary blue
+    return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];   // ④ legacy by-index
+}
+```
+
+最关键：**有 athlete binding 时颜色由 athlete 决定，否则由 track_id 决定**。教练能给张三固定一个紫色，无论今天的张三是 #3 还是 #7。
+
+`labelFor` 同样三层：athlete name → `#${trackId}` → `P${idx+1}`。
+
+#### UI：分析页「队员管理」模态
+
+视频卡片头部加一个「队员」按钮 → 弹模态：
+
+- 顶部 hint：解释为什么 binding 是 per-Set
+- 中部：本 set 出现过的所有 unique track_id 列表（聚合自 `landmarks.all_ids`）
+- 每行：色块（按 `id % 8`）+ `#3` + 已绑定显示运动员名 + 解绑按钮 / 未绑定显示下拉
+- 下拉里：已有 athlete 列表 + 「+新建运动员」选项
+
+「新建运动员」目前用 `window.prompt()`。功能 OK 但 UX 粗糙，等 7.3 完成后顺手做成内联 input。
+
+### in-place mutation：避免 setupSkeletonOverlay 重入
+
+每次绑定后**不能**重新调 `setupSkeletonOverlay(name)` —— 它会 `addEventListener` 给 `<video>` 元素累计绑定，导致每帧 drawOverlay 跑 N 次。
+
+解决方案：模块级 `_activeOverlay = { setName, landmarks }`。模态绑定后**直接 mutate** `_activeOverlay.landmarks.athlete_map`：
+
+```js
+aMap[String(trackId)] = { athlete_id, name, color };
+if (_activeOverlay && _activeOverlay.landmarks) {
+    _activeOverlay.landmarks.athlete_map = aMap;
+}
+```
+
+drawOverlay 闭包里的 `landmarks` 是同一对象引用，下一次 `requestAnimationFrame` 自动拾取。无重新绑定，无视频闪烁，无事件监听泄漏。
+
+### 验证
+
+- ✅ 所有 .py / .js 静态语法（`python3 ast.parse`、`node --check`）
+- ✅ athlete_store 单元 smoke：9 个边界场景（CRUD、绑定冲突解决、解绑幂等、损坏 JSON 自愈、未知 schema 兜底、绑不存在的 athlete 返回 None）
+- ✅ FastAPI TestClient 集成 smoke：11 assertions（含覆盖式 bind 冲突 / phantom set 404 / 空 name 400 / 解绑幂等 / 删除幂等）
+- ✅ 完整 pytest 回归：9 failed / 94 passed = baseline
+
+### 收获
+
+1. **per-Set 绑定不是过度设计，是物理事实**：BYTETracker 在 reset 后世界重新开始，把"张三 = #3"假设成全局是把局部规律当全局规律 —— 在分布式 / 有状态系统里这是经典错误。每次设计"X 等于 Y"型的映射，先问一句"在什么时间窗口、什么状态边界内成立？"
+2. **冲突解决的语义比正确性更重要**：覆盖式 bind 不一定"对"，但它最贴合教练的心智模型（"哦我刚才搞错了"）。设计 API 时永远要想"用户最常打错的操作发生时，结果是什么"。
+3. **DELETE-with-body 是历史包袱**：HTTP 规范允许，但生态不友好。POST + 子动作 (`/unbind`) 是更可移植的写法。这种小细节，在团队协作里能省掉无数次"为什么 curl 能跑前端就不行"的扯皮。
+4. **silent misroute 比报错更危险**：phantom set 不拦截 → 用户以为绑成功了，结果回放时啥也没看到，怀疑是别的 bug，去查别处 —— 浪费的不是时间，是信任。Edge-case 拦截要走 fail-loud 路线。
+5. **前端模态的 in-place mutation 是高性价比 trick**：比起重新初始化整个 overlay 系统，只 mutate 一个对象引用，完美避开"事件监听累积"这种隐性 bug。React 时代我们容易忘了这种轻量级的、面向"现有 vanilla JS 闭包"的优雅做法。
+
+---
+
+## 问题 #27：跨 Set 对比 —— 让 IMU 独有指标"真正放光"
+
+### 背景
+
+DEVLOG #23 在介绍 `explosive_power / energy_index / motion_complexity` 三个 IMU 独有指标时埋了一个坑：
+
+> 这些指标单独看没有"标准答案"——爆发力多大算好？能量消耗多少算多？所以**只在横向对比里才放光**。教练的实用场景是"训练前后对比"：同一运动员两次训练，`energy_index` 上升 = 同样的动作花了更多能量 = 疲劳 / 动作不经济。
+
+但 7.2 之前我们没有"同一运动员的多次训练"这个概念，只有按 set 编号排列的孤立录制。7.1 给了稳定 ID、7.2 把 ID 绑到了名字 — 现在 7.3 终于可以兑现这张支票，做出**横向对比页**。
+
+### 设计要点
+
+#### 1. 后端最小复用：复用 set_report，不重写计算
+
+跨 set 对比天然要求"每个 set 的数值跟它各自分析页看到的完全一致"。如果新写一套统计逻辑，就有"对比页说 7.5 但分析页说 7.7"的对不上号风险。
+
+我直接 await 已有的 `set_report(name)` route handler，从返回 dict 里抠精简字段：
+
+```python
+for name in set_names:
+    rep = await set_report(name)
+    if isinstance(rep, JSONResponse):
+        results.append({"name": name, "error": "not found"})
+        continue
+    slim = {
+        "name": name,
+        "overall_score": rep.get("overall_score"),
+        "metrics": rep.get("metrics"),
+        ...
+    }
+```
+
+**partial-failure 设计**：某个 set 不存在不该让整个对比请求 500。每个 set 独立 try，失败的标 `{"name": ..., "error": "not found"}`，前端能渲染部分对比 + 高亮失败的那行。这是面向"教练 7 天前删了 set_005 但今天打开旧的对比快照"的真实场景。
+
+**上限 20 个**：批量太大网络会卡，且雷达图叠加超过 6 条人眼根本看不清。20 是个合理的硬性上限。
+
+#### 2. 前端三块视图，一个状态机
+
+我没用 React/Vue，全是模块级 `_compareState` + `renderCompare()`。三块视图：
+
+- **chips strip** — 当前可对比的 set 列表，点击 toggle 选中
+- **雷达叠加** — 选中 set 的多边形叠加，颜色按 athlete 走
+- **单指标折线** — 选中 set 按录制时间升序排列，X 轴是时间，Y 轴是指标值
+
+切换"指标筛选"下拉只重画折线（`renderCompareCharts()` 不重渲染 chips），改"运动员筛选"才整体重拉数据（`applyCompareFilter()`）。
+
+#### 3. 雷达叠加的"共有指标 intersect"
+
+不同 set 可能有不同 metric 集合（IMU 没连那场就缺 IMU 指标，纯 IMU 那场就缺视觉指标）。雷达图所有顶点必须一致，所以要算所有选中 set 的 metric 交集：
+
+```js
+let names = (reports[0].metrics || [])
+    .filter(m => m.value != null && m.zone !== 'no_data')
+    .map(m => m.name);
+for (let i = 1; i < reports.length; i++) {
+    const set = new Set(reports[i].metrics.filter(m => ...).map(m => m.name));
+    names = names.filter(n => set.has(n));
+}
+```
+
+如果交集 < 3 个指标（雷达图至少需要三角形），渲染一句"共有指标 < 3，无法叠加"。这是教练混选了"纯 IMU"和"纯视频"两个 set 时会触发的友好提示。
+
+#### 4. 颜色策略：athlete > palette
+
+教练选了"张三的全部 5 场训练"，所有 5 个雷达多边形都是同一个紫色。视觉上一眼能看出"哦这五场都是同一个人的进步轨迹"。
+
+选了"张三 vs 李四 各 3 场"，张三的 3 场都紫色，李四的 3 场都蓝色，交集对比一目了然。
+
+这就是 7.2 那个"athlete pin colour"字段的真正用途 — 它在 7.2 PR 里只是个 UX 装饰，到 7.3 才显现出"跨场视觉聚簇"的真正价值。
+
+#### 5. set 名字缩写 → 人类可读
+
+原始：`set_009_20260422_142249`，22 字符，雷达图标签塞不下。
+
+格式化为：`#9 · 04-22 14:22`，11 字符，肉眼能秒看出"哦这是 9 月 22 号下午 2 点那场"。
+
+这种细节对教练 vs 工程师的 UX 差异巨大 — 工程师能记住 "20260422_142249" 的语义，教练只想看"哪天哪场"。
+
+### 验证
+
+- ✅ JS / Python 静态语法
+- ✅ FastAPI TestClient 集成 smoke：4 场景（empty sets 400 / >20 sets 400 / phantom set partial error / athletes/{id}/sets 404）
+- ✅ pytest 回归：9 failed / 94 passed = baseline
+
+### 收获
+
+1. **复用 route handler 是确保"对比页和详情页数值对得上"的最直接保证**：抗拒重新实现的诱惑，只做"投影"而不是"重算"。这种 DRY 不是为了少写代码，是为了**消除两套实现 drift 的可能性**。
+2. **partial-failure > all-or-nothing**：批量 API 默认应该是"每个独立成败、整体永远 200"。让前端决定如何展示部分失败，比让前端处理 500 友好得多。
+3. **下游产品化挖掘上游工程投资**：7.3 之所以能在两小时内做完，全靠 7.1 的 stable ID 和 7.2 的 athlete name 这两个"看似只是基础"的工作。**真正有用的产品价值往往隐藏在三层之上的 UX 里**，但它们必须站在前面铺好的稳定基座上。如果当初 7.1 只做了"颜色和数组顺序解耦"而没引入 BYTETracker，7.3 的趋势对比就根本无从谈起。
+4. **不同 set 的 metric 集合要做交集**：跨 set 比较前一定要先对齐"维度集合"，否则雷达图会突然"长出一个角"或"少一个角"，肉眼立刻察觉异常但调试起来很难。先做交集 + 阈值校验（< 3 给提示），是面向"用户混选不兼容数据"的常规防御。
+5. **状态机的拆分粒度反映用户操作的拆分粒度**：用户切指标只重画折线，用户改筛选才重拉数据。这个分层避免了"每点一下都重新跑一次完整渲染"的浪费。状态机粒度 = 用户操作粒度，这是最朴素也最有效的性能优化原则。
+
+---
+
+## 问题 #28：YOLO 微调的"基础设施先行" —— 在素材到位前把脚手架搭好
+
+### 背景
+
+7.4 的目标是"用真实游泳素材微调 YOLOv8-pose"。但我们目前**还没有**真实素材 — 总统大人决定先把整个阶段七的代码框架打完再上传素材。
+
+正常思路："没素材就什么都做不了，等素材到了再说"。但这是错的：
+
+1. **流程上的所有难点都和素材内容无关**：怎么半监督预标、怎么避开 ultralytics 的 80/20 自动拆分坑、怎么针对水中场景调 augmentation、怎么评估泛化能力 — 这些**全是工程问题**，跟具体素材是哪个泳池毫无关系。
+2. **素材到位时教练第一次跑应该一行命令**：如果到那时候才开始想"哦怎么把视频转成 YOLO format"，会浪费教练的真实素材时间。
+3. **写脚手架时是清醒的 → 选择会更冷静**：等素材堆积起来再边训练边想，容易急功近利做出错误决定（比如 auto-split）。
+
+所以 7.4 这一阶段不动模型，只准备**完整可跑的基础设施**：脚本、配置、文档。等总统大人一上传素材，能 1 行命令跑完整流程。
+
+### 三个脚本 + 一个 yaml + 一份文档
+
+#### `tools/preannotate.py` — 半监督预标注
+
+最关键的设计点：**故意调低 conf 阈值（0.3 而不是 0.5）**。
+
+直觉上 conf 应该高，"我们要可靠的预标"。但这个工具的用户不是模型，**是教练 + 标注员**。教练修一个错位的关键点比从空白开始画快得多。所以宁可让 borderline 检测也进入预标 — 错的修一下，对的省下手工绘制成本。
+
+```python
+v = 2 if c > 0.5 else (1 if c > 0.0 else 0)
+```
+
+visibility 的三档映射也按这个逻辑：高置信 = visible(2)，低置信 = occluded(1)，零置信 = unlabelled(0)。让标注员一眼能看出"这个点模型不太确定，需要重点检查"。
+
+跳过"零检测"帧：如果某一帧 YOLO 找不到任何人，连图带 label 都不写。empty-label 图只会污染数据集，触发 ultralytics 的"missing labels"警告。
+
+#### `tools/train_pose.py` — augmentation 针对水中场景调
+
+ultralytics 默认的 augmentation 是为通用 COCO 调的，对花泳并不合适：
+
+| 参数 | 默认 | 我们 | 为什么 |
+|---|---|---|---|
+| `mosaic` | 1.0 | 0.5 | 多人镜头本身已经有"自然 mosaic"。叠加 1.0 会把 4 张多人画面拼成一张，模型直接懵。 |
+| `degrees` | 0.0–10.0 | 5.0 | 花泳动作有强烈的方向语义（vertical routine 必须头朝下），过度旋转破坏先验。 |
+| `hsv_v` | 0.4 | 0.5 | 水面反光让画面亮度跳幅极大，需要更宽容的亮度抖动。 |
+| `mixup` | 0.0 | 0.1 | 少量混合保留单人特征，但不能太多 — 混合两个翻身姿势会让 keypoint 完全乱。 |
+
+这些选择都基于"领域先验"，**不是把超参数留给用户调**。教练不是 ML 工程师，给他一堆未明含义的旋钮等于没给。
+
+#### `tools/eval_pose.py` — 把"留出场地"的要求写进 docstring
+
+模块 docstring 第一段就强调：
+
+> CRITICAL: the validation split must come from a venue / lighting /
+> athlete combination that was NOT in the training set. Otherwise a
+> high mAP just means "memorized this dataset"...
+
+这种"过拟合到训练池"的坑太常见。把警告写进**程序自身的 docstring**，比写在外部文档里更难错过。
+
+输出里也直接打基准：`(baseline yolov8s-pose ≈ 0.55 on swim)`。让用户**当场就能判断"这个数好不好"**，而不是去翻文档对照。
+
+#### `data/training/syncswim.yaml` — flip_idx 是关键
+
+```yaml
+flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
+```
+
+水平翻转增强时，左右关键点要对换。`flip_idx[i] = j` 表示"翻转后第 i 个 keypoint 的语义跟原来第 j 个一样"。COCO 标准对应：
+
+```
+0  nose      (镜像后还是 nose)
+1  left_eye   ↔  2  right_eye
+3  left_ear   ↔  4  right_ear
+... 以此类推
+```
+
+如果**没**指定 flip_idx，ultralytics 翻转后 left_shoulder 和 right_shoulder 的 label 不变 — 模型就开始相信"左肩可以出现在右边"，回归不收敛。这是个特别难调的坑，因为不会报错，只会模型表现奇差。
+
+#### `docs/fine-tuning.md` — 把所有"踩过的坑"前置
+
+文档不是流程描述，是**给未来的自己 / 教练写的踩坑记录**。比如：
+
+> **正确做法**：手动拆分 train/val。ultralytics 默认按文件名 hash 拆 — 同视频相邻帧会被分到两边，val mAP 虚高。
+
+> **数据隐私**：单个真实训练视频可能有运动员肖像权问题 — 上传给云端 CVAT 前必须确认所有出现的人都签过授权。
+
+> **常见坑表**：列了 5 个最常见 failure mode 和修复方法。
+
+这种"在素材到位前写好的文档"比"碰到坑了再补"更冷静、更全面。
+
+### 阶段七全景回顾
+
+走到这里，阶段七的拼图全了：
+
+| 阶段 | 做了什么 | 解锁了什么 |
+|---|---|---|
+| 7.1 | BYTETracker 给每个运动员稳定 ID（`#3`、`#7`） | 颜色绑身份不绑数组顺序 |
+| 7.2 | 教练把 ID 绑到名字（`#3 = 张三`） | 跨场识别同一个人 |
+| 7.3 | 多 set 雷达叠加 + 单指标时间轴 | "训练前后对比"的真实场景兑现 |
+| 7.4 | 微调脚本 + 文档 | 当真实素材到位时，1 行命令出 best.pt |
+
+每一阶段都是为下一阶段铺路：**没有 7.1 的稳定 ID，7.2 的 athlete name 就是空中楼阁；没有 7.2 的 athlete，7.3 的"张三的所有训练"无从谈起；没有 7.3 验证模型在真实指标上的表现，7.4 的微调就只是给数字看好看而非真改善教练的判断**。
+
+### 收获
+
+1. **基础设施先行 ≠ 过度工程**：在素材到位前把流程跑通的所有"非数据相关"工程问题先解决掉，是产品成熟的标志。等数据来了再边训边写代码 = 浪费数据。
+2. **故意调低预标 conf 是面向"人类校对者"的优化**：模型工程师容易把 conf 阈值当成"输出质量门槛"，但在半监督场景里它是"省下多少手画功夫的拉杆"。**用户是谁，决定了优化目标是什么**。
+3. **augmentation 的领域先验远比通用默认值重要**：花泳"vertical routine 头朝下"是先验，COCO 不知道。把领域知识硬编码到 `degrees=5.0` 比留给用户调更负责任。
+4. **flip_idx 这种"不指定就静默错"的坑要早暴露**：把它写在 yaml 而不是 train 脚本里，教练改 yaml 时一眼能看到 17 个数字 — 哪怕看不懂也会去 google，比埋在代码里强。
+5. **文档不是流程描述，是踩坑记录**：碰到坑前先写文档，比碰到坑后补文档更冷静、更全面，因为这时候没有"赶紧出结果"的压力扭曲判断。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

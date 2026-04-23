@@ -51,6 +51,9 @@ def on_ble_state_change(dev_state: str, set_number: int):
         # set_001 and clash with prior ones. The server is the source
         # of truth: scan data/ for the next free number.
         recorder.start_manual()
+        # Reset BYTETracker so this Set's IDs start at #1 instead of
+        # continuing the previous Set's numbering.
+        camera_manager.reset_tracking()
         # Push the authoritative number back to the M5 so its display
         # shows what the server actually saved (B-protocol).
         ble_manager.write_set_number(recorder.set_number)
@@ -140,9 +143,14 @@ def _vision_writer_loop():
 
         # Multi-person landmarks (JSONL) — persist every athlete per
         # frame so the analysis page can render dual-/team-person
-        # skeletons, not just the primary swimmer.
+        # skeletons, not just the primary swimmer. ``track_ids`` lets
+        # the analysis page bind a stable colour per athlete and is
+        # the foundation for cross-Set comparison (phase 7.2 / 7.3).
         recorder.write_landmarks_multi(
-            local_ts, frame_count, data.get("all_landmarks") or []
+            local_ts,
+            frame_count,
+            data.get("all_landmarks") or [],
+            data.get("track_ids"),
         )
 
         # Write video frame

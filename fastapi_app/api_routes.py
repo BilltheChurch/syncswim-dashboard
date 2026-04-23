@@ -45,6 +45,8 @@ from dashboard.core.vision_angles import (
     calc_trunk_vertical,
 )
 
+from .athlete_store import AthleteStore
+
 router = APIRouter(prefix="/api")
 
 # Module-level references, set by init()
@@ -52,6 +54,7 @@ _ble = None
 _camera = None
 _recorder = None
 _set_manual_recording = None
+_athletes: AthleteStore | None = None
 
 _DATA_DIR = "data"
 
@@ -77,12 +80,15 @@ SKELETON_COLOR_BGR = (246, 130, 59)  # matches frontend primary blue
 
 
 def init(ble_manager, camera_manager, recorder, set_manual_recording=None):
-    global _ble, _camera, _recorder, _set_manual_recording, _DATA_DIR
+    global _ble, _camera, _recorder, _set_manual_recording, _DATA_DIR, _athletes
     _ble = ble_manager
     _camera = camera_manager
     _recorder = recorder
     _set_manual_recording = set_manual_recording
     _DATA_DIR = getattr(recorder, "_data_dir", "data")
+    # Athlete bindings live next to the Set directories so the data
+    # folder is self-contained — easy to back up or move as a unit.
+    _athletes = AthleteStore(os.path.join(_DATA_DIR, "athletes.json"))
 
 
 # ── Helpers ────────────────────────────────────────────────────
@@ -302,6 +308,14 @@ async def start_recording():
     if _set_manual_recording:
         _set_manual_recording(True)
     _recorder.start_manual()
+    # Reset BYTETracker so this Set's IDs start at #1 (otherwise
+    # tracker state carries over from the last Set and the coach sees
+    # confusing high-number IDs like #14 / #15 on what is logically
+    # the first swimmer of a fresh recording).
+    try:
+        _camera.reset_tracking()
+    except Exception:
+        pass
     # Push authoritative set number to M5 display
     try:
         _ble.write_set_number(_recorder.set_number)
@@ -578,11 +592,20 @@ async def set_landmarks(name: str):
     # when the set was recorded with the new pipeline. Older sets
     # without landmarks_multi.jsonl simply won't include this key,
     # and the client falls back to single-person rendering.
+    #
+    # ``all_ids`` is the parallel BYTETracker ID stream (added in
+    # phase 7.1). For each frame it's a list the same length as that
+    # frame's ``persons`` list — each entry an ``int`` (stable across
+    # frames) or ``None`` (older recordings, MP backend, or a brand
+    # new detection). Frontend uses ``id`` when present and falls back
+    # to array-order colouring when not.
     all_frames: list[list[list[list[float]]]] | None = None
+    all_ids: list[list[int | None]] | None = None
     multi_path = os.path.join(set_dir, "landmarks_multi.jsonl")
     if os.path.exists(multi_path):
         try:
-            parsed: list[list[list[list[float]]]] = []
+            parsed_persons: list[list[list[list[float]]]] = []
+            parsed_ids: list[list[int | None]] = []
             with open(multi_path, "r") as f:
                 for line in f:
                     line = line.strip()
@@ -592,14 +615,27 @@ async def set_landmarks(name: str):
                         obj = json.loads(line)
                     except ValueError:
                         continue
-                    parsed.append(obj.get("persons") or [])
+                    persons = obj.get("persons") or []
+                    parsed_persons.append(persons)
+                    raw_ids = obj.get("ids")
+                    if isinstance(raw_ids, list) and len(raw_ids) == len(persons):
+                        parsed_ids.append([
+                            (int(x) if isinstance(x, (int, float)) else None)
+                            for x in raw_ids
+                        ])
+                    else:
+                        # Older recordings: no ids field. Pad with None
+                        # so the frontend can rely on length alignment.
+                        parsed_ids.append([None] * len(persons))
             # Only return if the file actually has data and roughly
             # matches the primary stream length (tolerate off-by-one
             # from the final flush).
-            if parsed and abs(len(parsed) - len(frames)) <= 2:
-                all_frames = parsed
+            if parsed_persons and abs(len(parsed_persons) - len(frames)) <= 2:
+                all_frames = parsed_persons
+                all_ids = parsed_ids
         except Exception:
             all_frames = None
+            all_ids = None
 
     payload = {
         "fps": fps,
@@ -609,6 +645,19 @@ async def set_landmarks(name: str):
     }
     if all_frames is not None:
         payload["all_frames"] = all_frames
+    if all_ids is not None:
+        payload["all_ids"] = all_ids
+
+    # Athlete name + colour overrides keyed by track_id (phase 7.2).
+    # The frontend uses this to render "张三" / "李四" labels above
+    # each skeleton instead of raw "#3" tags. Empty when no bindings
+    # exist for this Set, in which case the frontend falls back to
+    # ``#${track_id}`` and the auto-derived colour from
+    # ``TEAM_COLORS[id % 8]``.
+    if _athletes is not None:
+        athlete_map = _athletes.lookup_for_set(name)
+        # Stringify keys for JSON; frontend normalises back to int.
+        payload["athlete_map"] = {str(k): v for k, v in athlete_map.items()}
     return payload
 
 
@@ -827,6 +876,182 @@ async def post_config(req: ConfigUpdate):
 
 
 # ── Data stats ─────────────────────────────────────────────────
+# ── Athlete bindings (phase 7.2) ───────────────────────────────
+# Coach assigns a stable name (e.g. "张三") to a BYTETracker ID
+# inside a specific Set. Bindings are per-Set because BYTETracker
+# state resets between Sets (see DEVLOG #25), so the same swimmer
+# gets a fresh ID in every recording.
+
+class _AthleteCreate(BaseModel):
+    name: str
+    color: Optional[str] = None
+
+
+class _AthleteUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+
+
+class _BindReq(BaseModel):
+    set: str
+    track_id: int
+
+
+@router.get("/athletes")
+async def list_athletes():
+    if _athletes is None:
+        return {"athletes": []}
+    return {"athletes": _athletes.list_athletes()}
+
+
+@router.post("/athletes")
+async def create_athlete(req: _AthleteCreate):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    try:
+        ath = _athletes.create_athlete(req.name, req.color)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return ath
+
+
+@router.patch("/athletes/{athlete_id}")
+async def update_athlete(athlete_id: str, req: _AthleteUpdate):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    ath = _athletes.update_athlete(athlete_id, name=req.name, color=req.color)
+    if ath is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return ath
+
+
+@router.delete("/athletes/{athlete_id}")
+async def delete_athlete(athlete_id: str):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    if not _athletes.delete_athlete(athlete_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return {"status": "deleted", "id": athlete_id}
+
+
+@router.post("/athletes/{athlete_id}/bind")
+async def bind_track(athlete_id: str, req: _BindReq):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    if not req.set or req.track_id < 0:
+        return JSONResponse({"error": "invalid set/track_id"}, status_code=400)
+    # Sanity: refuse to bind to a Set that doesn't exist on disk.
+    # Stops typos / stale frontend state from creating bindings for
+    # phantom Sets that would never resolve in lookup_for_set.
+    if not os.path.isdir(_set_dir(req.set)):
+        return JSONResponse(
+            {"error": f"set not found: {req.set}"}, status_code=404
+        )
+    ath = _athletes.bind_track(athlete_id, req.set, int(req.track_id))
+    if ath is None:
+        return JSONResponse({"error": "athlete not found"}, status_code=404)
+    return ath
+
+
+@router.post("/athletes/{athlete_id}/unbind")
+async def unbind_track(athlete_id: str, req: _BindReq):
+    """Remove an athlete's binding for ``(set, track_id)``.
+
+    Modeled as POST rather than DELETE-with-body because some HTTP
+    clients (notably ``httpx.Client.delete`` and a number of CDN/proxy
+    layers) silently drop bodies on DELETE — POST is universally safe
+    and the operation isn't idempotent enough to need DELETE semantics.
+    """
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    ok = _athletes.unbind_track(athlete_id, req.set, int(req.track_id))
+    if not ok:
+        return JSONResponse({"error": "binding not found"}, status_code=404)
+    return {"status": "unbound", "set": req.set, "track_id": req.track_id}
+
+
+# ── Cross-Set comparison (phase 7.3) ───────────────────────────
+# These endpoints power the "对比" tab. They reuse the per-Set
+# report path so the metric values shown in comparison are
+# byte-identical to what each Set's analysis page shows — no
+# divergent scoring logic to keep in sync.
+
+@router.get("/athletes/{athlete_id}/sets")
+async def athlete_sets(athlete_id: str):
+    """List every (set, track_id) binding for ``athlete_id``.
+
+    Used by the compare-tab Set picker so the coach can pick
+    "all of 张三's training sessions" with one click.
+    """
+    if _athletes is None:
+        return {"sets": []}
+    ath = _athletes.get_athlete(athlete_id)
+    if ath is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return {
+        "athlete_id": ath["id"],
+        "name": ath["name"],
+        "color": ath.get("color"),
+        "bindings": ath.get("bindings", []),
+    }
+
+
+@router.get("/compare")
+async def compare_sets(sets: str = ""):
+    """Batch-fetch slim Set reports for cross-Set visualisation.
+
+    ``sets`` is a comma-separated list of Set names. Each entry in
+    the response is the same metric / overall_score / duration
+    structure used by ``/api/sets/{name}/report`` — minus the heavy
+    ``phases`` field which the compare view doesn't use — plus an
+    ``athletes`` list mapping track_ids to athlete names that the
+    coach has bound for this Set (phase 7.2).
+
+    Sets that don't exist are reported individually as
+    ``{"name": ..., "error": "not found"}`` rather than failing
+    the whole request, so the frontend can render a partial
+    comparison even when one of N selected Sets has been deleted.
+    """
+    set_names = [s.strip() for s in sets.split(",") if s.strip()]
+    if not set_names:
+        return JSONResponse({"error": "sets parameter required"},
+                            status_code=400)
+    if len(set_names) > 20:
+        return JSONResponse({"error": "max 20 sets per request"},
+                            status_code=400)
+
+    results = []
+    for name in set_names:
+        rep = await set_report(name)
+        if isinstance(rep, JSONResponse):
+            results.append({"name": name, "error": "not found"})
+            continue
+        slim = {
+            "name": name,
+            "overall_score": rep.get("overall_score"),
+            "duration": rep.get("duration"),
+            "metrics": rep.get("metrics"),
+            "imu_summary": rep.get("imu_summary"),
+            "fps_mean": rep.get("fps_mean"),
+            "frame_count": rep.get("frame_count"),
+            "has_video": rep.get("has_video"),
+            "athletes": [],
+        }
+        if _athletes is not None:
+            ath_map = _athletes.lookup_for_set(name)
+            slim["athletes"] = [
+                {
+                    "track_id": tid,
+                    "name": v["name"],
+                    "athlete_id": v["athlete_id"],
+                    "color": v.get("color"),
+                }
+                for tid, v in sorted(ath_map.items())
+            ]
+        results.append(slim)
+    return {"sets": results}
+
+
 @router.get("/data/stats")
 async def data_stats():
     sessions = load_or_rebuild_index(_DATA_DIR)

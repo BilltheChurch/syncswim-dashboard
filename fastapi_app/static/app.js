@@ -206,6 +206,7 @@ function switchTab(view) {
     $$('.view').forEach(v => v.classList.toggle('active', v.id === `view-${view}`));
     if (view === 'analysis') loadSetList();
     if (view === 'history')  loadHistory();
+    if (view === 'compare')  loadCompare();
     if (view === 'settings') loadSettings();
 }
 
@@ -231,7 +232,8 @@ document.addEventListener('keydown', e => {
         case '1': switchTab('live');     break;
         case '2': switchTab('analysis'); break;
         case '3': switchTab('history');  break;
-        case '4': switchTab('settings'); break;
+        case '4': switchTab('compare');  break;
+        case '5': switchTab('settings'); break;
         case 'r': case 'R':
             if (!$('#btn-start').disabled) $('#btn-start').click();
             break;
@@ -338,17 +340,21 @@ function connectVideoWs() {
             ctx.drawImage(img, 0, 0);
 
             // Multi-person: draw each teammate with their own colour
-            // + "Pn" label + key-angle pills. Primary gets the rich
-            // MPI-blue full-detail treatment on top.
+            // + identity label + key-angle pills. Primary gets the
+            // rich MPI-blue full-detail treatment on top. ``trackIds``
+            // is the parallel BYTETracker stream (phase 7.1) — when
+            // present, identity binds colour and label so the same
+            // swimmer keeps the same hue across frames.
             const all = data.all_landmarks || [];
             const allAngles = data.all_angles || [];
+            const trackIds = data.track_ids || [];
             if (all.length > 1) {
                 for (let i = 1; i < all.length; i++) {
-                    drawSecondaryPose(ctx, canvas, all[i], allAngles[i], i);
+                    drawSecondaryPose(ctx, canvas, all[i], allAngles[i], i, trackIds[i]);
                 }
             }
             if (data.landmarks && data.landmarks.length === 33) {
-                drawSkeletonOnCanvas(ctx, canvas, data.landmarks, data.angles);
+                drawSkeletonOnCanvas(ctx, canvas, data.landmarks, data.angles, trackIds[0]);
             }
             // Size the wrapper to match image aspect ratio so we don't waste space
             fitVideoWrapper(img.width / img.height);
@@ -446,18 +452,25 @@ const TEAM_COLORS = [
 ];
 
 /**
- * Skeleton + "Pn" label + key-angle pills for a non-primary teammate.
+ * Skeleton + identity label + key-angle pills for a non-primary teammate.
  * Each person gets a distinct colour so the coach can track them
  * visually across frames.
  *
- * @param {*} idx    Position in all_landmarks (1…N-1, 0 is primary).
- * @param {*} angles Per-person angles dict from data.all_angles[idx]
- *                   (may be undefined if the backend is old).
+ * @param {*} idx     Position in all_landmarks (1…N-1, 0 is primary).
+ * @param {*} angles  Per-person angles dict from data.all_angles[idx]
+ *                    (may be undefined if the backend is old).
+ * @param {*} trackId Stable BYTETracker ID (int) when available, or
+ *                    null/undefined for older recordings / MediaPipe.
+ *                    When present we bind colour to the ID so the same
+ *                    swimmer keeps the same hue even if their array
+ *                    position changes between frames.
  */
-function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
+function drawSecondaryPose(c, cv, landmarks, angles, idx = 1, trackId = null) {
     if (!landmarks || landmarks.length !== 33) return;
     const w = cv.width, h = cv.height;
-    const color = TEAM_COLORS[idx % TEAM_COLORS.length];
+    const color = (trackId != null)
+        ? TEAM_COLORS[trackId % TEAM_COLORS.length]
+        : TEAM_COLORS[idx % TEAM_COLORS.length];
 
     // Bones
     c.strokeStyle = color + 'B0';  // ~70% opacity
@@ -492,7 +505,10 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
         anchorOk = true;
     }
     if (anchorOk) {
-        const tag = `P${idx + 1}`;
+        // Prefer the stable BYTETracker ID (#3, #7, ...) so the coach
+        // can verify identity across frames. Fall back to "Pn" for
+        // older recordings / MP backend that don't surface IDs.
+        const tag = (trackId != null) ? `#${trackId}` : `P${idx + 1}`;
         c.font = 'bold 13px "Fira Code", monospace';
         const tw = c.measureText(tag).width;
         c.fillStyle = color;
@@ -533,9 +549,41 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
     }
 }
 
-function drawSkeletonOnCanvas(c, cv, landmarks, angles) {
+function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
     const w = cv.width, h = cv.height;
     const detailed = _annotationMode === 'detailed';
+
+    // --- Identity tag above head (BYTETracker ID, when available) ---
+    // Drawn first so the skeleton bones render on top if they
+    // overlap; the small dark pill stays readable either way.
+    if (trackId != null && landmarks && landmarks.length === 33) {
+        let lx = 0, ly = 0, ok = false;
+        if (landmarks[0] && landmarks[0][2] > 0.3) {
+            lx = landmarks[0][0] * w;
+            ly = landmarks[0][1] * h - 22;
+            ok = true;
+        } else if (landmarks[11] && landmarks[12]
+                   && landmarks[11][2] > 0.3 && landmarks[12][2] > 0.3) {
+            lx = (landmarks[11][0] + landmarks[12][0]) / 2 * w;
+            ly = (landmarks[11][1] + landmarks[12][1]) / 2 * h - 30;
+            ok = true;
+        }
+        if (ok) {
+            const tag = `#${trackId}`;
+            c.font = 'bold 13px "Fira Code", monospace';
+            const tw = c.measureText(tag).width;
+            c.fillStyle = '#3B82F6';
+            c.beginPath();
+            c.roundRect(lx - tw/2 - 6, ly - 12, tw + 12, 18, 4);
+            c.fill();
+            c.fillStyle = '#fff';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText(tag, lx, ly - 3);
+            c.textAlign = 'left';
+            c.textBaseline = 'alphabetic';
+        }
+    }
 
     // --- Connections (bones) ---
     c.strokeStyle = 'rgba(59, 130, 246, 0.9)';
@@ -1163,6 +1211,7 @@ function renderReport(name, report) {
         <div class="video-player-card">
             <div class="vp-header">
                 <span class="vp-title">视频回放</span>
+                <button class="vp-athletes-btn" id="vp-athletes-btn" type="button" title="给检测到的运动员命名">队员</button>
                 <label class="vp-overlay-toggle active" id="vp-toggle">
                     <span>骨架叠加</span>
                     <span class="toggle-switch"></span>
@@ -1269,6 +1318,11 @@ function renderReport(name, report) {
     const tgl = $('#vp-toggle');
     if (tgl) {
         tgl.addEventListener('click', () => tgl.classList.toggle('active'));
+    }
+    // Athlete-management modal trigger
+    const aBtn = $('#vp-athletes-btn');
+    if (aBtn) {
+        aBtn.addEventListener('click', () => openAthleteManager(name));
     }
     setupSkeletonOverlay(name);
 }
@@ -1632,6 +1686,12 @@ function drawTimeseries() {
 let _skelLandmarks = null;
 let _skelFrameRAF = null;
 
+// Module-level handle to the currently-displayed overlay so the
+// athlete-manager modal can mutate ``athlete_map`` after a binding
+// change without rebuilding the whole overlay (which would re-bind
+// every video event listener and accumulate them on each open).
+let _activeOverlay = null;   // { setName, landmarks }
+
 async function setupSkeletonOverlay(name) {
     const video  = $('#vp-video');
     const canvas = $('#vp-skeleton');
@@ -1644,6 +1704,8 @@ async function setupSkeletonOverlay(name) {
         const r = await fetch(`/api/sets/${encodeURIComponent(name)}/landmarks`);
         if (r.ok) landmarks = await r.json();
     } catch { landmarks = null; }
+
+    _activeOverlay = { setName: name, landmarks };
 
     const c2 = canvas.getContext('2d');
 
@@ -1695,7 +1757,7 @@ async function setupSkeletonOverlay(name) {
         return { x, y, w: drawW, h: drawH };
     }
 
-    function drawPersonAt(box, pts, color, idxLabel) {
+    function drawPersonAt(box, pts, color, label) {
         if (!pts || pts.length !== 33) return;
         const toXY = (p) => ({ x: box.x + p[0] * box.w, y: box.y + p[1] * box.h, v: p[2] });
 
@@ -1715,9 +1777,10 @@ async function setupSkeletonOverlay(name) {
             c2.fillStyle = '#fff';
             c2.beginPath(); c2.arc(p.x, p.y, 1.4, 0, Math.PI * 2); c2.fill();
         }
-        // "Pn" tag above head — only for teammates (idxLabel > 0) so
-        // the primary swimmer stays uncluttered.
-        if (idxLabel && idxLabel > 0) {
+        // Tag above head — caller decides what to render. Falsy/empty
+        // string means "no label" (e.g. the legacy primary swimmer
+        // path that wants to stay uncluttered).
+        if (label) {
             let lx = 0, ly = 0, ok = false;
             if (pts[0][2] > 0.3) {
                 lx = box.x + pts[0][0] * box.w;
@@ -1729,17 +1792,46 @@ async function setupSkeletonOverlay(name) {
                 ok = true;
             }
             if (ok) {
-                const tag = `P${idxLabel + 1}`;
                 c2.font = 'bold 12px "Fira Code", monospace';
-                const tw = c2.measureText(tag).width;
+                const tw = c2.measureText(label).width;
                 c2.fillStyle = color;
                 c2.beginPath(); c2.roundRect(lx - tw / 2 - 5, ly - 11, tw + 10, 16, 4); c2.fill();
                 c2.fillStyle = '#fff';
                 c2.textAlign = 'center'; c2.textBaseline = 'middle';
-                c2.fillText(tag, lx, ly - 3);
+                c2.fillText(label, lx, ly - 3);
                 c2.textAlign = 'start'; c2.textBaseline = 'alphabetic';
             }
         }
+    }
+
+    // Per-person colour and label resolution. Three-layer fallback:
+    //   1. Athlete binding (phase 7.2) — coach has named #3 → "张三"
+    //      and optionally pinned a colour. Highest priority.
+    //   2. BYTETracker ID (phase 7.1) — colour bound to the ID itself
+    //      so the same swimmer keeps the same hue across frames AND
+    //      across Sets (foundation for cross-Set comparison in 7.3).
+    //   3. Array-index fallback — older recordings, MediaPipe backend,
+    //      or brand-new detections that don't have an ID yet.
+    //
+    // ``athleteMap`` is keyed by ``String(track_id)`` because JSON
+    // object keys are always strings.
+    function colourFor(arrayIdx, trackId, athleteMap) {
+        if (trackId != null) {
+            const ath = athleteMap && athleteMap[String(trackId)];
+            if (ath && ath.color) return ath.color;
+            return TEAM_COLORS[trackId % TEAM_COLORS.length];
+        }
+        if (arrayIdx === 0) return '#3B82F6';
+        return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
+    }
+    function labelFor(arrayIdx, trackId, athleteMap) {
+        if (trackId != null) {
+            const ath = athleteMap && athleteMap[String(trackId)];
+            if (ath && ath.name) return ath.name;
+            return `#${trackId}`;
+        }
+        if (arrayIdx === 0) return '';   // legacy: don't clutter primary
+        return `P${arrayIdx + 1}`;
     }
 
     function drawOverlay() {
@@ -1752,24 +1844,40 @@ async function setupSkeletonOverlay(name) {
         if (idx < 0) return;
 
         // Multi-person playback: if the server returned all_frames,
-        // draw each athlete with their own distinct colour. The primary
-        // swimmer (idx 0) keeps MPI blue; teammates cycle through
-        // TEAM_COLORS to match the live view.
+        // draw each athlete with their own distinct colour. Stable
+        // BYTETracker IDs (when present) bind colour to athlete
+        // instead of array position, so the same swimmer keeps the
+        // same hue even when their relative position in the frame
+        // changes from one moment to the next. ``athlete_map`` (when
+        // present) overrides both colour and label with the coach's
+        // assigned name (phase 7.2).
         if (landmarks.all_frames && landmarks.all_frames[idx]) {
             const persons = landmarks.all_frames[idx];
-            // Draw teammates first so the primary ends up on top.
+            const ids = (landmarks.all_ids && landmarks.all_ids[idx]) || [];
+            const aMap = landmarks.athlete_map || {};
+            // Draw teammates first so the primary (or whoever is at
+            // index 0 — usually the closest-to-camera athlete) ends
+            // up on top.
             for (let p = 1; p < persons.length; p++) {
-                drawPersonAt(box, persons[p], TEAM_COLORS[p % TEAM_COLORS.length], p);
+                drawPersonAt(
+                    box, persons[p],
+                    colourFor(p, ids[p], aMap),
+                    labelFor(p, ids[p], aMap),
+                );
             }
             if (persons.length > 0) {
-                drawPersonAt(box, persons[0], '#3B82F6', 0);
+                drawPersonAt(
+                    box, persons[0],
+                    colourFor(0, ids[0], aMap),
+                    labelFor(0, ids[0], aMap),
+                );
                 return;
             }
         }
 
         // Single-person fallback (older sets without landmarks_multi.jsonl)
         const pts = landmarks.frames[idx];
-        drawPersonAt(box, pts, '#3B82F6', 0);
+        drawPersonAt(box, pts, '#3B82F6', '');
     }
 
     // rAF loop only while playing for smoothness
@@ -1788,6 +1896,703 @@ async function setupSkeletonOverlay(name) {
 
     // Initial paint once metadata is ready
     if (video.readyState >= 1) drawOverlay();
+}
+
+// ═══════════════════════════════════════════════════════
+//   COMPARE VIEW (phase 7.3)
+// ═══════════════════════════════════════════════════════
+//   Cross-Set trend comparison. Pulls slim reports from
+//   /api/compare?sets=A,B,C and renders three views in
+//   one tab:
+//     1. Set chips (toggleable selection)
+//     2. Radar overlay — one polygon per selected Set
+//     3. Single-metric line chart — one point per Set,
+//        ordered by recording date (X axis)
+//
+//   Athlete-bound Sets get coloured by the athlete's pinned
+//   colour so "all of 张三's sessions" form a coherent
+//   visual cluster on screen.
+
+const COMPARE_PALETTE = [
+    '#3B82F6', '#A855F7', '#F59E0B', '#10B981',
+    '#EC4899', '#06B6D4', '#F43F5E', '#84CC16',
+    '#FB923C', '#8B5CF6',
+];
+
+let _compareState = {
+    allSets: [],          // raw /api/sets list
+    athletes: [],         // raw /api/athletes list
+    filteredSets: [],     // after athlete + recent filter
+    reports: [],          // slim reports from /api/compare
+    selected: new Set(),  // selected set names
+    metric: 'overall_score',
+    sortedByDate: [],     // reports sorted by date asc (for line chart)
+};
+
+async function loadCompare() {
+    const content = $('#compare-content');
+    content.innerHTML = `
+        <div class="skel-card"><div class="skeleton skel-block"></div></div>
+        <div class="skel-card"><div class="skeleton skel-block"></div></div>
+    `;
+
+    // Pull sets list + athlete roster in parallel
+    let sets = [], athletes = [];
+    try {
+        const [r1, r2] = await Promise.all([
+            fetch('/api/sets'),
+            fetch('/api/athletes'),
+        ]);
+        sets = await r1.json();
+        if (r2.ok) athletes = (await r2.json()).athletes || [];
+    } catch {
+        content.innerHTML = `<div class="analysis-placeholder"><p>加载失败</p></div>`;
+        return;
+    }
+
+    _compareState.allSets = sets;
+    _compareState.athletes = athletes;
+
+    // Populate athlete filter (preserve current selection if any)
+    const aSel = $('#compare-athlete');
+    const prev = aSel.value || '';
+    aSel.innerHTML = '<option value="">— 全部训练组 —</option>'
+        + athletes.map(a => `<option value="${a.id}">${escapeAttr(a.name)}</option>`).join('');
+    aSel.value = prev;
+
+    // Wire controls (idempotent — replaceAll listeners by cloning)
+    aSel.onchange = () => applyCompareFilter();
+    $('#compare-recent').onchange = () => applyCompareFilter();
+    $('#compare-refresh').onclick = () => loadCompare();
+
+    applyCompareFilter();
+}
+
+function escapeAttr(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+async function applyCompareFilter() {
+    const aId = $('#compare-athlete').value || '';
+    const recent = parseInt($('#compare-recent').value, 10) || 10;
+
+    // Filter set list
+    let pool = _compareState.allSets.slice();
+    if (aId) {
+        // Pull athlete's bindings (already in roster)
+        const ath = _compareState.athletes.find(a => a.id === aId);
+        const setNames = new Set((ath && ath.bindings || []).map(b => b.set));
+        pool = pool.filter(s => setNames.has(s.name));
+    }
+    // Sort by date desc (sets list usually already is, but be safe)
+    pool.sort((a, b) => (b.created_at || b.name).localeCompare(a.created_at || a.name));
+    pool = pool.slice(0, recent);
+
+    _compareState.filteredSets = pool;
+    if (pool.length === 0) {
+        $('#compare-content').innerHTML = `
+            <div class="analysis-placeholder"><p>没有符合条件的训练组</p></div>
+        `;
+        $('#compare-stats').textContent = `0 / 0 选中`;
+        return;
+    }
+
+    // Default selection: all filtered sets (capped at 6 so the
+    // radar overlay isn't impossible to read)
+    _compareState.selected = new Set(pool.slice(0, 6).map(s => s.name));
+
+    // Batch-fetch slim reports
+    const url = '/api/compare?sets=' + encodeURIComponent(pool.map(s => s.name).join(','));
+    let reports = [];
+    try {
+        const r = await fetch(url);
+        const body = await r.json();
+        reports = (body.sets || []).filter(s => !s.error);
+    } catch {
+        $('#compare-content').innerHTML = `<div class="analysis-placeholder"><p>对比加载失败</p></div>`;
+        return;
+    }
+
+    // Sort by date ascending for the line chart
+    const dateOf = (name) => {
+        // set_NNN_YYYYMMDD_HHMMSS — extract from name
+        const m = name.match(/_(\d{8})_(\d{6})$/);
+        return m ? m[1] + m[2] : name;
+    };
+    _compareState.reports = reports;
+    _compareState.sortedByDate = reports.slice().sort(
+        (a, b) => dateOf(a.name).localeCompare(dateOf(b.name))
+    );
+
+    renderCompare();
+}
+
+function renderCompare() {
+    const sel = _compareState.selected;
+    const reports = _compareState.reports;
+    const selectedReports = reports.filter(r => sel.has(r.name));
+
+    // Build chip strip
+    const chipsHTML = reports.map((r, i) => {
+        const isSel = sel.has(r.name);
+        const colour = colourForSetReport(r, i);
+        const ath = (r.athletes && r.athletes[0]) || null;
+        const tag = ath ? escapeAttr(ath.name) : '';
+        const score = (r.overall_score != null) ? r.overall_score.toFixed(1) : '—';
+        return `
+            <button class="cmp-chip ${isSel ? 'selected' : ''}"
+                    data-name="${escapeAttr(r.name)}"
+                    style="--chip-color:${colour}">
+                <span class="chip-dot"></span>
+                <span class="chip-name">${escapeAttr(displaySetName(r.name))}</span>
+                ${tag ? `<span class="chip-tag">${tag}</span>` : ''}
+                <span class="chip-score">${score}</span>
+            </button>
+        `;
+    }).join('');
+
+    // Available metrics for the line chart — intersect across all
+    // selected reports so we don't offer a metric some sets don't have.
+    const metricNames = collectMetricNames(selectedReports);
+    const metricOpts = ['overall_score', ...metricNames].map(n => {
+        const lbl = (n === 'overall_score') ? '综合评分'
+                                            : (METRIC_LABELS[n] || n);
+        const sel2 = (n === _compareState.metric) ? 'selected' : '';
+        return `<option value="${n}" ${sel2}>${escapeAttr(lbl)}</option>`;
+    }).join('');
+
+    $('#compare-content').innerHTML = `
+        <div class="cmp-chips">${chipsHTML}</div>
+
+        <div class="cmp-grid">
+            <div class="cmp-card">
+                <div class="cmp-card-title">雷达叠加（${selectedReports.length} 组）</div>
+                <canvas id="cmp-radar" class="cmp-radar"></canvas>
+                <div class="cmp-legend" id="cmp-radar-legend"></div>
+            </div>
+            <div class="cmp-card">
+                <div class="cmp-card-title">
+                    指标趋势
+                    <select id="cmp-metric" class="cmp-metric-select">${metricOpts}</select>
+                </div>
+                <canvas id="cmp-trend" class="cmp-trend"></canvas>
+                <div class="cmp-trend-hint" id="cmp-trend-hint"></div>
+            </div>
+        </div>
+    `;
+
+    $('#compare-stats').textContent = `${selectedReports.length} / ${reports.length} 选中`;
+
+    // Wire chip clicks
+    $$('.cmp-chip').forEach(el => {
+        el.onclick = () => {
+            const name = el.dataset.name;
+            if (sel.has(name)) sel.delete(name); else sel.add(name);
+            renderCompare();
+        };
+    });
+
+    // Metric switcher
+    $('#cmp-metric').onchange = (e) => {
+        _compareState.metric = e.target.value;
+        renderCompareCharts();
+    };
+
+    renderCompareCharts();
+}
+
+function renderCompareCharts() {
+    const sel = _compareState.selected;
+    const reports = _compareState.reports;
+    const selectedReports = reports.filter(r => sel.has(r.name));
+
+    const radar = $('#cmp-radar');
+    const trend = $('#cmp-trend');
+    const legend = $('#cmp-radar-legend');
+    const trendHint = $('#cmp-trend-hint');
+
+    if (!selectedReports.length) {
+        if (radar) {
+            const c = radar.getContext('2d');
+            radar.width = 320; radar.height = 320;
+            c.fillStyle = 'rgba(140,150,180,0.6)';
+            c.font = '12px "Fira Sans", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('选中至少一个训练组', 160, 160);
+        }
+        if (legend) legend.innerHTML = '';
+        if (trend) {
+            const c = trend.getContext('2d');
+            trend.width = 600; trend.height = 220;
+            c.fillStyle = 'rgba(140,150,180,0.6)';
+            c.font = '12px "Fira Sans", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('选中至少一个训练组', 300, 110);
+        }
+        if (trendHint) trendHint.textContent = '';
+        return;
+    }
+
+    // Radar overlay
+    const datasets = selectedReports.map((r, i) => ({
+        label: displaySetName(r.name)
+            + (r.athletes && r.athletes[0] ? ' · ' + r.athletes[0].name : ''),
+        color: colourForSetReport(r, reports.indexOf(r)),
+        metrics: r.metrics || [],
+    }));
+    if (radar) drawRadarOverlay(radar, datasets);
+    if (legend) {
+        legend.innerHTML = datasets.map(d => `
+            <span class="legend-pill" style="--lp:${d.color}">
+                <span class="legend-dot"></span>${escapeAttr(d.label)}
+            </span>
+        `).join('');
+    }
+
+    // Trend line — one point per selected report, ordered by date
+    const sortedSelected = _compareState.sortedByDate.filter(r => sel.has(r.name));
+    if (trend) {
+        drawTrendLine(trend, sortedSelected, _compareState.metric);
+    }
+    if (trendHint) {
+        const m = _compareState.metric;
+        const label = (m === 'overall_score') ? '综合评分'
+                                              : (METRIC_LABELS[m] || m);
+        trendHint.textContent = `指标：${label} · 横轴按录制时间升序`;
+    }
+}
+
+function displaySetName(name) {
+    // "set_009_20260422_142249" → "#9 · 04-22 14:22"
+    const m = name.match(/^set_(\d+)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+    if (!m) return name;
+    return `#${parseInt(m[1], 10)} · ${m[3]}-${m[4]} ${m[5]}:${m[6]}`;
+}
+
+function colourForSetReport(r, idx) {
+    // Athlete colour wins (so "all of 张三" form a coherent cluster);
+    // otherwise cycle through the compare palette.
+    const ath = (r.athletes && r.athletes[0]) || null;
+    if (ath && ath.color) return ath.color;
+    return COMPARE_PALETTE[idx % COMPARE_PALETTE.length];
+}
+
+function collectMetricNames(reports) {
+    if (!reports.length) return [];
+    // Intersection so the X axis is comparable across all selections
+    let names = (reports[0].metrics || [])
+        .filter(m => m.value != null && m.zone !== 'no_data')
+        .map(m => m.name);
+    for (let i = 1; i < reports.length; i++) {
+        const set = new Set((reports[i].metrics || [])
+            .filter(m => m.value != null && m.zone !== 'no_data')
+            .map(m => m.name));
+        names = names.filter(n => set.has(n));
+    }
+    return names;
+}
+
+function drawRadarOverlay(canvas, datasets) {
+    const dpr = window.devicePixelRatio || 1;
+    const size = Math.min(canvas.parentElement.clientWidth - 32, 360);
+    canvas.style.width  = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    const c = canvas.getContext('2d');
+    c.scale(dpr, dpr);
+    const cx = size / 2, cy = size / 2, r = size * 0.34;
+
+    // Use the first dataset's metric order as the canonical axis
+    // ordering, intersect every subsequent dataset against it.
+    const baseNames = (datasets[0].metrics || [])
+        .filter(m => m.value != null && m.zone !== 'no_data')
+        .map(m => m.name);
+    const commonNames = baseNames.filter(n =>
+        datasets.every(d =>
+            (d.metrics || []).some(m => m.name === n
+                && m.value != null && m.zone !== 'no_data')
+        )
+    );
+
+    if (commonNames.length < 3) {
+        c.fillStyle = 'rgba(140,150,180,0.6)';
+        c.font = '12px "Fira Sans", sans-serif';
+        c.textAlign = 'center';
+        c.fillText('共有指标 < 3，无法叠加雷达', cx, cy);
+        return;
+    }
+
+    const n = commonNames.length;
+    const labels = commonNames.map(n => METRIC_LABELS[n] || n);
+
+    // Background rings
+    [0.25, 0.5, 0.75, 1.0].forEach((frac, ri, arr) => {
+        c.beginPath();
+        for (let i = 0; i < n; i++) {
+            const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const x = cx + Math.cos(angle) * r * frac;
+            const y = cy + Math.sin(angle) * r * frac;
+            if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        }
+        c.closePath();
+        c.strokeStyle = ri === arr.length - 1
+            ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+        c.lineWidth = ri === arr.length - 1 ? 1.5 : 1;
+        c.stroke();
+    });
+    // Spokes
+    c.strokeStyle = 'rgba(255,255,255,0.08)';
+    c.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+        c.stroke();
+    }
+
+    // Each dataset's polygon
+    datasets.forEach(d => {
+        const lookup = new Map((d.metrics || []).map(m => [m.name, m]));
+        const pts = commonNames.map((name, i) => {
+            const m = lookup.get(name);
+            const v = normalizeForRadar(name, m.value);
+            const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const frac  = v / 100;
+            return [cx + Math.cos(angle) * r * frac, cy + Math.sin(angle) * r * frac];
+        });
+        c.beginPath();
+        pts.forEach(([x, y], i) => { if (i === 0) c.moveTo(x, y); else c.lineTo(x, y); });
+        c.closePath();
+        c.fillStyle = d.color + '22';   // ~13% opacity fill
+        c.fill();
+        c.strokeStyle = d.color;
+        c.lineWidth = 2;
+        c.stroke();
+        pts.forEach(([x, y]) => {
+            c.beginPath(); c.arc(x, y, 3, 0, Math.PI * 2);
+            c.fillStyle = d.color; c.fill();
+        });
+    });
+
+    // Axis labels
+    const labelR = r + size * 0.10;
+    c.font = `${Math.round(size * 0.030)}px "Fira Sans", sans-serif`;
+    c.fillStyle = 'rgba(200,210,230,0.85)';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    labels.forEach((label, i) => {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        const lx = cx + Math.cos(angle) * labelR;
+        const ly = cy + Math.sin(angle) * labelR;
+        const words = label.match(/.{1,4}/gu) || [label];
+        const lineH = size * 0.034;
+        words.forEach((word, wi) => {
+            c.fillText(word, lx, ly + (wi - (words.length - 1) / 2) * lineH);
+        });
+    });
+}
+
+function drawTrendLine(canvas, sortedReports, metricName) {
+    const parent = canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    const w = parent.clientWidth - 32;
+    const h = 220;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    const c = canvas.getContext('2d');
+    c.scale(dpr, dpr);
+    c.clearRect(0, 0, w, h);
+
+    // Pull metric value out of each report (or overall_score)
+    const data = sortedReports.map(r => {
+        if (metricName === 'overall_score') {
+            return { name: r.name, value: r.overall_score, athletes: r.athletes };
+        }
+        const m = (r.metrics || []).find(x => x.name === metricName);
+        return {
+            name: r.name,
+            value: (m && m.value != null && m.zone !== 'no_data') ? m.value : null,
+            athletes: r.athletes,
+        };
+    }).filter(d => d.value != null);
+
+    if (data.length === 0) {
+        c.fillStyle = 'rgba(140,150,180,0.6)';
+        c.font = '12px "Fira Sans", sans-serif';
+        c.textAlign = 'center';
+        c.fillText('选中训练组的此指标无数据', w / 2, h / 2);
+        return;
+    }
+
+    const padL = 44, padR = 16, padT = 16, padB = 36;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    const values = data.map(d => d.value);
+    let vmin = Math.min(...values), vmax = Math.max(...values);
+    if (vmin === vmax) { vmin -= 1; vmax += 1; }
+    const pad = (vmax - vmin) * 0.1;
+    vmin -= pad; vmax += pad;
+
+    // Y-axis grid + labels
+    c.strokeStyle = 'rgba(255,255,255,0.06)';
+    c.fillStyle = 'rgba(180,190,210,0.7)';
+    c.font = '10px "Fira Code", monospace';
+    c.textAlign = 'right';
+    c.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const y = padT + (plotH * i) / 4;
+        c.beginPath();
+        c.moveTo(padL, y); c.lineTo(padL + plotW, y); c.stroke();
+        const v = vmax - ((vmax - vmin) * i) / 4;
+        c.fillText(v.toFixed(1), padL - 6, y);
+    }
+
+    // Plot points + line
+    const xFor = (i) => padL + (data.length === 1 ? plotW / 2
+                                                  : (plotW * i) / (data.length - 1));
+    const yFor = (v) => padT + plotH * (1 - (v - vmin) / (vmax - vmin));
+
+    c.strokeStyle = '#3B82F6';
+    c.lineWidth = 2;
+    c.beginPath();
+    data.forEach((d, i) => {
+        const x = xFor(i), y = yFor(d.value);
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    });
+    c.stroke();
+
+    data.forEach((d, i) => {
+        const x = xFor(i), y = yFor(d.value);
+        const ath = (d.athletes && d.athletes[0]) || null;
+        const colour = (ath && ath.color) || '#3B82F6';
+        c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2);
+        c.fillStyle = colour; c.fill();
+        c.beginPath(); c.arc(x, y, 2, 0, Math.PI * 2);
+        c.fillStyle = '#fff'; c.fill();
+    });
+
+    // X-axis date labels (just first / mid / last to avoid clutter)
+    c.fillStyle = 'rgba(180,190,210,0.7)';
+    c.font = '10px "Fira Code", monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'top';
+    const showAt = data.length <= 4
+        ? data.map((_, i) => i)
+        : [0, Math.floor(data.length / 2), data.length - 1];
+    showAt.forEach(i => {
+        const d = data[i];
+        const m = d.name.match(/_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+        const txt = m ? `${m[2]}-${m[3]} ${m[4]}:${m[5]}` : d.name;
+        c.fillText(txt, xFor(i), padT + plotH + 8);
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+//   ATHLETE MANAGER (phase 7.2)
+// ═══════════════════════════════════════════════════════
+//   Coach assigns a stable name to each BYTETracker ID detected
+//   in this Set. The binding is per-Set because BYTETracker state
+//   resets between recordings (see DEVLOG #25).
+//
+//   On bind/unbind we mutate ``_activeOverlay.landmarks.athlete_map``
+//   in place — drawOverlay() reads from this object reference every
+//   frame, so the skeleton labels update on the next render without
+//   re-running setupSkeletonOverlay() (which would accumulate event
+//   listeners).
+//
+async function openAthleteManager(setName) {
+    if (!setName) return;
+
+    // Aggregate every distinct (non-null) track_id observed in this
+    // recording. ByteTrack assigns IDs from 1, but old recordings
+    // (before phase 7.1) won't have any IDs at all — show a friendly
+    // "nothing to bind" hint in that case.
+    const detectedIds = new Set();
+    if (_activeOverlay && _activeOverlay.landmarks
+        && Array.isArray(_activeOverlay.landmarks.all_ids)) {
+        for (const frameIds of _activeOverlay.landmarks.all_ids) {
+            for (const id of (frameIds || [])) {
+                if (id != null) detectedIds.add(id);
+            }
+        }
+    }
+    const sortedIds = [...detectedIds].sort((a, b) => a - b);
+
+    // Snapshot of the existing roster so we can offer it in the picker.
+    let athletes = [];
+    try {
+        const r = await fetch('/api/athletes');
+        if (r.ok) athletes = (await r.json()).athletes || [];
+    } catch {}
+
+    // Per-Set binding map (mutated in place as we bind/unbind).
+    const aMap = (_activeOverlay && _activeOverlay.landmarks
+                  && _activeOverlay.landmarks.athlete_map) || {};
+
+    const root = $('#modal-root');
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    function escapeHTML(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+    }
+
+    function rowsHTML() {
+        if (sortedIds.length === 0) {
+            return `<div class="ath-empty">本组没有检测到带稳定 ID 的运动员
+                    （旧录制 / MediaPipe backend / 单人都属此情况）。</div>`;
+        }
+        return sortedIds.map(id => {
+            const swatch = `<span class="ath-swatch" style="background:${TEAM_COLORS[id % TEAM_COLORS.length]}"></span>`;
+            const idTag = `<span class="ath-id">#${id}</span>`;
+            const bound = aMap[String(id)];
+            if (bound) {
+                return `<div class="ath-row" data-track-id="${id}">
+                    ${swatch}${idTag}
+                    <span class="ath-name">${escapeHTML(bound.name)}</span>
+                    <button class="ath-unbind"
+                            data-track-id="${id}"
+                            data-athlete-id="${escapeHTML(bound.athlete_id)}">解绑</button>
+                </div>`;
+            }
+            const opts = athletes.map(a =>
+                `<option value="${escapeHTML(a.id)}">${escapeHTML(a.name)}</option>`
+            ).join('');
+            return `<div class="ath-row" data-track-id="${id}">
+                ${swatch}${idTag}
+                <select class="ath-select" data-track-id="${id}">
+                    <option value="">— 选择运动员 —</option>
+                    ${opts}
+                    <option value="__new__">＋ 新建运动员…</option>
+                </select>
+            </div>`;
+        }).join('');
+    }
+
+    function render() {
+        overlay.innerHTML = `
+            <div class="modal-box ath-modal">
+                <div class="modal-title">队员管理 · ${escapeHTML(setName)}</div>
+                <div class="modal-body">
+                    <div class="ath-hint">
+                        本组检测到的 BYTETracker ID。给每个 ID 绑定一个运动员后，
+                        骨架标签会从 <code>#3</code> 升级为运动员姓名。绑定是 per-Set 的，
+                        因为追踪 ID 每次录制都会重置（DEVLOG #25）。
+                    </div>
+                    <div class="ath-rows">${rowsHTML()}</div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-cancel" id="ath-close">关闭</button>
+                </div>
+            </div>
+        `;
+        overlay.querySelector('#ath-close').onclick = closeModal;
+        overlay.querySelectorAll('.ath-select').forEach(sel => {
+            sel.addEventListener('change', () => onPick(sel));
+        });
+        overlay.querySelectorAll('.ath-unbind').forEach(btn => {
+            btn.addEventListener('click', () => onUnbind(btn));
+        });
+    }
+
+    async function onPick(sel) {
+        const trackId = parseInt(sel.dataset.trackId, 10);
+        let athleteId = sel.value;
+        if (!athleteId) return;
+
+        if (athleteId === '__new__') {
+            const name = window.prompt('运动员姓名：');
+            if (!name || !name.trim()) { sel.value = ''; return; }
+            try {
+                const r = await fetch('/api/athletes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim() }),
+                });
+                if (!r.ok) throw 0;
+                const ath = await r.json();
+                athletes.push(ath);
+                athleteId = ath.id;
+            } catch {
+                toast('创建运动员失败', 'error');
+                sel.value = '';
+                return;
+            }
+        }
+
+        try {
+            const r = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}/bind`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ set: setName, track_id: trackId }),
+            });
+            if (!r.ok) throw 0;
+            const ath = await r.json();
+            // Conflict resolution on the server may have stolen this
+            // (set, track_id) from another athlete — clear stale local
+            // entries with the same id before writing the new one.
+            for (const k of Object.keys(aMap)) {
+                if (aMap[k].athlete_id === ath.id && k !== String(trackId)) {
+                    // not our concern: that's a *different* track_id
+                    // for the same athlete, which is allowed
+                }
+            }
+            aMap[String(trackId)] = {
+                athlete_id: ath.id,
+                name: ath.name,
+                color: ath.color,
+            };
+            if (_activeOverlay && _activeOverlay.landmarks) {
+                _activeOverlay.landmarks.athlete_map = aMap;
+            }
+            toast(`#${trackId} → ${ath.name}`, 'success');
+            render();
+        } catch {
+            toast('绑定失败', 'error');
+            sel.value = '';
+        }
+    }
+
+    async function onUnbind(btn) {
+        const trackId = parseInt(btn.dataset.trackId, 10);
+        const athleteId = btn.dataset.athleteId;
+        try {
+            const r = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}/unbind`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ set: setName, track_id: trackId }),
+            });
+            if (!r.ok) throw 0;
+            delete aMap[String(trackId)];
+            if (_activeOverlay && _activeOverlay.landmarks) {
+                _activeOverlay.landmarks.athlete_map = aMap;
+            }
+            toast(`#${trackId} 已解绑`, 'success');
+            render();
+        } catch {
+            toast('解绑失败', 'error');
+        }
+    }
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener('keydown', keyHandler);
+    }
+    const keyHandler = (e) => { if (e.key === 'Escape') closeModal(); };
+    document.addEventListener('keydown', keyHandler);
+    overlay.onclick = e => { if (e.target === overlay) closeModal(); };
+
+    render();
+    root.appendChild(overlay);
 }
 
 // ═══════════════════════════════════════════════════════

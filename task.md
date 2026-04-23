@@ -163,6 +163,59 @@ data/
 - [x] 时长 0s 回退
   - `/api/sets/{name}/report` 中若 IMU 无数据，依次回退到 vision.csv → landmarks.csv → `frame_count / fps`。无 IMU 的训练组也能显示真实时长。
 
+## 阶段七：多人追踪 + 跨 Set 对比 + 微调前置 🚧 进行中
+
+目标：把 Coach Workstation 从「单场会话」升级为「同一队员在多场训练间的纵向画像」。
+
+**前提共识**：阶段六的 UI 全部基于离线想象 + 论文先验设计，没有真实泳池数据校验。所以本阶段的隐藏前置是 **7.0 真实数据采集**，第一场实训只囤素材不分析。
+
+### 7.0 真实训练数据采集（推后到 7.2/7.3/7.4 准备工作完成后）
+> 总统大人决定：先把 7.2/7.3/7.4 完整跑通，再上传一些已有的真实训练视频做实地验证 + YOLO 微调。
+- [ ] 总统上传若干已录制的真实训练视频到 `data/raw_videos/`
+- [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）—— 由 7.4 一起产出
+
+### 7.1 多人独立追踪（ByteTrack） — PR #2
+- [ ] [yolo_pose.py](fastapi_app/yolo_pose.py)：`.predict()` → `.track(persist=True, tracker='bytetrack.yaml')`，`detect()` 返回 `(persons, track_ids)`
+- [ ] [camera_manager.py](fastapi_app/camera_manager.py)：在帧字典中新增 `track_ids: list[int]`，与 `all_landmarks` 平行
+- [ ] [recorder.py](fastapi_app/recorder.py)：`write_landmarks_multi(local_ts, frame, all_landmarks, track_ids=None)`；JSONL 每个 person 加 `id` 字段
+- [ ] [main.py](fastapi_app/main.py)：`_vision_writer_loop` 把 `data["track_ids"]` 透传给 `write_landmarks_multi`
+- [ ] [api_routes.py](fastapi_app/api_routes.py)：`/api/sets/{name}/landmarks` 的 `all_frames` 中每个 person 附 `id`
+- [ ] 前端 `setupSkeletonOverlay`：色板按 `track_id % len(TEAM_COLORS)`（不再是数组顺序），标签 `#3` 而不是 `P2`
+- [ ] 实时页骨架覆盖层：在每个人头顶显示 `#id`，便于教练即时确认 ID 稳定
+- [ ] DEVLOG #25 记录"为什么追踪 ID 是横向对比的前提"
+
+### 7.2 运动员名 ↔ track_id 映射 — PR #3 ✅
+- [x] `data/athletes.json`：`{id, name, color, bindings: [{set, track_id}], created_at}` + 原子写 + threading.Lock + forward-compat
+- [x] `/api/athletes` GET / POST / PATCH / DELETE / bind / unbind（unbind 用 POST 而不是 DELETE-with-body，避开 httpx + 代理兼容性坑）
+- [x] `/api/sets/{name}/landmarks` 额外返回 `athlete_map: {track_id_str: {athlete_id, name, color}}`
+- [x] 分析页「队员管理」模态：聚合本 set 出现过的所有 unique track_id → 选 athlete or 新建 → bind/unbind
+- [x] 三层 fallback `colourFor / labelFor`：athlete binding > track_id 配色 > 数组顺序
+- [x] in-place `_activeOverlay.landmarks.athlete_map` mutation 避免 setupSkeletonOverlay 重入累计事件
+- [x] athlete_store 单元 smoke（9 边界场景）+ FastAPI TestClient 集成 smoke（11 assertions）
+- [x] DEVLOG #26
+
+### 7.3 跨 Set 趋势对比页 — PR #4 ✅
+- [x] `/api/compare?sets=name1,name2,...` 多 Set 批量获取 slim report（最多 20 个，phantom set 单独标 error 不阻塞）
+- [x] `/api/athletes/{id}/sets` 列出运动员的所有 binding
+- [x] 前端新增第 4 个 Tab「对比」（原设置由 4 → 5）：
+  - [x] 顶部筛选：运动员下拉（"全部"/已注册队员）+ 最近 N 组（5/10/20）
+  - [x] Set chips 多选（默认前 6 个，避免雷达图过于拥挤）
+  - [x] 雷达图叠加：取所有选中 Set 的共有指标（intersect），每组一个多边形 + 图例
+  - [x] 单指标平行折线：可切换指标（综合评分 / 任一交集指标），横轴按录制时间升序
+  - [x] 颜色策略：同一运动员的多场训练用 athlete.color 形成视觉聚簇
+- [x] 键盘快捷键 1/2/3/4/5 映射更新；设置页快捷键文档同步
+- [x] DEVLOG #27
+
+### 7.4 微调 YOLO — 准备工作完成 ✅，实际训练等 7.0
+- [x] [tools/preannotate.py](tools/preannotate.py) — 半监督预标注（每 N 帧抽样、`--conf 0.3` 让 borderline 也进入预标）
+- [x] [tools/train_pose.py](tools/train_pose.py) — 包装 ultralytics yolo pose train，augmentation 已针对水中场景调（mosaic 0.5、degrees 5、hsv_v 0.5）
+- [x] [tools/eval_pose.py](tools/eval_pose.py) — 包装 yolo pose val，输出 mAP@50/50-95，注释里写明"评估集必须来自训练集没见过的场地"
+- [x] [data/training/syncswim.yaml](data/training/syncswim.yaml) — ultralytics 配置（17 个 COCO keypoints + flip_idx 左右镜像）
+- [x] [docs/fine-tuning.md](docs/fine-tuning.md) — 完整流程：囤素材 → 预标 → CVAT 修正 → 手动拆 train/val（避免 auto-split 把同视频相邻帧分两边）→ 训练 → 评估 → 部署
+- [x] `.gitignore` 排除 `data/raw_videos/`、`data/training/{images,labels}/`、`runs/` 但保留 `syncswim.yaml`
+- [x] DEVLOG #28
+- [ ] **等 7.0 真实素材**：跑一次完整流程出第一个 `best.pt`，然后切换 `config.toml` 部署
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）

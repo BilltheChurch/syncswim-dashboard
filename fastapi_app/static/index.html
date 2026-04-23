@@ -32,9 +32,13 @@
                 <span class="tab-dot"></span>历史
                 <span class="tab-kbd">3</span>
             </button>
+            <button class="tab" data-view="compare">
+                <span class="tab-dot"></span>对比
+                <span class="tab-kbd">4</span>
+            </button>
             <button class="tab" data-view="settings">
                 <span class="tab-dot"></span>设置
-                <span class="tab-kbd">4</span>
+                <span class="tab-kbd">5</span>
             </button>
         </nav>
         <div class="header-status">
@@ -291,6 +295,34 @@
             </div>
         </div>
 
+        <!-- ═══════════════ VIEW: COMPARE ═══════════════ -->
+        <div id="view-compare" class="view">
+            <div class="compare-topbar">
+                <div class="compare-filter-group">
+                    <label class="filter-label">运动员筛选</label>
+                    <select id="compare-athlete">
+                        <option value="">— 全部训练组 —</option>
+                    </select>
+                </div>
+                <div class="compare-filter-group">
+                    <label class="filter-label">最近</label>
+                    <select id="compare-recent">
+                        <option value="5">5 组</option>
+                        <option value="10" selected>10 组</option>
+                        <option value="20">20 组</option>
+                    </select>
+                </div>
+                <button class="btn-secondary" id="compare-refresh">刷新</button>
+                <div class="compare-stats" id="compare-stats">-- / -- 选中</div>
+            </div>
+            <div id="compare-content">
+                <div class="analysis-placeholder">
+                    <div class="placeholder-mark"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- ═══════════════ VIEW: SETTINGS ═══════════════ -->
         <div id="view-settings" class="view">
             <div class="settings-layout">
@@ -430,7 +462,7 @@
                 <div class="settings-section">
                     <div class="section-title">键盘快捷键</div>
                     <div class="shortcut-table">
-                        <div class="sc-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> <span>切换 Tab</span></div>
+                        <div class="sc-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd> <span>切换 Tab（实时 / 分析 / 历史 / 对比 / 设置）</span></div>
                         <div class="sc-row"><kbd>R</kbd> <span>开始录制</span></div>
                         <div class="sc-row"><kbd>␣</kbd> <span>停止录制</span></div>
                         <div class="sc-row"><kbd>S</kbd> <span>快照（带骨架）</span></div>
