@@ -194,14 +194,17 @@ data/
 - [x] athlete_store 单元 smoke（9 边界场景）+ FastAPI TestClient 集成 smoke（11 assertions）
 - [x] DEVLOG #26
 
-### 7.3 跨 Set 趋势对比页 — PR #4
-- [ ] `/api/compare?sets=name1,name2,...&metric=energy_index|...` 多 Set 同指标聚合
-- [ ] `/api/athletes/{name}/sets` 按队员筛选历史
-- [ ] 前端新增第 5 个 Tab「对比」：
-  - [ ] Set 多选（最近 N 个 / 按队员筛选）
-  - [ ] 雷达图叠加（同一人两次训练 8/15 指标对比）
-  - [ ] 单指标平行折线（横轴日期，纵轴 `energy_index` / `explosive_power` / `motion_complexity` 等独有指标）
-- [ ] DEVLOG 记录"训练前后对比 = IMU 独有指标真正放光的场景"
+### 7.3 跨 Set 趋势对比页 — PR #4 ✅
+- [x] `/api/compare?sets=name1,name2,...` 多 Set 批量获取 slim report（最多 20 个，phantom set 单独标 error 不阻塞）
+- [x] `/api/athletes/{id}/sets` 列出运动员的所有 binding
+- [x] 前端新增第 4 个 Tab「对比」（原设置由 4 → 5）：
+  - [x] 顶部筛选：运动员下拉（"全部"/已注册队员）+ 最近 N 组（5/10/20）
+  - [x] Set chips 多选（默认前 6 个，避免雷达图过于拥挤）
+  - [x] 雷达图叠加：取所有选中 Set 的共有指标（intersect），每组一个多边形 + 图例
+  - [x] 单指标平行折线：可切换指标（综合评分 / 任一交集指标），横轴按录制时间升序
+  - [x] 颜色策略：同一运动员的多场训练用 athlete.color 形成视觉聚簇
+- [x] 键盘快捷键 1/2/3/4/5 映射更新；设置页快捷键文档同步
+- [x] DEVLOG #27
 
 ### 7.4 微调 YOLO（依赖 7.0 素材到位后）
 - [ ] 用现有 `yolov8s-pose.pt` 半监督预标注真实素材

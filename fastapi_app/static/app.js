@@ -206,6 +206,7 @@ function switchTab(view) {
     $$('.view').forEach(v => v.classList.toggle('active', v.id === `view-${view}`));
     if (view === 'analysis') loadSetList();
     if (view === 'history')  loadHistory();
+    if (view === 'compare')  loadCompare();
     if (view === 'settings') loadSettings();
 }
 
@@ -231,7 +232,8 @@ document.addEventListener('keydown', e => {
         case '1': switchTab('live');     break;
         case '2': switchTab('analysis'); break;
         case '3': switchTab('history');  break;
-        case '4': switchTab('settings'); break;
+        case '4': switchTab('compare');  break;
+        case '5': switchTab('settings'); break;
         case 'r': case 'R':
             if (!$('#btn-start').disabled) $('#btn-start').click();
             break;
@@ -1894,6 +1896,502 @@ async function setupSkeletonOverlay(name) {
 
     // Initial paint once metadata is ready
     if (video.readyState >= 1) drawOverlay();
+}
+
+// ═══════════════════════════════════════════════════════
+//   COMPARE VIEW (phase 7.3)
+// ═══════════════════════════════════════════════════════
+//   Cross-Set trend comparison. Pulls slim reports from
+//   /api/compare?sets=A,B,C and renders three views in
+//   one tab:
+//     1. Set chips (toggleable selection)
+//     2. Radar overlay — one polygon per selected Set
+//     3. Single-metric line chart — one point per Set,
+//        ordered by recording date (X axis)
+//
+//   Athlete-bound Sets get coloured by the athlete's pinned
+//   colour so "all of 张三's sessions" form a coherent
+//   visual cluster on screen.
+
+const COMPARE_PALETTE = [
+    '#3B82F6', '#A855F7', '#F59E0B', '#10B981',
+    '#EC4899', '#06B6D4', '#F43F5E', '#84CC16',
+    '#FB923C', '#8B5CF6',
+];
+
+let _compareState = {
+    allSets: [],          // raw /api/sets list
+    athletes: [],         // raw /api/athletes list
+    filteredSets: [],     // after athlete + recent filter
+    reports: [],          // slim reports from /api/compare
+    selected: new Set(),  // selected set names
+    metric: 'overall_score',
+    sortedByDate: [],     // reports sorted by date asc (for line chart)
+};
+
+async function loadCompare() {
+    const content = $('#compare-content');
+    content.innerHTML = `
+        <div class="skel-card"><div class="skeleton skel-block"></div></div>
+        <div class="skel-card"><div class="skeleton skel-block"></div></div>
+    `;
+
+    // Pull sets list + athlete roster in parallel
+    let sets = [], athletes = [];
+    try {
+        const [r1, r2] = await Promise.all([
+            fetch('/api/sets'),
+            fetch('/api/athletes'),
+        ]);
+        sets = await r1.json();
+        if (r2.ok) athletes = (await r2.json()).athletes || [];
+    } catch {
+        content.innerHTML = `<div class="analysis-placeholder"><p>加载失败</p></div>`;
+        return;
+    }
+
+    _compareState.allSets = sets;
+    _compareState.athletes = athletes;
+
+    // Populate athlete filter (preserve current selection if any)
+    const aSel = $('#compare-athlete');
+    const prev = aSel.value || '';
+    aSel.innerHTML = '<option value="">— 全部训练组 —</option>'
+        + athletes.map(a => `<option value="${a.id}">${escapeAttr(a.name)}</option>`).join('');
+    aSel.value = prev;
+
+    // Wire controls (idempotent — replaceAll listeners by cloning)
+    aSel.onchange = () => applyCompareFilter();
+    $('#compare-recent').onchange = () => applyCompareFilter();
+    $('#compare-refresh').onclick = () => loadCompare();
+
+    applyCompareFilter();
+}
+
+function escapeAttr(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+async function applyCompareFilter() {
+    const aId = $('#compare-athlete').value || '';
+    const recent = parseInt($('#compare-recent').value, 10) || 10;
+
+    // Filter set list
+    let pool = _compareState.allSets.slice();
+    if (aId) {
+        // Pull athlete's bindings (already in roster)
+        const ath = _compareState.athletes.find(a => a.id === aId);
+        const setNames = new Set((ath && ath.bindings || []).map(b => b.set));
+        pool = pool.filter(s => setNames.has(s.name));
+    }
+    // Sort by date desc (sets list usually already is, but be safe)
+    pool.sort((a, b) => (b.created_at || b.name).localeCompare(a.created_at || a.name));
+    pool = pool.slice(0, recent);
+
+    _compareState.filteredSets = pool;
+    if (pool.length === 0) {
+        $('#compare-content').innerHTML = `
+            <div class="analysis-placeholder"><p>没有符合条件的训练组</p></div>
+        `;
+        $('#compare-stats').textContent = `0 / 0 选中`;
+        return;
+    }
+
+    // Default selection: all filtered sets (capped at 6 so the
+    // radar overlay isn't impossible to read)
+    _compareState.selected = new Set(pool.slice(0, 6).map(s => s.name));
+
+    // Batch-fetch slim reports
+    const url = '/api/compare?sets=' + encodeURIComponent(pool.map(s => s.name).join(','));
+    let reports = [];
+    try {
+        const r = await fetch(url);
+        const body = await r.json();
+        reports = (body.sets || []).filter(s => !s.error);
+    } catch {
+        $('#compare-content').innerHTML = `<div class="analysis-placeholder"><p>对比加载失败</p></div>`;
+        return;
+    }
+
+    // Sort by date ascending for the line chart
+    const dateOf = (name) => {
+        // set_NNN_YYYYMMDD_HHMMSS — extract from name
+        const m = name.match(/_(\d{8})_(\d{6})$/);
+        return m ? m[1] + m[2] : name;
+    };
+    _compareState.reports = reports;
+    _compareState.sortedByDate = reports.slice().sort(
+        (a, b) => dateOf(a.name).localeCompare(dateOf(b.name))
+    );
+
+    renderCompare();
+}
+
+function renderCompare() {
+    const sel = _compareState.selected;
+    const reports = _compareState.reports;
+    const selectedReports = reports.filter(r => sel.has(r.name));
+
+    // Build chip strip
+    const chipsHTML = reports.map((r, i) => {
+        const isSel = sel.has(r.name);
+        const colour = colourForSetReport(r, i);
+        const ath = (r.athletes && r.athletes[0]) || null;
+        const tag = ath ? escapeAttr(ath.name) : '';
+        const score = (r.overall_score != null) ? r.overall_score.toFixed(1) : '—';
+        return `
+            <button class="cmp-chip ${isSel ? 'selected' : ''}"
+                    data-name="${escapeAttr(r.name)}"
+                    style="--chip-color:${colour}">
+                <span class="chip-dot"></span>
+                <span class="chip-name">${escapeAttr(displaySetName(r.name))}</span>
+                ${tag ? `<span class="chip-tag">${tag}</span>` : ''}
+                <span class="chip-score">${score}</span>
+            </button>
+        `;
+    }).join('');
+
+    // Available metrics for the line chart — intersect across all
+    // selected reports so we don't offer a metric some sets don't have.
+    const metricNames = collectMetricNames(selectedReports);
+    const metricOpts = ['overall_score', ...metricNames].map(n => {
+        const lbl = (n === 'overall_score') ? '综合评分'
+                                            : (METRIC_LABELS[n] || n);
+        const sel2 = (n === _compareState.metric) ? 'selected' : '';
+        return `<option value="${n}" ${sel2}>${escapeAttr(lbl)}</option>`;
+    }).join('');
+
+    $('#compare-content').innerHTML = `
+        <div class="cmp-chips">${chipsHTML}</div>
+
+        <div class="cmp-grid">
+            <div class="cmp-card">
+                <div class="cmp-card-title">雷达叠加（${selectedReports.length} 组）</div>
+                <canvas id="cmp-radar" class="cmp-radar"></canvas>
+                <div class="cmp-legend" id="cmp-radar-legend"></div>
+            </div>
+            <div class="cmp-card">
+                <div class="cmp-card-title">
+                    指标趋势
+                    <select id="cmp-metric" class="cmp-metric-select">${metricOpts}</select>
+                </div>
+                <canvas id="cmp-trend" class="cmp-trend"></canvas>
+                <div class="cmp-trend-hint" id="cmp-trend-hint"></div>
+            </div>
+        </div>
+    `;
+
+    $('#compare-stats').textContent = `${selectedReports.length} / ${reports.length} 选中`;
+
+    // Wire chip clicks
+    $$('.cmp-chip').forEach(el => {
+        el.onclick = () => {
+            const name = el.dataset.name;
+            if (sel.has(name)) sel.delete(name); else sel.add(name);
+            renderCompare();
+        };
+    });
+
+    // Metric switcher
+    $('#cmp-metric').onchange = (e) => {
+        _compareState.metric = e.target.value;
+        renderCompareCharts();
+    };
+
+    renderCompareCharts();
+}
+
+function renderCompareCharts() {
+    const sel = _compareState.selected;
+    const reports = _compareState.reports;
+    const selectedReports = reports.filter(r => sel.has(r.name));
+
+    const radar = $('#cmp-radar');
+    const trend = $('#cmp-trend');
+    const legend = $('#cmp-radar-legend');
+    const trendHint = $('#cmp-trend-hint');
+
+    if (!selectedReports.length) {
+        if (radar) {
+            const c = radar.getContext('2d');
+            radar.width = 320; radar.height = 320;
+            c.fillStyle = 'rgba(140,150,180,0.6)';
+            c.font = '12px "Fira Sans", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('选中至少一个训练组', 160, 160);
+        }
+        if (legend) legend.innerHTML = '';
+        if (trend) {
+            const c = trend.getContext('2d');
+            trend.width = 600; trend.height = 220;
+            c.fillStyle = 'rgba(140,150,180,0.6)';
+            c.font = '12px "Fira Sans", sans-serif';
+            c.textAlign = 'center';
+            c.fillText('选中至少一个训练组', 300, 110);
+        }
+        if (trendHint) trendHint.textContent = '';
+        return;
+    }
+
+    // Radar overlay
+    const datasets = selectedReports.map((r, i) => ({
+        label: displaySetName(r.name)
+            + (r.athletes && r.athletes[0] ? ' · ' + r.athletes[0].name : ''),
+        color: colourForSetReport(r, reports.indexOf(r)),
+        metrics: r.metrics || [],
+    }));
+    if (radar) drawRadarOverlay(radar, datasets);
+    if (legend) {
+        legend.innerHTML = datasets.map(d => `
+            <span class="legend-pill" style="--lp:${d.color}">
+                <span class="legend-dot"></span>${escapeAttr(d.label)}
+            </span>
+        `).join('');
+    }
+
+    // Trend line — one point per selected report, ordered by date
+    const sortedSelected = _compareState.sortedByDate.filter(r => sel.has(r.name));
+    if (trend) {
+        drawTrendLine(trend, sortedSelected, _compareState.metric);
+    }
+    if (trendHint) {
+        const m = _compareState.metric;
+        const label = (m === 'overall_score') ? '综合评分'
+                                              : (METRIC_LABELS[m] || m);
+        trendHint.textContent = `指标：${label} · 横轴按录制时间升序`;
+    }
+}
+
+function displaySetName(name) {
+    // "set_009_20260422_142249" → "#9 · 04-22 14:22"
+    const m = name.match(/^set_(\d+)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+    if (!m) return name;
+    return `#${parseInt(m[1], 10)} · ${m[3]}-${m[4]} ${m[5]}:${m[6]}`;
+}
+
+function colourForSetReport(r, idx) {
+    // Athlete colour wins (so "all of 张三" form a coherent cluster);
+    // otherwise cycle through the compare palette.
+    const ath = (r.athletes && r.athletes[0]) || null;
+    if (ath && ath.color) return ath.color;
+    return COMPARE_PALETTE[idx % COMPARE_PALETTE.length];
+}
+
+function collectMetricNames(reports) {
+    if (!reports.length) return [];
+    // Intersection so the X axis is comparable across all selections
+    let names = (reports[0].metrics || [])
+        .filter(m => m.value != null && m.zone !== 'no_data')
+        .map(m => m.name);
+    for (let i = 1; i < reports.length; i++) {
+        const set = new Set((reports[i].metrics || [])
+            .filter(m => m.value != null && m.zone !== 'no_data')
+            .map(m => m.name));
+        names = names.filter(n => set.has(n));
+    }
+    return names;
+}
+
+function drawRadarOverlay(canvas, datasets) {
+    const dpr = window.devicePixelRatio || 1;
+    const size = Math.min(canvas.parentElement.clientWidth - 32, 360);
+    canvas.style.width  = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    const c = canvas.getContext('2d');
+    c.scale(dpr, dpr);
+    const cx = size / 2, cy = size / 2, r = size * 0.34;
+
+    // Use the first dataset's metric order as the canonical axis
+    // ordering, intersect every subsequent dataset against it.
+    const baseNames = (datasets[0].metrics || [])
+        .filter(m => m.value != null && m.zone !== 'no_data')
+        .map(m => m.name);
+    const commonNames = baseNames.filter(n =>
+        datasets.every(d =>
+            (d.metrics || []).some(m => m.name === n
+                && m.value != null && m.zone !== 'no_data')
+        )
+    );
+
+    if (commonNames.length < 3) {
+        c.fillStyle = 'rgba(140,150,180,0.6)';
+        c.font = '12px "Fira Sans", sans-serif';
+        c.textAlign = 'center';
+        c.fillText('共有指标 < 3，无法叠加雷达', cx, cy);
+        return;
+    }
+
+    const n = commonNames.length;
+    const labels = commonNames.map(n => METRIC_LABELS[n] || n);
+
+    // Background rings
+    [0.25, 0.5, 0.75, 1.0].forEach((frac, ri, arr) => {
+        c.beginPath();
+        for (let i = 0; i < n; i++) {
+            const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const x = cx + Math.cos(angle) * r * frac;
+            const y = cy + Math.sin(angle) * r * frac;
+            if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        }
+        c.closePath();
+        c.strokeStyle = ri === arr.length - 1
+            ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
+        c.lineWidth = ri === arr.length - 1 ? 1.5 : 1;
+        c.stroke();
+    });
+    // Spokes
+    c.strokeStyle = 'rgba(255,255,255,0.08)';
+    c.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+        c.stroke();
+    }
+
+    // Each dataset's polygon
+    datasets.forEach(d => {
+        const lookup = new Map((d.metrics || []).map(m => [m.name, m]));
+        const pts = commonNames.map((name, i) => {
+            const m = lookup.get(name);
+            const v = normalizeForRadar(name, m.value);
+            const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+            const frac  = v / 100;
+            return [cx + Math.cos(angle) * r * frac, cy + Math.sin(angle) * r * frac];
+        });
+        c.beginPath();
+        pts.forEach(([x, y], i) => { if (i === 0) c.moveTo(x, y); else c.lineTo(x, y); });
+        c.closePath();
+        c.fillStyle = d.color + '22';   // ~13% opacity fill
+        c.fill();
+        c.strokeStyle = d.color;
+        c.lineWidth = 2;
+        c.stroke();
+        pts.forEach(([x, y]) => {
+            c.beginPath(); c.arc(x, y, 3, 0, Math.PI * 2);
+            c.fillStyle = d.color; c.fill();
+        });
+    });
+
+    // Axis labels
+    const labelR = r + size * 0.10;
+    c.font = `${Math.round(size * 0.030)}px "Fira Sans", sans-serif`;
+    c.fillStyle = 'rgba(200,210,230,0.85)';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    labels.forEach((label, i) => {
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        const lx = cx + Math.cos(angle) * labelR;
+        const ly = cy + Math.sin(angle) * labelR;
+        const words = label.match(/.{1,4}/gu) || [label];
+        const lineH = size * 0.034;
+        words.forEach((word, wi) => {
+            c.fillText(word, lx, ly + (wi - (words.length - 1) / 2) * lineH);
+        });
+    });
+}
+
+function drawTrendLine(canvas, sortedReports, metricName) {
+    const parent = canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    const w = parent.clientWidth - 32;
+    const h = 220;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    const c = canvas.getContext('2d');
+    c.scale(dpr, dpr);
+    c.clearRect(0, 0, w, h);
+
+    // Pull metric value out of each report (or overall_score)
+    const data = sortedReports.map(r => {
+        if (metricName === 'overall_score') {
+            return { name: r.name, value: r.overall_score, athletes: r.athletes };
+        }
+        const m = (r.metrics || []).find(x => x.name === metricName);
+        return {
+            name: r.name,
+            value: (m && m.value != null && m.zone !== 'no_data') ? m.value : null,
+            athletes: r.athletes,
+        };
+    }).filter(d => d.value != null);
+
+    if (data.length === 0) {
+        c.fillStyle = 'rgba(140,150,180,0.6)';
+        c.font = '12px "Fira Sans", sans-serif';
+        c.textAlign = 'center';
+        c.fillText('选中训练组的此指标无数据', w / 2, h / 2);
+        return;
+    }
+
+    const padL = 44, padR = 16, padT = 16, padB = 36;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    const values = data.map(d => d.value);
+    let vmin = Math.min(...values), vmax = Math.max(...values);
+    if (vmin === vmax) { vmin -= 1; vmax += 1; }
+    const pad = (vmax - vmin) * 0.1;
+    vmin -= pad; vmax += pad;
+
+    // Y-axis grid + labels
+    c.strokeStyle = 'rgba(255,255,255,0.06)';
+    c.fillStyle = 'rgba(180,190,210,0.7)';
+    c.font = '10px "Fira Code", monospace';
+    c.textAlign = 'right';
+    c.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        const y = padT + (plotH * i) / 4;
+        c.beginPath();
+        c.moveTo(padL, y); c.lineTo(padL + plotW, y); c.stroke();
+        const v = vmax - ((vmax - vmin) * i) / 4;
+        c.fillText(v.toFixed(1), padL - 6, y);
+    }
+
+    // Plot points + line
+    const xFor = (i) => padL + (data.length === 1 ? plotW / 2
+                                                  : (plotW * i) / (data.length - 1));
+    const yFor = (v) => padT + plotH * (1 - (v - vmin) / (vmax - vmin));
+
+    c.strokeStyle = '#3B82F6';
+    c.lineWidth = 2;
+    c.beginPath();
+    data.forEach((d, i) => {
+        const x = xFor(i), y = yFor(d.value);
+        if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    });
+    c.stroke();
+
+    data.forEach((d, i) => {
+        const x = xFor(i), y = yFor(d.value);
+        const ath = (d.athletes && d.athletes[0]) || null;
+        const colour = (ath && ath.color) || '#3B82F6';
+        c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2);
+        c.fillStyle = colour; c.fill();
+        c.beginPath(); c.arc(x, y, 2, 0, Math.PI * 2);
+        c.fillStyle = '#fff'; c.fill();
+    });
+
+    // X-axis date labels (just first / mid / last to avoid clutter)
+    c.fillStyle = 'rgba(180,190,210,0.7)';
+    c.font = '10px "Fira Code", monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'top';
+    const showAt = data.length <= 4
+        ? data.map((_, i) => i)
+        : [0, Math.floor(data.length / 2), data.length - 1];
+    showAt.forEach(i => {
+        const d = data[i];
+        const m = d.name.match(/_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+        const txt = m ? `${m[2]}-${m[3]} ${m[4]}:${m[5]}` : d.name;
+        c.fillText(txt, xFor(i), padT + plotH + 8);
+    });
 }
 
 // ═══════════════════════════════════════════════════════

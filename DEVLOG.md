@@ -1948,4 +1948,98 @@ drawOverlay 闭包里的 `landmarks` 是同一对象引用，下一次 `requestA
 
 ---
 
+## 问题 #27：跨 Set 对比 —— 让 IMU 独有指标"真正放光"
+
+### 背景
+
+DEVLOG #23 在介绍 `explosive_power / energy_index / motion_complexity` 三个 IMU 独有指标时埋了一个坑：
+
+> 这些指标单独看没有"标准答案"——爆发力多大算好？能量消耗多少算多？所以**只在横向对比里才放光**。教练的实用场景是"训练前后对比"：同一运动员两次训练，`energy_index` 上升 = 同样的动作花了更多能量 = 疲劳 / 动作不经济。
+
+但 7.2 之前我们没有"同一运动员的多次训练"这个概念，只有按 set 编号排列的孤立录制。7.1 给了稳定 ID、7.2 把 ID 绑到了名字 — 现在 7.3 终于可以兑现这张支票，做出**横向对比页**。
+
+### 设计要点
+
+#### 1. 后端最小复用：复用 set_report，不重写计算
+
+跨 set 对比天然要求"每个 set 的数值跟它各自分析页看到的完全一致"。如果新写一套统计逻辑，就有"对比页说 7.5 但分析页说 7.7"的对不上号风险。
+
+我直接 await 已有的 `set_report(name)` route handler，从返回 dict 里抠精简字段：
+
+```python
+for name in set_names:
+    rep = await set_report(name)
+    if isinstance(rep, JSONResponse):
+        results.append({"name": name, "error": "not found"})
+        continue
+    slim = {
+        "name": name,
+        "overall_score": rep.get("overall_score"),
+        "metrics": rep.get("metrics"),
+        ...
+    }
+```
+
+**partial-failure 设计**：某个 set 不存在不该让整个对比请求 500。每个 set 独立 try，失败的标 `{"name": ..., "error": "not found"}`，前端能渲染部分对比 + 高亮失败的那行。这是面向"教练 7 天前删了 set_005 但今天打开旧的对比快照"的真实场景。
+
+**上限 20 个**：批量太大网络会卡，且雷达图叠加超过 6 条人眼根本看不清。20 是个合理的硬性上限。
+
+#### 2. 前端三块视图，一个状态机
+
+我没用 React/Vue，全是模块级 `_compareState` + `renderCompare()`。三块视图：
+
+- **chips strip** — 当前可对比的 set 列表，点击 toggle 选中
+- **雷达叠加** — 选中 set 的多边形叠加，颜色按 athlete 走
+- **单指标折线** — 选中 set 按录制时间升序排列，X 轴是时间，Y 轴是指标值
+
+切换"指标筛选"下拉只重画折线（`renderCompareCharts()` 不重渲染 chips），改"运动员筛选"才整体重拉数据（`applyCompareFilter()`）。
+
+#### 3. 雷达叠加的"共有指标 intersect"
+
+不同 set 可能有不同 metric 集合（IMU 没连那场就缺 IMU 指标，纯 IMU 那场就缺视觉指标）。雷达图所有顶点必须一致，所以要算所有选中 set 的 metric 交集：
+
+```js
+let names = (reports[0].metrics || [])
+    .filter(m => m.value != null && m.zone !== 'no_data')
+    .map(m => m.name);
+for (let i = 1; i < reports.length; i++) {
+    const set = new Set(reports[i].metrics.filter(m => ...).map(m => m.name));
+    names = names.filter(n => set.has(n));
+}
+```
+
+如果交集 < 3 个指标（雷达图至少需要三角形），渲染一句"共有指标 < 3，无法叠加"。这是教练混选了"纯 IMU"和"纯视频"两个 set 时会触发的友好提示。
+
+#### 4. 颜色策略：athlete > palette
+
+教练选了"张三的全部 5 场训练"，所有 5 个雷达多边形都是同一个紫色。视觉上一眼能看出"哦这五场都是同一个人的进步轨迹"。
+
+选了"张三 vs 李四 各 3 场"，张三的 3 场都紫色，李四的 3 场都蓝色，交集对比一目了然。
+
+这就是 7.2 那个"athlete pin colour"字段的真正用途 — 它在 7.2 PR 里只是个 UX 装饰，到 7.3 才显现出"跨场视觉聚簇"的真正价值。
+
+#### 5. set 名字缩写 → 人类可读
+
+原始：`set_009_20260422_142249`，22 字符，雷达图标签塞不下。
+
+格式化为：`#9 · 04-22 14:22`，11 字符，肉眼能秒看出"哦这是 9 月 22 号下午 2 点那场"。
+
+这种细节对教练 vs 工程师的 UX 差异巨大 — 工程师能记住 "20260422_142249" 的语义，教练只想看"哪天哪场"。
+
+### 验证
+
+- ✅ JS / Python 静态语法
+- ✅ FastAPI TestClient 集成 smoke：4 场景（empty sets 400 / >20 sets 400 / phantom set partial error / athletes/{id}/sets 404）
+- ✅ pytest 回归：9 failed / 94 passed = baseline
+
+### 收获
+
+1. **复用 route handler 是确保"对比页和详情页数值对得上"的最直接保证**：抗拒重新实现的诱惑，只做"投影"而不是"重算"。这种 DRY 不是为了少写代码，是为了**消除两套实现 drift 的可能性**。
+2. **partial-failure > all-or-nothing**：批量 API 默认应该是"每个独立成败、整体永远 200"。让前端决定如何展示部分失败，比让前端处理 500 友好得多。
+3. **下游产品化挖掘上游工程投资**：7.3 之所以能在两小时内做完，全靠 7.1 的 stable ID 和 7.2 的 athlete name 这两个"看似只是基础"的工作。**真正有用的产品价值往往隐藏在三层之上的 UX 里**，但它们必须站在前面铺好的稳定基座上。如果当初 7.1 只做了"颜色和数组顺序解耦"而没引入 BYTETracker，7.3 的趋势对比就根本无从谈起。
+4. **不同 set 的 metric 集合要做交集**：跨 set 比较前一定要先对齐"维度集合"，否则雷达图会突然"长出一个角"或"少一个角"，肉眼立刻察觉异常但调试起来很难。先做交集 + 阈值校验（< 3 给提示），是面向"用户混选不兼容数据"的常规防御。
+5. **状态机的拆分粒度反映用户操作的拆分粒度**：用户切指标只重画折线，用户改筛选才重拉数据。这个分层避免了"每点一下都重新跑一次完整渲染"的浪费。状态机粒度 = 用户操作粒度，这是最朴素也最有效的性能优化原则。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

@@ -970,6 +970,88 @@ async def unbind_track(athlete_id: str, req: _BindReq):
     return {"status": "unbound", "set": req.set, "track_id": req.track_id}
 
 
+# ── Cross-Set comparison (phase 7.3) ───────────────────────────
+# These endpoints power the "对比" tab. They reuse the per-Set
+# report path so the metric values shown in comparison are
+# byte-identical to what each Set's analysis page shows — no
+# divergent scoring logic to keep in sync.
+
+@router.get("/athletes/{athlete_id}/sets")
+async def athlete_sets(athlete_id: str):
+    """List every (set, track_id) binding for ``athlete_id``.
+
+    Used by the compare-tab Set picker so the coach can pick
+    "all of 张三's training sessions" with one click.
+    """
+    if _athletes is None:
+        return {"sets": []}
+    ath = _athletes.get_athlete(athlete_id)
+    if ath is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return {
+        "athlete_id": ath["id"],
+        "name": ath["name"],
+        "color": ath.get("color"),
+        "bindings": ath.get("bindings", []),
+    }
+
+
+@router.get("/compare")
+async def compare_sets(sets: str = ""):
+    """Batch-fetch slim Set reports for cross-Set visualisation.
+
+    ``sets`` is a comma-separated list of Set names. Each entry in
+    the response is the same metric / overall_score / duration
+    structure used by ``/api/sets/{name}/report`` — minus the heavy
+    ``phases`` field which the compare view doesn't use — plus an
+    ``athletes`` list mapping track_ids to athlete names that the
+    coach has bound for this Set (phase 7.2).
+
+    Sets that don't exist are reported individually as
+    ``{"name": ..., "error": "not found"}`` rather than failing
+    the whole request, so the frontend can render a partial
+    comparison even when one of N selected Sets has been deleted.
+    """
+    set_names = [s.strip() for s in sets.split(",") if s.strip()]
+    if not set_names:
+        return JSONResponse({"error": "sets parameter required"},
+                            status_code=400)
+    if len(set_names) > 20:
+        return JSONResponse({"error": "max 20 sets per request"},
+                            status_code=400)
+
+    results = []
+    for name in set_names:
+        rep = await set_report(name)
+        if isinstance(rep, JSONResponse):
+            results.append({"name": name, "error": "not found"})
+            continue
+        slim = {
+            "name": name,
+            "overall_score": rep.get("overall_score"),
+            "duration": rep.get("duration"),
+            "metrics": rep.get("metrics"),
+            "imu_summary": rep.get("imu_summary"),
+            "fps_mean": rep.get("fps_mean"),
+            "frame_count": rep.get("frame_count"),
+            "has_video": rep.get("has_video"),
+            "athletes": [],
+        }
+        if _athletes is not None:
+            ath_map = _athletes.lookup_for_set(name)
+            slim["athletes"] = [
+                {
+                    "track_id": tid,
+                    "name": v["name"],
+                    "athlete_id": v["athlete_id"],
+                    "color": v.get("color"),
+                }
+                for tid, v in sorted(ath_map.items())
+            ]
+        results.append(slim)
+    return {"sets": results}
+
+
 @router.get("/data/stats")
 async def data_stats():
     sessions = load_or_rebuild_index(_DATA_DIR)

@@ -3143,3 +3143,190 @@ kbd {
     color: #fff;
     border-color: var(--danger, #ef4444);
 }
+
+/* ── Compare view (phase 7.3) ─────────────────────────── */
+
+.compare-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--card-bg, rgba(255,255,255,0.03));
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.compare-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compare-filter-group select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.compare-filter-group select:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+
+.compare-stats {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-secondary:hover {
+    background: var(--secondary);
+    color: #fff;
+    border-color: var(--secondary);
+}
+
+.cmp-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.cmp-chip {
+    --chip-color: #3B82F6;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.cmp-chip:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--border-hi);
+}
+.cmp-chip.selected {
+    background: color-mix(in srgb, var(--chip-color) 18%, transparent);
+    border-color: var(--chip-color);
+    color: var(--text-hi);
+}
+.cmp-chip .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--chip-color);
+    flex-shrink: 0;
+}
+.cmp-chip .chip-name {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.74rem;
+}
+.cmp-chip .chip-tag {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+}
+.cmp-chip .chip-score {
+    margin-left: 4px;
+    color: var(--chip-color);
+    font-weight: 600;
+}
+
+.cmp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 16px;
+}
+@media (max-width: 1100px) {
+    .cmp-grid { grid-template-columns: 1fr; }
+}
+
+.cmp-card {
+    background: var(--card-bg, rgba(255,255,255,0.03));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+.cmp-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+}
+.cmp-radar {
+    display: block;
+    margin: 0 auto;
+}
+.cmp-trend {
+    display: block;
+    width: 100%;
+}
+.cmp-metric-select {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.cmp-trend-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    text-align: center;
+}
+
+.cmp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+    justify-content: center;
+}
+.legend-pill {
+    --lp: #3B82F6;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+}
+.legend-pill .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lp);
+}
