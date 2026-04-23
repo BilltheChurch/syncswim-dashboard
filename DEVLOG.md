@@ -2149,4 +2149,65 @@ flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
 
 ---
 
+## 问题 #29：用预录制视频做 dogfood —— 把"导入"做成第一公民
+
+### 背景
+
+总统大人决定先把阶段 7 全部完成 + 后续若干小特性，再上传真实素材做 dogfood。但**当下还有一摞历史训练录像可以先用**。问题是：现有 pipeline 的入口只有"实时录制"——MJPEG 摄像头流 + BLE IMU + Button A 触发 → 落盘 set。视频文件没有任何入口能进系统。
+
+两个糟糕的备选方案：
+
+1. **临时改 camera_manager 喂视频**：把 MJPEG reader 换成 cv2 VideoCapture，假装是"实时摄像头"。结论拒绝 — 这是侵入式改动，dogfood 完了得回退，回退又容易漏一处。
+2. **手工拼装 set 目录**：照着 `Recorder` 写出的 CSV/JSONL 格式手动创建文件。脆弱、容易漂、每个新 phase 加字段都要更新这个手工流程。
+
+正确做法：**做一个一等公民的"导入"工具**，输出跟 live recorder 100% 同构的 set 目录，下游 pipeline 完全不知道这是录的还是导入的。
+
+### 设计原则：与 Recorder 共享 schema
+
+[tools/import_video.py](tools/import_video.py) 的核心姿态是**只调用、不复制**：
+
+```python
+from fastapi_app.camera_manager import _compute_angles
+from fastapi_app.recorder import IMU_HEADER, LANDMARK_NAMES, VISION_HEADER
+```
+
+elbow 角度走 `_compute_angles`、CSV header 走 `Recorder` 模块常量、`reset_tracking()` 走 `YoloPoseDetector` 自带方法。**任何一个 schema 变化，导入工具自动跟随**。这避免了"live 加了字段、导入还在写老格式" 这类悄无声息的 drift。
+
+### 五个不变量
+
+写完后我用合成视频 + monkey-patched detector 跑了端到端 smoke，确认 5 个关键不变量：
+
+1. **6 个文件齐全**：`video.mp4` / `vision.csv` / `landmarks.csv` / `landmarks_multi.jsonl` / `imu_NODE_A1.csv` / `imu_NODE_A2.csv`
+2. **IMU CSV header-only**：触发 `set_report` duration 回退链（DEVLOG #13），让无 IMU 的导入 set 也能显示真实时长
+3. **vision.csv 30+1 行**：每帧一行 + header
+4. **landmarks.csv 30+1 行，与 video 严格 1:1**：DEVLOG #13 的核心约束 —— 否则比例映射后骨架会漂移
+5. **landmarks_multi.jsonl 30 行，奇偶交替**：奇数帧（无人）`persons=[], ids=[]`、偶数帧（2 人）`ids=[3, 7]` —— 证明两条 detection 分支都跑了
+
+测试用 monkey-patched 的 fake `YoloPoseDetector`，因为 yolov8s-pose.pt 权重不入仓（.gitignore），CI 环境也跑不动 mps inference。**用 mock 验证 pipeline 拓扑结构 ≠ 验证模型质量**，前者就是这个 PR 要做的事。
+
+### dogfood 的"测得到 vs 测不到"
+
+把整个测试矩阵整理在这里：
+
+| 能验证 ✅ | 测不到 ❌（需要硬件 + 真实场地） |
+|---|---|
+| 多人追踪 ID 稳定性 | 实时 MJPEG 摄像头流 |
+| 骨架渲染、配色、标签 | BLE IMU 数据接收 |
+| YOLO 在水中场景的真实表现（mAP） | Button A 录制触发 |
+| 分析页 / 历史页 / 对比页 / 设置页 / 队员管理 | 实时页评分环 + 三维条 |
+| 队员命名 → 跨场对比的完整闭环 | 现场操作流（教练岸边走动 UX） |
+| 7.4 微调流程 | |
+
+这就是导入工具的边界 —— **录制路径以外的一切都能验证**，足够支撑后续阶段 8 的 ABCDEF 改动验证。剩下的"硬件依赖"留给真正的实地 dogfood。
+
+### 收获
+
+1. **导入是一等公民，不是一次性脚本**：`tools/` 里的脚本如果会被反复用、且会随系统演进、且与生产代码共享 schema，就值得做成"工具"而不是"脚本"。一次性脚本会随 phase 演进 drift 然后被人嫌弃。
+2. **mock 验证拓扑、真实数据验证质量**：smoke test 的目标是证明"路径走通、字段齐全、不变量保持"，不是证明"模型预测准"。把这两件事分开避免"为了能跑测试拉一坨真实模型权重进 CI"的反模式。
+3. **共享代码的诱惑要算 ROI**：reuse `_compute_angles` 是好的（schema-coupled、变更同步），但 reuse `Recorder` 整个写盘类就过度了 — 那会强制 import 工具持有线程锁、状态机等不需要的东西。**reuse 的合理边界在"schema/常量"层面，不在"行为/状态"层面**。
+4. **设计一开始就考虑"非典型入口"**：live recorder 是典型入口，import 是非典型。但如果系统设计时不预留"非典型入口"的位置，到了 dogfood 阶段就要么改主路径要么手工拼装。把这种"侧门"做成一等公民工具是产品成熟的标志。
+5. **set 编号共享 vs 命名区分**：导入 set 跟 live set 共享 `set_NNN` 编号空间（教练在历史页看到连续编号），但目录名加 `_imported_` 后缀（一眼能看出来源）。**统一其能统一的，区分其需要区分的**，比一刀切都好。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

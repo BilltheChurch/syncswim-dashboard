@@ -174,17 +174,17 @@ data/
 - [ ] 总统上传若干已录制的真实训练视频到 `data/raw_videos/`
 - [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）—— 由 7.4 一起产出
 
-### 7.1 多人独立追踪（ByteTrack） — PR #2
-- [ ] [yolo_pose.py](fastapi_app/yolo_pose.py)：`.predict()` → `.track(persist=True, tracker='bytetrack.yaml')`，`detect()` 返回 `(persons, track_ids)`
-- [ ] [camera_manager.py](fastapi_app/camera_manager.py)：在帧字典中新增 `track_ids: list[int]`，与 `all_landmarks` 平行
-- [ ] [recorder.py](fastapi_app/recorder.py)：`write_landmarks_multi(local_ts, frame, all_landmarks, track_ids=None)`；JSONL 每个 person 加 `id` 字段
-- [ ] [main.py](fastapi_app/main.py)：`_vision_writer_loop` 把 `data["track_ids"]` 透传给 `write_landmarks_multi`
-- [ ] [api_routes.py](fastapi_app/api_routes.py)：`/api/sets/{name}/landmarks` 的 `all_frames` 中每个 person 附 `id`
-- [ ] 前端 `setupSkeletonOverlay`：色板按 `track_id % len(TEAM_COLORS)`（不再是数组顺序），标签 `#3` 而不是 `P2`
-- [ ] 实时页骨架覆盖层：在每个人头顶显示 `#id`，便于教练即时确认 ID 稳定
-- [ ] DEVLOG #25 记录"为什么追踪 ID 是横向对比的前提"
+### 7.1 多人独立追踪（ByteTrack） — PR #2 ✅
+- [x] [yolo_pose.py](fastapi_app/yolo_pose.py)：`.predict()` → `.track(persist=True, tracker='bytetrack.yaml')`，`detect()` 返回 `(persons, track_ids)`；新增 `reset_tracking()` 防 ID 跨 Set 泄漏
+- [x] [camera_manager.py](fastapi_app/camera_manager.py)：在帧字典中新增 `track_ids: list[int]`，与 `all_landmarks` 平行；含防御性长度对齐
+- [x] [recorder.py](fastapi_app/recorder.py)：`write_landmarks_multi(local_ts, frame, all_landmarks, track_ids=None)`；JSONL 每行新增并行 `ids` 字段（旧文件无 ids 也兼容）
+- [x] [main.py](fastapi_app/main.py)：`_vision_writer_loop` 把 `data["track_ids"]` 透传；`start_recording()` 后调 `reset_tracking()`
+- [x] [api_routes.py](fastapi_app/api_routes.py)：`/api/sets/{name}/landmarks` 返回 `all_ids`；`ws_video.py` 实时推送 `track_ids`
+- [x] 前端 `setupSkeletonOverlay`：色板按 `track_id % len(TEAM_COLORS)`，标签 `#3`；与实时页 `drawSkeletonOnCanvas` / `drawSecondaryPose` 共享三层 fallback
+- [x] 实时页骨架覆盖层：主角头顶 `#3` 角标；队友按 ID 配色 + `#id` 标签
+- [x] DEVLOG #25 记录"为什么追踪 ID 是横向对比的前提"
 
-### 7.2 运动员名 ↔ track_id 映射 — PR #3 ✅
+### 7.2 运动员名 ↔ track_id 映射 — PR #2 ✅
 - [x] `data/athletes.json`：`{id, name, color, bindings: [{set, track_id}], created_at}` + 原子写 + threading.Lock + forward-compat
 - [x] `/api/athletes` GET / POST / PATCH / DELETE / bind / unbind（unbind 用 POST 而不是 DELETE-with-body，避开 httpx + 代理兼容性坑）
 - [x] `/api/sets/{name}/landmarks` 额外返回 `athlete_map: {track_id_str: {athlete_id, name, color}}`
@@ -194,7 +194,7 @@ data/
 - [x] athlete_store 单元 smoke（9 边界场景）+ FastAPI TestClient 集成 smoke（11 assertions）
 - [x] DEVLOG #26
 
-### 7.3 跨 Set 趋势对比页 — PR #4 ✅
+### 7.3 跨 Set 趋势对比页 — PR #2 ✅
 - [x] `/api/compare?sets=name1,name2,...` 多 Set 批量获取 slim report（最多 20 个，phantom set 单独标 error 不阻塞）
 - [x] `/api/athletes/{id}/sets` 列出运动员的所有 binding
 - [x] 前端新增第 4 个 Tab「对比」（原设置由 4 → 5）：
@@ -215,6 +215,49 @@ data/
 - [x] `.gitignore` 排除 `data/raw_videos/`、`data/training/{images,labels}/`、`runs/` 但保留 `syncswim.yaml`
 - [x] DEVLOG #28
 - [ ] **等 7.0 真实素材**：跑一次完整流程出第一个 `best.pt`，然后切换 `config.toml` 部署
+
+## 阶段八：dogfood 前置 + 小型 UX/运维增强 🚧 进行中
+
+目标：把"预录制视频"也能进系统；再补一批 dogfood 前后教练必用的小特性。
+
+### 8.0 视频导入工具 — PR #3 ✅
+- [x] [tools/import_video.py](tools/import_video.py)：mp4/mov/avi → 完整 set 包
+- [x] 与 Recorder 共享 schema（_compute_angles、LANDMARK_NAMES、IMU_HEADER、VISION_HEADER），避免 drift
+- [x] 产出：video.mp4（H.264 + faststart）+ vision.csv + landmarks.csv (1:1 video) + landmarks_multi.jsonl + 空 IMU CSV（触发 duration 回退链）
+- [x] set 编号共享 live 空间；目录名加 `_imported_` 后缀一眼辨识
+- [x] 端到端 smoke：5 不变量（6 文件齐全 / IMU header-only / vision 行数 / landmarks 1:1 video / JSONL 奇偶 detection 两路径均覆盖）
+- [x] DEVLOG #29
+
+### 8.1 实时页录制时绑定 athlete（A）— PR #4
+- [ ] 实时页复用 7.2 的「队员管理」模态，绑定目标是"当前录制"占位
+- [ ] 录制停止时把占位 set_name 替换成真实 set 目录名
+- [ ] 教练录制中看到 #3 → 立刻命名，不用等回分析页
+
+### 8.2 数据备份脚本（B）— PR #5（与 A 并入或拆分）
+- [ ] `tools/backup.py`：rclone / rsync 同步 data/ 到指定 remote
+- [ ] 文档：推荐 cron 设置 + 常见 remote（iCloud / S3 / 外置盘）
+- [ ] 错误处理：不中断 dashboard，失败只 log 不 kill
+
+### 8.3 历史 set 备注字段（C）
+- [ ] set 目录加 `note.md`（free-form markdown，教练手写）
+- [ ] `/api/sets/{name}/note` GET/PUT
+- [ ] 分析页顶部 + 历史卡片加"备注"可编辑区
+
+### 8.4 PDF / 截图报告导出（D）— PR #6
+- [ ] `/api/sets/{name}/report.pdf` 端点
+- [ ] 用 weasyprint 或 Playwright 渲染分析页 HTML 到 PDF
+- [ ] 包含：摘要、雷达图、关键帧、指标卡、教练备注
+- [ ] 分析页"导出"按钮
+
+### 8.5 录制中打标（E）— PR #7
+- [ ] 实时页按 `M` → 在当前时间点插一个标记
+- [ ] `data/set_*/markers.csv`：`timestamp, label, note`
+- [ ] 回放时间轴上显示标记点，点击跳转
+
+### 8.6 自动趋势告警（F）— PR #7 或独立
+- [ ] 规则引擎：指标连续 N 场单调下降 / 超出阈值 → 告警
+- [ ] 告警面板（对比页 / 历史页入口）
+- [ ] 可选：Slack / Telegram webhook 推送（配置在 settings）
 
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
