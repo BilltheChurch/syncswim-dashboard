@@ -3017,3 +3017,129 @@ kbd {
     50% { transform: scale(1.05); color: var(--cta-hi); }
     100% { transform: scale(1); }
 }
+
+/* ── Athlete manager (phase 7.2) ──────────────────────── */
+
+.vp-athletes-btn {
+    margin-left: auto;
+    margin-right: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.vp-athletes-btn:hover {
+    background: var(--secondary);
+    color: #fff;
+    border-color: var(--secondary);
+}
+
+.ath-modal {
+    min-width: 480px;
+    max-width: 90vw;
+}
+
+.ath-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    background: rgba(168, 85, 247, 0.06);
+    border-left: 3px solid var(--secondary, #A855F7);
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+}
+.ath-hint code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    color: var(--text-dim);
+}
+
+.ath-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.ath-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 24px 12px;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+}
+
+.ath-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.ath-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.ath-id {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    min-width: 40px;
+}
+
+.ath-name {
+    flex: 1;
+    font-size: 0.92rem;
+    color: var(--text-hi);
+    font-weight: 500;
+}
+
+.ath-select {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.ath-select:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+
+.ath-unbind {
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.ath-unbind:hover {
+    background: var(--danger, #ef4444);
+    color: #fff;
+    border-color: var(--danger, #ef4444);
+}

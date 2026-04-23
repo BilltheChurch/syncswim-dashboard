@@ -45,6 +45,8 @@ from dashboard.core.vision_angles import (
     calc_trunk_vertical,
 )
 
+from .athlete_store import AthleteStore
+
 router = APIRouter(prefix="/api")
 
 # Module-level references, set by init()
@@ -52,6 +54,7 @@ _ble = None
 _camera = None
 _recorder = None
 _set_manual_recording = None
+_athletes: AthleteStore | None = None
 
 _DATA_DIR = "data"
 
@@ -77,12 +80,15 @@ SKELETON_COLOR_BGR = (246, 130, 59)  # matches frontend primary blue
 
 
 def init(ble_manager, camera_manager, recorder, set_manual_recording=None):
-    global _ble, _camera, _recorder, _set_manual_recording, _DATA_DIR
+    global _ble, _camera, _recorder, _set_manual_recording, _DATA_DIR, _athletes
     _ble = ble_manager
     _camera = camera_manager
     _recorder = recorder
     _set_manual_recording = set_manual_recording
     _DATA_DIR = getattr(recorder, "_data_dir", "data")
+    # Athlete bindings live next to the Set directories so the data
+    # folder is self-contained — easy to back up or move as a unit.
+    _athletes = AthleteStore(os.path.join(_DATA_DIR, "athletes.json"))
 
 
 # ── Helpers ────────────────────────────────────────────────────
@@ -641,6 +647,17 @@ async def set_landmarks(name: str):
         payload["all_frames"] = all_frames
     if all_ids is not None:
         payload["all_ids"] = all_ids
+
+    # Athlete name + colour overrides keyed by track_id (phase 7.2).
+    # The frontend uses this to render "张三" / "李四" labels above
+    # each skeleton instead of raw "#3" tags. Empty when no bindings
+    # exist for this Set, in which case the frontend falls back to
+    # ``#${track_id}`` and the auto-derived colour from
+    # ``TEAM_COLORS[id % 8]``.
+    if _athletes is not None:
+        athlete_map = _athletes.lookup_for_set(name)
+        # Stringify keys for JSON; frontend normalises back to int.
+        payload["athlete_map"] = {str(k): v for k, v in athlete_map.items()}
     return payload
 
 
@@ -859,6 +876,100 @@ async def post_config(req: ConfigUpdate):
 
 
 # ── Data stats ─────────────────────────────────────────────────
+# ── Athlete bindings (phase 7.2) ───────────────────────────────
+# Coach assigns a stable name (e.g. "张三") to a BYTETracker ID
+# inside a specific Set. Bindings are per-Set because BYTETracker
+# state resets between Sets (see DEVLOG #25), so the same swimmer
+# gets a fresh ID in every recording.
+
+class _AthleteCreate(BaseModel):
+    name: str
+    color: Optional[str] = None
+
+
+class _AthleteUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+
+
+class _BindReq(BaseModel):
+    set: str
+    track_id: int
+
+
+@router.get("/athletes")
+async def list_athletes():
+    if _athletes is None:
+        return {"athletes": []}
+    return {"athletes": _athletes.list_athletes()}
+
+
+@router.post("/athletes")
+async def create_athlete(req: _AthleteCreate):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    try:
+        ath = _athletes.create_athlete(req.name, req.color)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return ath
+
+
+@router.patch("/athletes/{athlete_id}")
+async def update_athlete(athlete_id: str, req: _AthleteUpdate):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    ath = _athletes.update_athlete(athlete_id, name=req.name, color=req.color)
+    if ath is None:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return ath
+
+
+@router.delete("/athletes/{athlete_id}")
+async def delete_athlete(athlete_id: str):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    if not _athletes.delete_athlete(athlete_id):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return {"status": "deleted", "id": athlete_id}
+
+
+@router.post("/athletes/{athlete_id}/bind")
+async def bind_track(athlete_id: str, req: _BindReq):
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    if not req.set or req.track_id < 0:
+        return JSONResponse({"error": "invalid set/track_id"}, status_code=400)
+    # Sanity: refuse to bind to a Set that doesn't exist on disk.
+    # Stops typos / stale frontend state from creating bindings for
+    # phantom Sets that would never resolve in lookup_for_set.
+    if not os.path.isdir(_set_dir(req.set)):
+        return JSONResponse(
+            {"error": f"set not found: {req.set}"}, status_code=404
+        )
+    ath = _athletes.bind_track(athlete_id, req.set, int(req.track_id))
+    if ath is None:
+        return JSONResponse({"error": "athlete not found"}, status_code=404)
+    return ath
+
+
+@router.post("/athletes/{athlete_id}/unbind")
+async def unbind_track(athlete_id: str, req: _BindReq):
+    """Remove an athlete's binding for ``(set, track_id)``.
+
+    Modeled as POST rather than DELETE-with-body because some HTTP
+    clients (notably ``httpx.Client.delete`` and a number of CDN/proxy
+    layers) silently drop bodies on DELETE — POST is universally safe
+    and the operation isn't idempotent enough to need DELETE semantics.
+    """
+    if _athletes is None:
+        return JSONResponse({"error": "store not ready"}, status_code=503)
+    ok = _athletes.unbind_track(athlete_id, req.set, int(req.track_id))
+    if not ok:
+        return JSONResponse({"error": "binding not found"}, status_code=404)
+    return {"status": "unbound", "set": req.set, "track_id": req.track_id}
+
+
 @router.get("/data/stats")
 async def data_stats():
     sessions = load_or_rebuild_index(_DATA_DIR)

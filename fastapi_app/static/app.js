@@ -1209,6 +1209,7 @@ function renderReport(name, report) {
         <div class="video-player-card">
             <div class="vp-header">
                 <span class="vp-title">视频回放</span>
+                <button class="vp-athletes-btn" id="vp-athletes-btn" type="button" title="给检测到的运动员命名">队员</button>
                 <label class="vp-overlay-toggle active" id="vp-toggle">
                     <span>骨架叠加</span>
                     <span class="toggle-switch"></span>
@@ -1315,6 +1316,11 @@ function renderReport(name, report) {
     const tgl = $('#vp-toggle');
     if (tgl) {
         tgl.addEventListener('click', () => tgl.classList.toggle('active'));
+    }
+    // Athlete-management modal trigger
+    const aBtn = $('#vp-athletes-btn');
+    if (aBtn) {
+        aBtn.addEventListener('click', () => openAthleteManager(name));
     }
     setupSkeletonOverlay(name);
 }
@@ -1678,6 +1684,12 @@ function drawTimeseries() {
 let _skelLandmarks = null;
 let _skelFrameRAF = null;
 
+// Module-level handle to the currently-displayed overlay so the
+// athlete-manager modal can mutate ``athlete_map`` after a binding
+// change without rebuilding the whole overlay (which would re-bind
+// every video event listener and accumulate them on each open).
+let _activeOverlay = null;   // { setName, landmarks }
+
 async function setupSkeletonOverlay(name) {
     const video  = $('#vp-video');
     const canvas = $('#vp-skeleton');
@@ -1690,6 +1702,8 @@ async function setupSkeletonOverlay(name) {
         const r = await fetch(`/api/sets/${encodeURIComponent(name)}/landmarks`);
         if (r.ok) landmarks = await r.json();
     } catch { landmarks = null; }
+
+    _activeOverlay = { setName: name, landmarks };
 
     const c2 = canvas.getContext('2d');
 
@@ -1788,20 +1802,32 @@ async function setupSkeletonOverlay(name) {
         }
     }
 
-    // Per-person colour and label resolution. When the recording has
-    // BYTETracker IDs (phase 7.1+), bind colour to the ID itself so
-    // the same swimmer keeps the same hue across frames — and the
-    // same hue across Sets, which is the foundation for cross-Set
-    // comparison (phase 7.3). When IDs are absent (older recordings,
-    // MediaPipe backend) we fall back to the legacy "primary blue +
-    // teammates by array order" behaviour so old playback still works.
-    function colourFor(arrayIdx, trackId) {
-        if (trackId != null) return TEAM_COLORS[trackId % TEAM_COLORS.length];
+    // Per-person colour and label resolution. Three-layer fallback:
+    //   1. Athlete binding (phase 7.2) — coach has named #3 → "张三"
+    //      and optionally pinned a colour. Highest priority.
+    //   2. BYTETracker ID (phase 7.1) — colour bound to the ID itself
+    //      so the same swimmer keeps the same hue across frames AND
+    //      across Sets (foundation for cross-Set comparison in 7.3).
+    //   3. Array-index fallback — older recordings, MediaPipe backend,
+    //      or brand-new detections that don't have an ID yet.
+    //
+    // ``athleteMap`` is keyed by ``String(track_id)`` because JSON
+    // object keys are always strings.
+    function colourFor(arrayIdx, trackId, athleteMap) {
+        if (trackId != null) {
+            const ath = athleteMap && athleteMap[String(trackId)];
+            if (ath && ath.color) return ath.color;
+            return TEAM_COLORS[trackId % TEAM_COLORS.length];
+        }
         if (arrayIdx === 0) return '#3B82F6';
         return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
     }
-    function labelFor(arrayIdx, trackId) {
-        if (trackId != null) return `#${trackId}`;
+    function labelFor(arrayIdx, trackId, athleteMap) {
+        if (trackId != null) {
+            const ath = athleteMap && athleteMap[String(trackId)];
+            if (ath && ath.name) return ath.name;
+            return `#${trackId}`;
+        }
         if (arrayIdx === 0) return '';   // legacy: don't clutter primary
         return `P${arrayIdx + 1}`;
     }
@@ -1820,18 +1846,29 @@ async function setupSkeletonOverlay(name) {
         // BYTETracker IDs (when present) bind colour to athlete
         // instead of array position, so the same swimmer keeps the
         // same hue even when their relative position in the frame
-        // changes from one moment to the next.
+        // changes from one moment to the next. ``athlete_map`` (when
+        // present) overrides both colour and label with the coach's
+        // assigned name (phase 7.2).
         if (landmarks.all_frames && landmarks.all_frames[idx]) {
             const persons = landmarks.all_frames[idx];
             const ids = (landmarks.all_ids && landmarks.all_ids[idx]) || [];
+            const aMap = landmarks.athlete_map || {};
             // Draw teammates first so the primary (or whoever is at
             // index 0 — usually the closest-to-camera athlete) ends
             // up on top.
             for (let p = 1; p < persons.length; p++) {
-                drawPersonAt(box, persons[p], colourFor(p, ids[p]), labelFor(p, ids[p]));
+                drawPersonAt(
+                    box, persons[p],
+                    colourFor(p, ids[p], aMap),
+                    labelFor(p, ids[p], aMap),
+                );
             }
             if (persons.length > 0) {
-                drawPersonAt(box, persons[0], colourFor(0, ids[0]), labelFor(0, ids[0]));
+                drawPersonAt(
+                    box, persons[0],
+                    colourFor(0, ids[0], aMap),
+                    labelFor(0, ids[0], aMap),
+                );
                 return;
             }
         }
@@ -1857,6 +1894,207 @@ async function setupSkeletonOverlay(name) {
 
     // Initial paint once metadata is ready
     if (video.readyState >= 1) drawOverlay();
+}
+
+// ═══════════════════════════════════════════════════════
+//   ATHLETE MANAGER (phase 7.2)
+// ═══════════════════════════════════════════════════════
+//   Coach assigns a stable name to each BYTETracker ID detected
+//   in this Set. The binding is per-Set because BYTETracker state
+//   resets between recordings (see DEVLOG #25).
+//
+//   On bind/unbind we mutate ``_activeOverlay.landmarks.athlete_map``
+//   in place — drawOverlay() reads from this object reference every
+//   frame, so the skeleton labels update on the next render without
+//   re-running setupSkeletonOverlay() (which would accumulate event
+//   listeners).
+//
+async function openAthleteManager(setName) {
+    if (!setName) return;
+
+    // Aggregate every distinct (non-null) track_id observed in this
+    // recording. ByteTrack assigns IDs from 1, but old recordings
+    // (before phase 7.1) won't have any IDs at all — show a friendly
+    // "nothing to bind" hint in that case.
+    const detectedIds = new Set();
+    if (_activeOverlay && _activeOverlay.landmarks
+        && Array.isArray(_activeOverlay.landmarks.all_ids)) {
+        for (const frameIds of _activeOverlay.landmarks.all_ids) {
+            for (const id of (frameIds || [])) {
+                if (id != null) detectedIds.add(id);
+            }
+        }
+    }
+    const sortedIds = [...detectedIds].sort((a, b) => a - b);
+
+    // Snapshot of the existing roster so we can offer it in the picker.
+    let athletes = [];
+    try {
+        const r = await fetch('/api/athletes');
+        if (r.ok) athletes = (await r.json()).athletes || [];
+    } catch {}
+
+    // Per-Set binding map (mutated in place as we bind/unbind).
+    const aMap = (_activeOverlay && _activeOverlay.landmarks
+                  && _activeOverlay.landmarks.athlete_map) || {};
+
+    const root = $('#modal-root');
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    function escapeHTML(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+    }
+
+    function rowsHTML() {
+        if (sortedIds.length === 0) {
+            return `<div class="ath-empty">本组没有检测到带稳定 ID 的运动员
+                    （旧录制 / MediaPipe backend / 单人都属此情况）。</div>`;
+        }
+        return sortedIds.map(id => {
+            const swatch = `<span class="ath-swatch" style="background:${TEAM_COLORS[id % TEAM_COLORS.length]}"></span>`;
+            const idTag = `<span class="ath-id">#${id}</span>`;
+            const bound = aMap[String(id)];
+            if (bound) {
+                return `<div class="ath-row" data-track-id="${id}">
+                    ${swatch}${idTag}
+                    <span class="ath-name">${escapeHTML(bound.name)}</span>
+                    <button class="ath-unbind"
+                            data-track-id="${id}"
+                            data-athlete-id="${escapeHTML(bound.athlete_id)}">解绑</button>
+                </div>`;
+            }
+            const opts = athletes.map(a =>
+                `<option value="${escapeHTML(a.id)}">${escapeHTML(a.name)}</option>`
+            ).join('');
+            return `<div class="ath-row" data-track-id="${id}">
+                ${swatch}${idTag}
+                <select class="ath-select" data-track-id="${id}">
+                    <option value="">— 选择运动员 —</option>
+                    ${opts}
+                    <option value="__new__">＋ 新建运动员…</option>
+                </select>
+            </div>`;
+        }).join('');
+    }
+
+    function render() {
+        overlay.innerHTML = `
+            <div class="modal-box ath-modal">
+                <div class="modal-title">队员管理 · ${escapeHTML(setName)}</div>
+                <div class="modal-body">
+                    <div class="ath-hint">
+                        本组检测到的 BYTETracker ID。给每个 ID 绑定一个运动员后，
+                        骨架标签会从 <code>#3</code> 升级为运动员姓名。绑定是 per-Set 的，
+                        因为追踪 ID 每次录制都会重置（DEVLOG #25）。
+                    </div>
+                    <div class="ath-rows">${rowsHTML()}</div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn modal-btn-cancel" id="ath-close">关闭</button>
+                </div>
+            </div>
+        `;
+        overlay.querySelector('#ath-close').onclick = closeModal;
+        overlay.querySelectorAll('.ath-select').forEach(sel => {
+            sel.addEventListener('change', () => onPick(sel));
+        });
+        overlay.querySelectorAll('.ath-unbind').forEach(btn => {
+            btn.addEventListener('click', () => onUnbind(btn));
+        });
+    }
+
+    async function onPick(sel) {
+        const trackId = parseInt(sel.dataset.trackId, 10);
+        let athleteId = sel.value;
+        if (!athleteId) return;
+
+        if (athleteId === '__new__') {
+            const name = window.prompt('运动员姓名：');
+            if (!name || !name.trim()) { sel.value = ''; return; }
+            try {
+                const r = await fetch('/api/athletes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim() }),
+                });
+                if (!r.ok) throw 0;
+                const ath = await r.json();
+                athletes.push(ath);
+                athleteId = ath.id;
+            } catch {
+                toast('创建运动员失败', 'error');
+                sel.value = '';
+                return;
+            }
+        }
+
+        try {
+            const r = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}/bind`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ set: setName, track_id: trackId }),
+            });
+            if (!r.ok) throw 0;
+            const ath = await r.json();
+            // Conflict resolution on the server may have stolen this
+            // (set, track_id) from another athlete — clear stale local
+            // entries with the same id before writing the new one.
+            for (const k of Object.keys(aMap)) {
+                if (aMap[k].athlete_id === ath.id && k !== String(trackId)) {
+                    // not our concern: that's a *different* track_id
+                    // for the same athlete, which is allowed
+                }
+            }
+            aMap[String(trackId)] = {
+                athlete_id: ath.id,
+                name: ath.name,
+                color: ath.color,
+            };
+            if (_activeOverlay && _activeOverlay.landmarks) {
+                _activeOverlay.landmarks.athlete_map = aMap;
+            }
+            toast(`#${trackId} → ${ath.name}`, 'success');
+            render();
+        } catch {
+            toast('绑定失败', 'error');
+            sel.value = '';
+        }
+    }
+
+    async function onUnbind(btn) {
+        const trackId = parseInt(btn.dataset.trackId, 10);
+        const athleteId = btn.dataset.athleteId;
+        try {
+            const r = await fetch(`/api/athletes/${encodeURIComponent(athleteId)}/unbind`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ set: setName, track_id: trackId }),
+            });
+            if (!r.ok) throw 0;
+            delete aMap[String(trackId)];
+            if (_activeOverlay && _activeOverlay.landmarks) {
+                _activeOverlay.landmarks.athlete_map = aMap;
+            }
+            toast(`#${trackId} 已解绑`, 'success');
+            render();
+        } catch {
+            toast('解绑失败', 'error');
+        }
+    }
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener('keydown', keyHandler);
+    }
+    const keyHandler = (e) => { if (e.key === 'Escape') closeModal(); };
+    document.addEventListener('keydown', keyHandler);
+    overlay.onclick = e => { if (e.target === overlay) closeModal(); };
+
+    render();
+    root.appendChild(overlay);
 }
 
 // ═══════════════════════════════════════════════════════

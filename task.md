@@ -169,9 +169,10 @@ data/
 
 **前提共识**：阶段六的 UI 全部基于离线想象 + 论文先验设计，没有真实泳池数据校验。所以本阶段的隐藏前置是 **7.0 真实数据采集**，第一场实训只囤素材不分析。
 
-### 7.0 真实训练数据采集（前置）
-- [ ] 第一场进泳馆只录不分析，囤多人 / 不同光照 / 翻身 / 遮挡 200+ 帧
-- [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）
+### 7.0 真实训练数据采集（推后到 7.2/7.3/7.4 准备工作完成后）
+> 总统大人决定：先把 7.2/7.3/7.4 完整跑通，再上传一些已有的真实训练视频做实地验证 + YOLO 微调。
+- [ ] 总统上传若干已录制的真实训练视频到 `data/raw_videos/`
+- [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）—— 由 7.4 一起产出
 
 ### 7.1 多人独立追踪（ByteTrack） — PR #2
 - [ ] [yolo_pose.py](fastapi_app/yolo_pose.py)：`.predict()` → `.track(persist=True, tracker='bytetrack.yaml')`，`detect()` 返回 `(persons, track_ids)`
@@ -183,12 +184,15 @@ data/
 - [ ] 实时页骨架覆盖层：在每个人头顶显示 `#id`，便于教练即时确认 ID 稳定
 - [ ] DEVLOG #25 记录"为什么追踪 ID 是横向对比的前提"
 
-### 7.2 运动员名 ↔ track_id 映射 — PR #3
-- [ ] `data/athletes.json`：`{name: str, color: str|null, track_history: [{set, id}]}`
-- [ ] `/api/athletes` GET / POST / DELETE
-- [ ] 设置页 / 分析页加「队员注册」UI：从最近一场 set 拉到的 `track_id` 列表里挑一个 → 命名 → 持久化
-- [ ] 分析页骨架标签从 `#3` 升级到 `张三`
-- [ ] DEVLOG 记录
+### 7.2 运动员名 ↔ track_id 映射 — PR #3 ✅
+- [x] `data/athletes.json`：`{id, name, color, bindings: [{set, track_id}], created_at}` + 原子写 + threading.Lock + forward-compat
+- [x] `/api/athletes` GET / POST / PATCH / DELETE / bind / unbind（unbind 用 POST 而不是 DELETE-with-body，避开 httpx + 代理兼容性坑）
+- [x] `/api/sets/{name}/landmarks` 额外返回 `athlete_map: {track_id_str: {athlete_id, name, color}}`
+- [x] 分析页「队员管理」模态：聚合本 set 出现过的所有 unique track_id → 选 athlete or 新建 → bind/unbind
+- [x] 三层 fallback `colourFor / labelFor`：athlete binding > track_id 配色 > 数组顺序
+- [x] in-place `_activeOverlay.landmarks.athlete_map` mutation 避免 setupSkeletonOverlay 重入累计事件
+- [x] athlete_store 单元 smoke（9 边界场景）+ FastAPI TestClient 集成 smoke（11 assertions）
+- [x] DEVLOG #26
 
 ### 7.3 跨 Set 趋势对比页 — PR #4
 - [ ] `/api/compare?sets=name1,name2,...&metric=energy_index|...` 多 Set 同指标聚合

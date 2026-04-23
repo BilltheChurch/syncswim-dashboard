@@ -1795,4 +1795,157 @@ if len(track_ids) != len(all_landmarks):
 
 ---
 
+## 问题 #26：从 `#3` 到「张三」 —— 给抽象 ID 一张人脸
+
+### 背景
+
+阶段 7.1 让 BYTETracker 给每个运动员发了一个稳定的整数 ID（`#3`、`#7`），骨架颜色也跟着 ID 走，**身份**问题解决了。但教练在屏幕上看到的还是 `#3` —— 一个抽象数字。要把这套系统真正交到教练手里，必须能说"这个 #3 是张三、那个 #7 是李四"，否则数据再准也只是"匿名运动员的优秀指标"，没法落到具体人头上。
+
+7.2 的目标只有一句话：**让骨架标签从 `#3` 升级为「张三」**。
+
+### 看似简单的两个设计决策
+
+#### 决策 1：绑定是「per-Set」还是「全局」？
+
+直觉上，「张三就是张三」，应该全局绑定一个 ID 就够了。但前一个 PR 的 7.1 决定了 BYTETracker 在每场录制开始时 reset，所以**张三今天是 #3，明天可能是 #7，后天可能是 #2**。如果做成"全局绑定 #3 = 张三"，明天就全错了。
+
+所以绑定必须是 `(set_name, track_id) → athlete_name` 三元组。同一个张三在不同 set 里有不同 binding，但都指向同一个 `athlete_id`。这正是 7.3 跨 Set 对比要用的"同一个人的多次训练"基础。
+
+数据 schema 在 [fastapi_app/athlete_store.py](fastapi_app/athlete_store.py) 里：
+
+```json
+{
+  "version": 1,
+  "athletes": [
+    {
+      "id": "ath_xxxxxxxx",
+      "name": "张三",
+      "color": "#A855F7",
+      "bindings": [
+        {"set": "set_009_…", "track_id": 3},
+        {"set": "set_010_…", "track_id": 5}
+      ]
+    }
+  ]
+}
+```
+
+#### 决策 2：bind 操作的冲突如何处理？
+
+如果教练已经绑了"set_009 的 #3 = 张三"，现在又要绑"set_009 的 #3 = 李四"，怎么办？
+
+三种选择：
+- **拒绝**：返回 409 Conflict，让教练先 unbind 张三 —— 最严格但 UX 最差
+- **共存**：允许同一个 (set, track_id) 同时绑给两个人 —— 数据不一致，下游要为每个 #3 都画两个名字
+- **覆盖**：自动从张三身上拿走，挂到李四身上 —— 体感最自然，符合"我刚才搞错了"的心智
+
+我选了**覆盖**。`bind_track` 的实现在写新绑定前，先扫一遍所有 athlete 把同 `(set, track_id)` 的 binding 都摘掉：
+
+```python
+for ath in data["athletes"]:
+    ath["bindings"] = [
+        b for b in ath.get("bindings", [])
+        if not (b["set"] == set_name and int(b["track_id"]) == int(track_id))
+    ]
+```
+
+这样 `lookup_for_set(set_name)` 永远返回唯一映射，前端不需要处理多对一的歧义。
+
+### 实现：从持久层到 UI 一条线
+
+#### 持久层：[fastapi_app/athlete_store.py](fastapi_app/athlete_store.py)
+
+JSON-backed CRUD store，关键设计：
+
+- **原子写**：`tmp + os.replace`，避免写到一半进程崩溃留下半截 JSON。
+- **forward-compat**：读到未知 schema version 或损坏文件直接返回空 store，**不抛异常**。教练操作时碰到"突然弹错误"的恐怖远大于"配置丢了重来一遍"。
+- **threading.Lock**：FastAPI worker thread 和 dashboard 并发请求都安全。
+- **lookup_for_set()**：`O(athletes × bindings)` 反查 —— 真实场景每个队最多十几个 athlete、每人几十个 binding，完全够。
+
+#### API 层：6 个端点（[fastapi_app/api_routes.py](fastapi_app/api_routes.py)）
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/api/athletes` | 列出所有 athlete |
+| POST | `/api/athletes` | 新建（`name` 必填，`color` 可选） |
+| PATCH | `/api/athletes/{id}` | 改名 / 改色 |
+| DELETE | `/api/athletes/{id}` | 删除 athlete（连带所有 binding） |
+| POST | `/api/athletes/{id}/bind` | 绑定 `(set, track_id)` |
+| POST | `/api/athletes/{id}/unbind` | 解绑 |
+
+**为什么 unbind 是 POST 不是 DELETE-with-body？** 第一版我写成 `DELETE /bind`，结果 `httpx.Client.delete()` **不接受** `json=` kwarg —— 这是 httpx 的明确限制。这是个红旗：如果连同进程的 TestClient 都嫌弃 DELETE-with-body，生产环境的代理 / CDN / curl-脚本里更不可控。所以改成 `POST /unbind` 是更稳健的语义选择，也符合"unbind 不是真正的 idempotent delete"（解绑一个不存在的 binding 我返回 404）。
+
+**phantom set 拦截**：`bind` 端点会先检查 `os.path.isdir(_set_dir(req.set))`。让一个不存在的 set 进入 binding 列表，`lookup_for_set` 永远找不到它 —— 看起来 binding 在但用不上，是最坏的"看似工作但实则失效"的 silent bug。
+
+#### 数据流：`/api/sets/{name}/landmarks` 加 `athlete_map` 字段
+
+```python
+if _athletes is not None:
+    athlete_map = _athletes.lookup_for_set(name)
+    payload["athlete_map"] = {str(k): v for k, v in athlete_map.items()}
+```
+
+key 必须 stringify —— JSON 没有 int key。前端读取时用 `aMap[String(track_id)]` 复原。
+
+#### 前端：三层 fallback 的 `colourFor` / `labelFor`
+
+```js
+function colourFor(arrayIdx, trackId, athleteMap) {
+    if (trackId != null) {
+        const ath = athleteMap && athleteMap[String(trackId)];
+        if (ath && ath.color) return ath.color;          // ① athlete pinned colour
+        return TEAM_COLORS[trackId % TEAM_COLORS.length]; // ② track-id colour
+    }
+    if (arrayIdx === 0) return '#3B82F6';                 // ③ legacy primary blue
+    return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];   // ④ legacy by-index
+}
+```
+
+最关键：**有 athlete binding 时颜色由 athlete 决定，否则由 track_id 决定**。教练能给张三固定一个紫色，无论今天的张三是 #3 还是 #7。
+
+`labelFor` 同样三层：athlete name → `#${trackId}` → `P${idx+1}`。
+
+#### UI：分析页「队员管理」模态
+
+视频卡片头部加一个「队员」按钮 → 弹模态：
+
+- 顶部 hint：解释为什么 binding 是 per-Set
+- 中部：本 set 出现过的所有 unique track_id 列表（聚合自 `landmarks.all_ids`）
+- 每行：色块（按 `id % 8`）+ `#3` + 已绑定显示运动员名 + 解绑按钮 / 未绑定显示下拉
+- 下拉里：已有 athlete 列表 + 「+新建运动员」选项
+
+「新建运动员」目前用 `window.prompt()`。功能 OK 但 UX 粗糙，等 7.3 完成后顺手做成内联 input。
+
+### in-place mutation：避免 setupSkeletonOverlay 重入
+
+每次绑定后**不能**重新调 `setupSkeletonOverlay(name)` —— 它会 `addEventListener` 给 `<video>` 元素累计绑定，导致每帧 drawOverlay 跑 N 次。
+
+解决方案：模块级 `_activeOverlay = { setName, landmarks }`。模态绑定后**直接 mutate** `_activeOverlay.landmarks.athlete_map`：
+
+```js
+aMap[String(trackId)] = { athlete_id, name, color };
+if (_activeOverlay && _activeOverlay.landmarks) {
+    _activeOverlay.landmarks.athlete_map = aMap;
+}
+```
+
+drawOverlay 闭包里的 `landmarks` 是同一对象引用，下一次 `requestAnimationFrame` 自动拾取。无重新绑定，无视频闪烁，无事件监听泄漏。
+
+### 验证
+
+- ✅ 所有 .py / .js 静态语法（`python3 ast.parse`、`node --check`）
+- ✅ athlete_store 单元 smoke：9 个边界场景（CRUD、绑定冲突解决、解绑幂等、损坏 JSON 自愈、未知 schema 兜底、绑不存在的 athlete 返回 None）
+- ✅ FastAPI TestClient 集成 smoke：11 assertions（含覆盖式 bind 冲突 / phantom set 404 / 空 name 400 / 解绑幂等 / 删除幂等）
+- ✅ 完整 pytest 回归：9 failed / 94 passed = baseline
+
+### 收获
+
+1. **per-Set 绑定不是过度设计，是物理事实**：BYTETracker 在 reset 后世界重新开始，把"张三 = #3"假设成全局是把局部规律当全局规律 —— 在分布式 / 有状态系统里这是经典错误。每次设计"X 等于 Y"型的映射，先问一句"在什么时间窗口、什么状态边界内成立？"
+2. **冲突解决的语义比正确性更重要**：覆盖式 bind 不一定"对"，但它最贴合教练的心智模型（"哦我刚才搞错了"）。设计 API 时永远要想"用户最常打错的操作发生时，结果是什么"。
+3. **DELETE-with-body 是历史包袱**：HTTP 规范允许，但生态不友好。POST + 子动作 (`/unbind`) 是更可移植的写法。这种小细节，在团队协作里能省掉无数次"为什么 curl 能跑前端就不行"的扯皮。
+4. **silent misroute 比报错更危险**：phantom set 不拦截 → 用户以为绑成功了，结果回放时啥也没看到，怀疑是别的 bug，去查别处 —— 浪费的不是时间，是信任。Edge-case 拦截要走 fail-loud 路线。
+5. **前端模态的 in-place mutation 是高性价比 trick**：比起重新初始化整个 overlay 系统，只 mutate 一个对象引用，完美避开"事件监听累积"这种隐性 bug。React 时代我们容易忘了这种轻量级的、面向"现有 vanilla JS 闭包"的优雅做法。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。
