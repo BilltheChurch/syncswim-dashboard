@@ -112,29 +112,41 @@ class YoloPoseDetector:
             )
 
     def detect(self, frame_bgr: np.ndarray, w: int, h: int):
-        """Detect up to ``max_persons`` poses in the BGR frame.
+        """Detect + track up to ``max_persons`` poses in the BGR frame.
 
-        Returns a list of lists-of-33-_Landmark, sorted by person
-        area (biggest-first). Visibility of unmapped MP slots is 0 so
-        the downstream code transparently skips them.
+        Returns ``(persons, track_ids)`` where:
+          * ``persons`` is a list of lists-of-33-_Landmark, sorted by
+            bounding-box area (biggest-first).
+          * ``track_ids`` is a list of the same length, with each entry
+            either an ``int`` (stable BYTETracker ID across frames) or
+            ``None`` if the tracker has not yet assigned an ID this
+            frame (e.g. brand-new detection on the very first frame).
+
+        Uses ``model.track(persist=True)`` with the bundled
+        ``bytetrack.yaml`` config so the same swimmer keeps the same
+        ID frame-to-frame — required for cross-Set comparison and for
+        the analysis page to bind a per-athlete colour without losing
+        identity when someone briefly leaves the frame.
         """
         try:
-            out = self._model.predict(
+            out = self._model.track(
                 frame_bgr,
                 verbose=False,
                 conf=self._conf,
                 iou=self._iou,
                 device=self._device,
                 max_det=self._max_persons,
+                persist=True,
+                tracker="bytetrack.yaml",
             )
         except Exception:
-            return []
+            return [], []
 
         if not out:
-            return []
+            return [], []
         result = out[0]
         if result.keypoints is None or result.keypoints.xy is None:
-            return []
+            return [], []
 
         # kp_xy shape: (N_persons, 17, 2)   pixel coords
         # kp_cnf shape: (N_persons, 17)     confidence per keypoint
@@ -145,11 +157,22 @@ class YoloPoseDetector:
             else np.ones((kp_xy.shape[0], 17), dtype=np.float32)
         )
         if kp_xy.shape[0] == 0:
-            return []
+            return [], []
+
+        # BYTETracker IDs (same length as persons; None when the tracker
+        # hasn't matched a brand-new detection yet).
+        track_ids: list[int | None] = [None] * kp_xy.shape[0]
+        if (
+            result.boxes is not None
+            and getattr(result.boxes, "id", None) is not None
+        ):
+            ids_np = result.boxes.id.cpu().numpy().astype(int)
+            if len(ids_np) == kp_xy.shape[0]:
+                track_ids = [int(x) for x in ids_np]
 
         # Sort persons by bounding-box area (biggest first) so index 0
-        # is the most prominent athlete — matches MediaPipe's
-        # "primary person" semantics.
+        # is the most prominent athlete — matches the previous
+        # "primary person" semantics. Reorder track_ids in lock-step.
         if result.boxes is not None and len(result.boxes) == kp_xy.shape[0]:
             areas = []
             for b in result.boxes.xyxy.cpu().numpy():
@@ -157,6 +180,7 @@ class YoloPoseDetector:
             order = np.argsort(-np.array(areas))
             kp_xy = kp_xy[order]
             kp_conf = kp_conf[order]
+            track_ids = [track_ids[i] for i in order]
 
         persons: list[list[_Landmark]] = []
         for i in range(kp_xy.shape[0]):
@@ -174,4 +198,25 @@ class YoloPoseDetector:
                     visibility=c,
                 )
             persons.append(mp33)
-        return persons
+        return persons, track_ids
+
+    def reset_tracking(self) -> None:
+        """Reset BYTETracker state so the next ``detect()`` starts IDs
+        from 1 again.
+
+        Called at recording start so IDs don't leak across Sets — if
+        last Set ended with #5, this Set's primary swimmer would
+        otherwise be #6 (confusing for the coach and breaks the "ID
+        is stable WITHIN one Set" assumption that 7.2 athlete-binding
+        depends on).
+        """
+        try:
+            predictor = getattr(self._model, "predictor", None)
+            if predictor is None:
+                return
+            trackers = getattr(predictor, "trackers", None) or []
+            for trk in trackers:
+                if hasattr(trk, "reset"):
+                    trk.reset()
+        except Exception as e:
+            print(f"[yolo_pose] tracker reset failed: {e}")

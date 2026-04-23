@@ -163,6 +163,50 @@ data/
 - [x] 时长 0s 回退
   - `/api/sets/{name}/report` 中若 IMU 无数据，依次回退到 vision.csv → landmarks.csv → `frame_count / fps`。无 IMU 的训练组也能显示真实时长。
 
+## 阶段七：多人追踪 + 跨 Set 对比 + 微调前置 🚧 进行中
+
+目标：把 Coach Workstation 从「单场会话」升级为「同一队员在多场训练间的纵向画像」。
+
+**前提共识**：阶段六的 UI 全部基于离线想象 + 论文先验设计，没有真实泳池数据校验。所以本阶段的隐藏前置是 **7.0 真实数据采集**，第一场实训只囤素材不分析。
+
+### 7.0 真实训练数据采集（前置）
+- [ ] 第一场进泳馆只录不分析，囤多人 / 不同光照 / 翻身 / 遮挡 200+ 帧
+- [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）
+
+### 7.1 多人独立追踪（ByteTrack） — PR #2
+- [ ] [yolo_pose.py](fastapi_app/yolo_pose.py)：`.predict()` → `.track(persist=True, tracker='bytetrack.yaml')`，`detect()` 返回 `(persons, track_ids)`
+- [ ] [camera_manager.py](fastapi_app/camera_manager.py)：在帧字典中新增 `track_ids: list[int]`，与 `all_landmarks` 平行
+- [ ] [recorder.py](fastapi_app/recorder.py)：`write_landmarks_multi(local_ts, frame, all_landmarks, track_ids=None)`；JSONL 每个 person 加 `id` 字段
+- [ ] [main.py](fastapi_app/main.py)：`_vision_writer_loop` 把 `data["track_ids"]` 透传给 `write_landmarks_multi`
+- [ ] [api_routes.py](fastapi_app/api_routes.py)：`/api/sets/{name}/landmarks` 的 `all_frames` 中每个 person 附 `id`
+- [ ] 前端 `setupSkeletonOverlay`：色板按 `track_id % len(TEAM_COLORS)`（不再是数组顺序），标签 `#3` 而不是 `P2`
+- [ ] 实时页骨架覆盖层：在每个人头顶显示 `#id`，便于教练即时确认 ID 稳定
+- [ ] DEVLOG #25 记录"为什么追踪 ID 是横向对比的前提"
+
+### 7.2 运动员名 ↔ track_id 映射 — PR #3
+- [ ] `data/athletes.json`：`{name: str, color: str|null, track_history: [{set, id}]}`
+- [ ] `/api/athletes` GET / POST / DELETE
+- [ ] 设置页 / 分析页加「队员注册」UI：从最近一场 set 拉到的 `track_id` 列表里挑一个 → 命名 → 持久化
+- [ ] 分析页骨架标签从 `#3` 升级到 `张三`
+- [ ] DEVLOG 记录
+
+### 7.3 跨 Set 趋势对比页 — PR #4
+- [ ] `/api/compare?sets=name1,name2,...&metric=energy_index|...` 多 Set 同指标聚合
+- [ ] `/api/athletes/{name}/sets` 按队员筛选历史
+- [ ] 前端新增第 5 个 Tab「对比」：
+  - [ ] Set 多选（最近 N 个 / 按队员筛选）
+  - [ ] 雷达图叠加（同一人两次训练 8/15 指标对比）
+  - [ ] 单指标平行折线（横轴日期，纵轴 `energy_index` / `explosive_power` / `motion_complexity` 等独有指标）
+- [ ] DEVLOG 记录"训练前后对比 = IMU 独有指标真正放光的场景"
+
+### 7.4 微调 YOLO（依赖 7.0 素材到位后）
+- [ ] 用现有 `yolov8s-pose.pt` 半监督预标注真实素材
+- [ ] CVAT / Label-Studio 修正水下 / 翻身 / 遮挡帧（起步 200–500，正式 2000+）
+- [ ] `yolo pose train data=syncswim.yaml model=yolov8s-pose.pt epochs=100 imgsz=640 device=mps`
+- [ ] 在留出场地的 set 上测 OKS / mAP@50（守门：训练集没见过的场地）
+- [ ] `config.toml` 切换 `yolo_model` 到自训权重，热替换 pipeline
+- [ ] DEVLOG 记录微调前后对比
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）

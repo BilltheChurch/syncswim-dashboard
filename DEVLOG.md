@@ -1696,4 +1696,103 @@ IMU timestamp 范围
 
 ---
 
+## 问题 #25：多人骨架的"脸盲" —— 颜色按数组顺序绑定，导致教练对不上人
+
+### 症状
+
+阶段六给多人录制做了 P1（蓝）/ P2（紫）/ P3（橙）的颜色区分，看上去挺像那么回事。直到我们脑补一个真实场景：
+
+> 两位运动员 A、B 同框。开始 A 离镜头近、area 大 → 系统判 A 是 P1（蓝）、B 是 P2（紫）。半秒后 B 翻身朝镜头扑近，area 反超 A → P1 变成 B（蓝突然变成另一个人）、A 沦为 P2（紫）。
+
+颜色和身份**完全是数组顺序的副产品**。教练眼里看到的是「蓝色那个人变身了」，但 IMU 还绑在 A 身上，分析就全错位。
+
+更糟的是，这个问题在阶段六的 demo 数据里看不出来 —— 当时只有一个人。它**只在真实多人训练里才会暴露**，而我们到目前为止还没去过真泳池。属于"离线设计的代码碰到真实使用必崩"的典型范本。
+
+### 这事儿为什么是阶段七的前置
+
+后续两件事都依赖"同一个人在所有帧里、所有 Set 之间，能被认出是同一个人"：
+
+1. **运动员名 ↔ ID 映射**（7.2）—— 教练手动给"#3"起名"张三"，之后看到 #3 就知道是张三
+2. **跨 Set 趋势对比**（7.3）—— 同一个张三的两次训练做对比图
+
+如果"#3"在帧之间会换人、会跨 Set 重新分配，上面两件事就是空中楼阁。所以阶段七必须先解决**身份**问题，再做名字、再做对比。
+
+### 实现：YOLOv8-pose 接 BYTETracker
+
+ultralytics 自带 ByteTrack 集成 —— 把 `model.predict()` 换成 `model.track(persist=True, tracker='bytetrack.yaml')` 即可。返回的 `result.boxes.id` 就是稳定 track_id（卡尔曼滤波 + IoU 关联）。
+
+#### 关键扩展：返回值变成 `(persons, track_ids)` 元组
+
+[fastapi_app/yolo_pose.py](fastapi_app/yolo_pose.py) 里 `detect()` 原本只返回 area-排序的 person 列表，现在多返回一个等长的 `track_ids: list[int|None]`。`None` 出现在两种情况：① BYTETracker 还没给新检测分配 ID（极罕见、就一帧）；② 用 MediaPipe backend（无追踪能力，全 None）。
+
+排序时要保证 ids 跟 persons 对齐 —— sort by area 之后用 `track_ids = [track_ids[i] for i in order]` 同步置换。
+
+#### 新增 `reset_tracking()`：跨 Set 隔离
+
+ByteTrack 的状态是 stateful 的 —— `predictor.trackers[0]` 持有一个对象，记录每个 ID 的卡尔曼状态、消失帧数等。如果不主动 reset，上一个 Set 用到 #5，下一个 Set 第一个被识别的人就成了 #6 —— 教练满脸问号"为什么我刚开始录就看到 #6 而不是 #1"。
+
+所以在 [fastapi_app/main.py](fastapi_app/main.py)（BLE 按钮触发）和 [fastapi_app/api_routes.py](fastapi_app/api_routes.py)（dashboard 按钮触发）两处 `start_recording()` 后都加一行 `camera_manager.reset_tracking()`。
+
+#### 持久化：`landmarks_multi.jsonl` 加 `ids` 字段
+
+不能改原本的 `persons` 数组结构，否则旧的 set_008 等录制无法回放。所以在每行 JSON 里**新增一个并行字段**：
+
+```json
+{"ts": 12.345, "frame": 308, "persons": [[[x,y,v]×33], ...], "ids": [3, 7]}
+```
+
+旧文件没有 `ids` 字段，[fastapi_app/api_routes.py](fastapi_app/api_routes.py) 的读取逻辑用 `obj.get("ids")` 兜底成 `[None]*N`，前端 fallback 到旧的"主角蓝 + 队友按 idx 配色"。**新旧文件回放都不坏**。
+
+#### 前端：`colourFor(arrayIdx, trackId)` 二级 fallback
+
+```js
+function colourFor(arrayIdx, trackId) {
+    if (trackId != null) return TEAM_COLORS[trackId % TEAM_COLORS.length];
+    if (arrayIdx === 0) return '#3B82F6';   // legacy primary blue
+    return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
+}
+function labelFor(arrayIdx, trackId) {
+    if (trackId != null) return `#${trackId}`;
+    if (arrayIdx === 0) return '';
+    return `P${arrayIdx + 1}`;
+}
+```
+
+实时页（`drawSkeletonOnCanvas` + `drawSecondaryPose`）和分析页（`drawPersonAt`）都走这套规则。教练现在看到的是「`#3` 永远是同一个人，颜色永远不变」，无论这个人是 area-第一还是第二。
+
+#### 防御性长度对齐
+
+[fastapi_app/camera_manager.py](fastapi_app/camera_manager.py) 在写出帧字典前做最后一次 sanity check：
+
+```python
+if len(track_ids) != len(all_landmarks):
+    track_ids = [None] * len(all_landmarks)
+```
+
+万一上游某个边缘情况让 `track_ids` 跟 `all_landmarks` 长度不齐（比如 ultralytics 升级后行为变化），降级到全 None 也好过让 `ids[i]` 取错人 —— 那种"silent misbinding"是最坏的 bug：颜色绑错人、IMU 也跟着绑错，分析数据全错但不会报错。
+
+### 验证
+
+1. **静态语法**：`python3 -c "import ast; [ast.parse(...)]"` 五个改动文件全过
+2. **recorder smoke**（mock cv2，6 个帧场景）：
+   - 正常多人 `[3, 7]` ✓
+   - 单人 `[3]` ✓
+   - 空帧 `[]` ✓
+   - 旧格式（无 ids）→ `[None, None]` ✓
+   - 混合（部分有 ID 部分 None）→ `[3, None]` ✓
+   - 畸形 person 被过滤时 ids 也对齐过滤 → 长度一致 ✓
+3. **测试套件回归**：`uv run pytest tests/` 改动前后均 9 failed / 94 passed（9 个失败全部 pre-existing，与本次改动无关）
+
+实地（多人 + 真实泳池）验证留到 **7.0 数据采集**完成后。
+
+### 收获
+
+1. **"颜色 = 身份" 不能是数组顺序的副产品**：当排序键（这里是 area）会随时间变化时，按数组下标绑色一定会出问题。要么固定一个稳定 key（这里就是 track_id），要么**就别让颜色承担身份信息**。
+2. **stateful 的库要把"reset"显式暴露**：BYTETracker 默认全程持有状态，不主动 reset 就会跨 Set 泄漏。这种"看不见的延续"是分布式系统/有状态服务里最常见的踩坑模式 —— 不是 bug，是默认行为不符合用户的心智模型。
+3. **加字段不改结构是良药**：JSONL 里加 `ids` 而不是改 `persons` 的形状，让旧录制无痛回放。这种"扩展点"思维在版本演进中省下大量返工成本。
+4. **silent misbinding 比 crash 更可怕**：长度不齐时 `track_ids[i]` 读错值，前端把蓝色画在了错的人头上，下游 IMU/视频/评分全错位但不会报错。这种 bug 一旦让教练用错了再被发现，信任度直接归零。defensive check 不是过度设计，是对"silent error"零容忍的纪律。
+5. **离线想象的产品必经实地验证**：阶段六全部 UI 没有真实多人数据校验过。`#25` 这一坑在阶段六代码合入主干那刻就埋下了，但因为没有真实场景去触发，一直没暴露。这印证了"7.0 实训数据采集"作为隐藏前置的必要性 —— 没有真数据，所有"我们觉得这样可以"的判断都是赌博。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

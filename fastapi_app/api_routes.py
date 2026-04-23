@@ -302,6 +302,14 @@ async def start_recording():
     if _set_manual_recording:
         _set_manual_recording(True)
     _recorder.start_manual()
+    # Reset BYTETracker so this Set's IDs start at #1 (otherwise
+    # tracker state carries over from the last Set and the coach sees
+    # confusing high-number IDs like #14 / #15 on what is logically
+    # the first swimmer of a fresh recording).
+    try:
+        _camera.reset_tracking()
+    except Exception:
+        pass
     # Push authoritative set number to M5 display
     try:
         _ble.write_set_number(_recorder.set_number)
@@ -578,11 +586,20 @@ async def set_landmarks(name: str):
     # when the set was recorded with the new pipeline. Older sets
     # without landmarks_multi.jsonl simply won't include this key,
     # and the client falls back to single-person rendering.
+    #
+    # ``all_ids`` is the parallel BYTETracker ID stream (added in
+    # phase 7.1). For each frame it's a list the same length as that
+    # frame's ``persons`` list — each entry an ``int`` (stable across
+    # frames) or ``None`` (older recordings, MP backend, or a brand
+    # new detection). Frontend uses ``id`` when present and falls back
+    # to array-order colouring when not.
     all_frames: list[list[list[list[float]]]] | None = None
+    all_ids: list[list[int | None]] | None = None
     multi_path = os.path.join(set_dir, "landmarks_multi.jsonl")
     if os.path.exists(multi_path):
         try:
-            parsed: list[list[list[list[float]]]] = []
+            parsed_persons: list[list[list[list[float]]]] = []
+            parsed_ids: list[list[int | None]] = []
             with open(multi_path, "r") as f:
                 for line in f:
                     line = line.strip()
@@ -592,14 +609,27 @@ async def set_landmarks(name: str):
                         obj = json.loads(line)
                     except ValueError:
                         continue
-                    parsed.append(obj.get("persons") or [])
+                    persons = obj.get("persons") or []
+                    parsed_persons.append(persons)
+                    raw_ids = obj.get("ids")
+                    if isinstance(raw_ids, list) and len(raw_ids) == len(persons):
+                        parsed_ids.append([
+                            (int(x) if isinstance(x, (int, float)) else None)
+                            for x in raw_ids
+                        ])
+                    else:
+                        # Older recordings: no ids field. Pad with None
+                        # so the frontend can rely on length alignment.
+                        parsed_ids.append([None] * len(persons))
             # Only return if the file actually has data and roughly
             # matches the primary stream length (tolerate off-by-one
             # from the final flush).
-            if parsed and abs(len(parsed) - len(frames)) <= 2:
-                all_frames = parsed
+            if parsed_persons and abs(len(parsed_persons) - len(frames)) <= 2:
+                all_frames = parsed_persons
+                all_ids = parsed_ids
         except Exception:
             all_frames = None
+            all_ids = None
 
     payload = {
         "fps": fps,
@@ -609,6 +639,8 @@ async def set_landmarks(name: str):
     }
     if all_frames is not None:
         payload["all_frames"] = all_frames
+    if all_ids is not None:
+        payload["all_ids"] = all_ids
     return payload
 
 

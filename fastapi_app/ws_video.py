@@ -24,11 +24,19 @@ async def video_ws(websocket: WebSocket, camera_manager):
             data = camera_manager.get_latest()
             if data and data["jpeg"]:
                 frame_b64 = base64.b64encode(data["jpeg"]).decode("utf-8")
+                # ``track_ids`` is the parallel BYTETracker ID stream
+                # (phase 7.1) — same length as ``all_landmarks``, each
+                # entry an int (stable across frames) or null. The
+                # client uses it to bind a per-athlete colour and to
+                # show ``#3``-style labels so the coach can verify ID
+                # stability live before relying on it for downstream
+                # bindings (athlete-name mapping, cross-Set comparison).
                 msg = {
                     "frame": f"data:image/jpeg;base64,{frame_b64}",
                     "landmarks": data.get("landmarks") or [],
                     "all_landmarks": data.get("all_landmarks") or [],
                     "all_angles": data.get("all_angles") or [],
+                    "track_ids": data.get("track_ids") or [],
                     "person_count": data.get("person_count", 0),
                     "angles": data.get("angles"),
                 }

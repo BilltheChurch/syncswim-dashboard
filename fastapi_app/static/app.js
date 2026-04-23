@@ -338,17 +338,21 @@ function connectVideoWs() {
             ctx.drawImage(img, 0, 0);
 
             // Multi-person: draw each teammate with their own colour
-            // + "Pn" label + key-angle pills. Primary gets the rich
-            // MPI-blue full-detail treatment on top.
+            // + identity label + key-angle pills. Primary gets the
+            // rich MPI-blue full-detail treatment on top. ``trackIds``
+            // is the parallel BYTETracker stream (phase 7.1) — when
+            // present, identity binds colour and label so the same
+            // swimmer keeps the same hue across frames.
             const all = data.all_landmarks || [];
             const allAngles = data.all_angles || [];
+            const trackIds = data.track_ids || [];
             if (all.length > 1) {
                 for (let i = 1; i < all.length; i++) {
-                    drawSecondaryPose(ctx, canvas, all[i], allAngles[i], i);
+                    drawSecondaryPose(ctx, canvas, all[i], allAngles[i], i, trackIds[i]);
                 }
             }
             if (data.landmarks && data.landmarks.length === 33) {
-                drawSkeletonOnCanvas(ctx, canvas, data.landmarks, data.angles);
+                drawSkeletonOnCanvas(ctx, canvas, data.landmarks, data.angles, trackIds[0]);
             }
             // Size the wrapper to match image aspect ratio so we don't waste space
             fitVideoWrapper(img.width / img.height);
@@ -446,18 +450,25 @@ const TEAM_COLORS = [
 ];
 
 /**
- * Skeleton + "Pn" label + key-angle pills for a non-primary teammate.
+ * Skeleton + identity label + key-angle pills for a non-primary teammate.
  * Each person gets a distinct colour so the coach can track them
  * visually across frames.
  *
- * @param {*} idx    Position in all_landmarks (1…N-1, 0 is primary).
- * @param {*} angles Per-person angles dict from data.all_angles[idx]
- *                   (may be undefined if the backend is old).
+ * @param {*} idx     Position in all_landmarks (1…N-1, 0 is primary).
+ * @param {*} angles  Per-person angles dict from data.all_angles[idx]
+ *                    (may be undefined if the backend is old).
+ * @param {*} trackId Stable BYTETracker ID (int) when available, or
+ *                    null/undefined for older recordings / MediaPipe.
+ *                    When present we bind colour to the ID so the same
+ *                    swimmer keeps the same hue even if their array
+ *                    position changes between frames.
  */
-function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
+function drawSecondaryPose(c, cv, landmarks, angles, idx = 1, trackId = null) {
     if (!landmarks || landmarks.length !== 33) return;
     const w = cv.width, h = cv.height;
-    const color = TEAM_COLORS[idx % TEAM_COLORS.length];
+    const color = (trackId != null)
+        ? TEAM_COLORS[trackId % TEAM_COLORS.length]
+        : TEAM_COLORS[idx % TEAM_COLORS.length];
 
     // Bones
     c.strokeStyle = color + 'B0';  // ~70% opacity
@@ -492,7 +503,10 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
         anchorOk = true;
     }
     if (anchorOk) {
-        const tag = `P${idx + 1}`;
+        // Prefer the stable BYTETracker ID (#3, #7, ...) so the coach
+        // can verify identity across frames. Fall back to "Pn" for
+        // older recordings / MP backend that don't surface IDs.
+        const tag = (trackId != null) ? `#${trackId}` : `P${idx + 1}`;
         c.font = 'bold 13px "Fira Code", monospace';
         const tw = c.measureText(tag).width;
         c.fillStyle = color;
@@ -533,9 +547,41 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1) {
     }
 }
 
-function drawSkeletonOnCanvas(c, cv, landmarks, angles) {
+function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
     const w = cv.width, h = cv.height;
     const detailed = _annotationMode === 'detailed';
+
+    // --- Identity tag above head (BYTETracker ID, when available) ---
+    // Drawn first so the skeleton bones render on top if they
+    // overlap; the small dark pill stays readable either way.
+    if (trackId != null && landmarks && landmarks.length === 33) {
+        let lx = 0, ly = 0, ok = false;
+        if (landmarks[0] && landmarks[0][2] > 0.3) {
+            lx = landmarks[0][0] * w;
+            ly = landmarks[0][1] * h - 22;
+            ok = true;
+        } else if (landmarks[11] && landmarks[12]
+                   && landmarks[11][2] > 0.3 && landmarks[12][2] > 0.3) {
+            lx = (landmarks[11][0] + landmarks[12][0]) / 2 * w;
+            ly = (landmarks[11][1] + landmarks[12][1]) / 2 * h - 30;
+            ok = true;
+        }
+        if (ok) {
+            const tag = `#${trackId}`;
+            c.font = 'bold 13px "Fira Code", monospace';
+            const tw = c.measureText(tag).width;
+            c.fillStyle = '#3B82F6';
+            c.beginPath();
+            c.roundRect(lx - tw/2 - 6, ly - 12, tw + 12, 18, 4);
+            c.fill();
+            c.fillStyle = '#fff';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText(tag, lx, ly - 3);
+            c.textAlign = 'left';
+            c.textBaseline = 'alphabetic';
+        }
+    }
 
     // --- Connections (bones) ---
     c.strokeStyle = 'rgba(59, 130, 246, 0.9)';
@@ -1695,7 +1741,7 @@ async function setupSkeletonOverlay(name) {
         return { x, y, w: drawW, h: drawH };
     }
 
-    function drawPersonAt(box, pts, color, idxLabel) {
+    function drawPersonAt(box, pts, color, label) {
         if (!pts || pts.length !== 33) return;
         const toXY = (p) => ({ x: box.x + p[0] * box.w, y: box.y + p[1] * box.h, v: p[2] });
 
@@ -1715,9 +1761,10 @@ async function setupSkeletonOverlay(name) {
             c2.fillStyle = '#fff';
             c2.beginPath(); c2.arc(p.x, p.y, 1.4, 0, Math.PI * 2); c2.fill();
         }
-        // "Pn" tag above head — only for teammates (idxLabel > 0) so
-        // the primary swimmer stays uncluttered.
-        if (idxLabel && idxLabel > 0) {
+        // Tag above head — caller decides what to render. Falsy/empty
+        // string means "no label" (e.g. the legacy primary swimmer
+        // path that wants to stay uncluttered).
+        if (label) {
             let lx = 0, ly = 0, ok = false;
             if (pts[0][2] > 0.3) {
                 lx = box.x + pts[0][0] * box.w;
@@ -1729,17 +1776,34 @@ async function setupSkeletonOverlay(name) {
                 ok = true;
             }
             if (ok) {
-                const tag = `P${idxLabel + 1}`;
                 c2.font = 'bold 12px "Fira Code", monospace';
-                const tw = c2.measureText(tag).width;
+                const tw = c2.measureText(label).width;
                 c2.fillStyle = color;
                 c2.beginPath(); c2.roundRect(lx - tw / 2 - 5, ly - 11, tw + 10, 16, 4); c2.fill();
                 c2.fillStyle = '#fff';
                 c2.textAlign = 'center'; c2.textBaseline = 'middle';
-                c2.fillText(tag, lx, ly - 3);
+                c2.fillText(label, lx, ly - 3);
                 c2.textAlign = 'start'; c2.textBaseline = 'alphabetic';
             }
         }
+    }
+
+    // Per-person colour and label resolution. When the recording has
+    // BYTETracker IDs (phase 7.1+), bind colour to the ID itself so
+    // the same swimmer keeps the same hue across frames — and the
+    // same hue across Sets, which is the foundation for cross-Set
+    // comparison (phase 7.3). When IDs are absent (older recordings,
+    // MediaPipe backend) we fall back to the legacy "primary blue +
+    // teammates by array order" behaviour so old playback still works.
+    function colourFor(arrayIdx, trackId) {
+        if (trackId != null) return TEAM_COLORS[trackId % TEAM_COLORS.length];
+        if (arrayIdx === 0) return '#3B82F6';
+        return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
+    }
+    function labelFor(arrayIdx, trackId) {
+        if (trackId != null) return `#${trackId}`;
+        if (arrayIdx === 0) return '';   // legacy: don't clutter primary
+        return `P${arrayIdx + 1}`;
     }
 
     function drawOverlay() {
@@ -1752,24 +1816,29 @@ async function setupSkeletonOverlay(name) {
         if (idx < 0) return;
 
         // Multi-person playback: if the server returned all_frames,
-        // draw each athlete with their own distinct colour. The primary
-        // swimmer (idx 0) keeps MPI blue; teammates cycle through
-        // TEAM_COLORS to match the live view.
+        // draw each athlete with their own distinct colour. Stable
+        // BYTETracker IDs (when present) bind colour to athlete
+        // instead of array position, so the same swimmer keeps the
+        // same hue even when their relative position in the frame
+        // changes from one moment to the next.
         if (landmarks.all_frames && landmarks.all_frames[idx]) {
             const persons = landmarks.all_frames[idx];
-            // Draw teammates first so the primary ends up on top.
+            const ids = (landmarks.all_ids && landmarks.all_ids[idx]) || [];
+            // Draw teammates first so the primary (or whoever is at
+            // index 0 — usually the closest-to-camera athlete) ends
+            // up on top.
             for (let p = 1; p < persons.length; p++) {
-                drawPersonAt(box, persons[p], TEAM_COLORS[p % TEAM_COLORS.length], p);
+                drawPersonAt(box, persons[p], colourFor(p, ids[p]), labelFor(p, ids[p]));
             }
             if (persons.length > 0) {
-                drawPersonAt(box, persons[0], '#3B82F6', 0);
+                drawPersonAt(box, persons[0], colourFor(0, ids[0]), labelFor(0, ids[0]));
                 return;
             }
         }
 
         // Single-person fallback (older sets without landmarks_multi.jsonl)
         const pts = landmarks.frames[idx];
-        drawPersonAt(box, pts, '#3B82F6', 0);
+        drawPersonAt(box, pts, '#3B82F6', '');
     }
 
     // rAF loop only while playing for smoothness

@@ -357,11 +357,20 @@ class Recorder:
                 self._landmarks_file.flush()
 
     def write_landmarks_multi(self, local_ts: float, frame_count: int,
-                              all_landmarks: list):
+                              all_landmarks: list,
+                              track_ids: list | None = None):
         """Write one JSONL row per video frame with every detected person.
 
         ``all_landmarks`` is a list of up to N persons; each person is a
         list of 33 ``[x, y, visibility]`` triples (normalized coords).
+        ``track_ids`` (optional) is a parallel list of stable
+        BYTETracker IDs. Each entry is either an ``int`` (same swimmer
+        across frames) or ``None`` (tracker hasn't matched yet, or
+        backend has no tracker — e.g. MediaPipe). Recorded as a sibling
+        ``ids`` field so existing JSONL files without IDs stay
+        readable (the API + frontend treat a missing ``ids`` as
+        "all None" and fall back to array-order colouring).
+
         Empty list is fine — we always write a row so the file stays
         1:1 with ``video.mp4`` frames (see DEVLOG #13 sync fix).
         """
@@ -369,7 +378,8 @@ class Recorder:
             if not self._recording or self._landmarks_multi_file is None:
                 return
             persons = []
-            for lm in (all_landmarks or []):
+            kept_idx: list[int] = []
+            for orig_idx, lm in enumerate(all_landmarks or []):
                 if not lm or len(lm) != 33:
                     continue
                 persons.append([
@@ -377,9 +387,22 @@ class Recorder:
                      round(float(p[2]), 3)]
                     for p in lm
                 ])
+                kept_idx.append(orig_idx)
+            # Project track_ids through the same filter so they line up
+            # with the kept persons, not the raw input list.
+            if track_ids is not None:
+                ids = [
+                    (int(track_ids[i]) if (i < len(track_ids)
+                                           and track_ids[i] is not None)
+                     else None)
+                    for i in kept_idx
+                ]
+            else:
+                ids = [None] * len(persons)
             row = {"ts": round(float(local_ts), 3),
                    "frame": int(frame_count),
-                   "persons": persons}
+                   "persons": persons,
+                   "ids": ids}
             self._landmarks_multi_file.write(json.dumps(row, separators=(",", ":")) + "\n")
             if self._vision_frame_count % 30 == 0:
                 self._landmarks_multi_file.flush()

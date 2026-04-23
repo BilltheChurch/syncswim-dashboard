@@ -316,6 +316,15 @@ class CameraManager:
         with self._lock:
             return self._latest
 
+    def reset_tracking(self) -> None:
+        """Reset the per-person tracker so the next frame's BYTETracker
+        IDs start at 1 again. Called at recording start so IDs don't
+        leak across Sets — see ``YoloPoseDetector.reset_tracking``.
+        Safe no-op when running on the MediaPipe backend.
+        """
+        if self._backend == "yolo" and self._yolo is not None:
+            self._yolo.reset_tracking()
+
     # -- Background processing loop -----------------------------------------
 
     def _run(self):
@@ -439,13 +448,18 @@ class CameraManager:
             landmarks_list: list[list[float]] = []
             all_landmarks: list[list[list[float]]] = []
             all_angles: list[dict] = []
+            # Stable per-person tracking IDs from BYTETracker (yolo
+            # backend only — MediaPipe has no built-in tracker, so
+            # those entries stay None and the analysis page falls back
+            # to array-order colouring).
+            track_ids: list[int | None] = []
             angles: dict[str, float] | None = None
 
             if self._backend == "yolo" and self._yolo is not None:
-                # ── YOLOv8-pose: reliable multi-person. Returns a list
-                # of up to N "primary-ordered" persons, each a 33-slot
-                # MP-compatible landmark list.
-                persons = self._yolo.detect(frame, w, h)
+                # ── YOLOv8-pose: reliable multi-person. Returns
+                # ``(persons, track_ids)`` — both lists are
+                # area-sorted (biggest-first) and aligned by index.
+                persons, track_ids = self._yolo.detect(frame, w, h)
                 if persons:
                     for lm_list in persons:
                         all_landmarks.append(
@@ -494,6 +508,9 @@ class CameraManager:
                         all_angles.append(_compute_angles(adj_objs, w, h))
                     landmarks_list = all_landmarks[0]
                     angles = all_angles[0]
+                    # MediaPipe doesn't track — fill with Nones so the
+                    # frame dict stays uniform regardless of backend.
+                    track_ids = [None] * len(all_landmarks)
 
             # Periodic debug log of how many people were detected.
             self._mp_log_counter = getattr(self, "_mp_log_counter", 0) + 1
@@ -508,12 +525,20 @@ class CameraManager:
             if not ok:
                 continue
 
+            # Defensive normalisation: track_ids must always be the
+            # same length as all_landmarks, otherwise downstream
+            # writers can mis-align IDs to bodies (a really nasty
+            # silent bug — wrong athlete's IMU pairs to wrong skeleton).
+            if len(track_ids) != len(all_landmarks):
+                track_ids = [None] * len(all_landmarks)
+
             result = {
                 "jpeg": jpeg_buf.tobytes(),
                 "raw_frame": frame,
                 "landmarks": landmarks_list,
                 "all_landmarks": all_landmarks,
                 "all_angles": all_angles,          # per-person angles, parallel to all_landmarks
+                "track_ids": track_ids,            # parallel to all_landmarks; None for MP backend / new detections
                 "person_count": len(all_landmarks),
                 "angles": angles,                  # primary person, backward-compat
             }
