@@ -2210,4 +2210,151 @@ elbow 角度走 `_compute_angles`、CSV header 走 `Recorder` 模块常量、`re
 
 ---
 
+## 问题 #30：阶段 8 第一波 —— 三件"小事"，每件都揭出一个普遍模式
+
+阶段 8 接 dogfood 准备拳，第一组改动是 **A. 实时页绑定 athlete + B. 数据备份脚本 + C. 教练备注**。三件事看起来杂，每件不到 200 行，但都是教练真正会用、丢了就难受的小特性。
+
+### 8.1 实时页绑定 athlete (A)
+
+#### 痛点
+
+7.2 把"队员命名"做在了**分析页**。一个录制结束 → 切到分析页 → 进模态 → 给 #3 起名"张三"。**理论可行，实操不顺**：教练录制时盯着泳池，看见 #3 那一刻**最知道这是张三**；等录制结束、切页面、找 set，他可能已经在带下一组了。
+
+正确的人体工程学：**录制中即可命名**。
+
+#### 设计：暂存 + 录后批量 flush
+
+直觉做法：实时绑定调 `/api/athletes/{id}/bind` 立即写库。但 BYTETracker ID 在录制开始时 reset，**录制开始前**和**录制中**的 ID 是同一个空间，可是真实 set 名字要等录制结束才知道。
+
+所以：
+
+```js
+const _liveSeenTrackIds = new Set();   // ws 流里出现过的 unique track_ids
+const _pendingLiveBindings = new Map();// track_id → {athleteId, name, color}
+```
+
+绑定时**只写到 `_pendingLiveBindings`**，不调后端。录制 stop 触发 `flushLiveBindings(setName)` 拉响应里的 `set_dir` basename，批量 POST `/api/athletes/{id}/bind`。
+
+`/api/recording/stop` 早就返回 `{"set_dir": ...}`，前端只需把绝对路径取 basename，不用任何后端改动。**最少摩擦的扩展点**。
+
+#### Badge 反馈
+
+按钮上加一个 `<span class="live-pending-badge">` 显示当前待绑数量。教练即使不打开模态，也能看到"哦我已经绑了 3 个了"。
+
+#### 不做即时视觉反馈
+
+第一版**没**让骨架立刻变颜色 / 显示名字 — 那需要让 `drawSkeletonOnCanvas` / `drawSecondaryPose` 也接受 athleteMap 参数，改两个函数签名 + 闭包重组，工作量翻倍。Trade-off：先解决"录制中能命名"这个核心痛点，视觉反馈下个 PR 再加。
+
+### 8.2 数据备份脚本 (B)
+
+#### 设计原则：cron 友好 = 永远 exit 0
+
+最容易写错的备份脚本：失败时返回 non-zero 让 cron 发邮件。结果：飞 wifi 一晚上，早上收到 96 封 "rsync timed out" 邮件。
+
+`tools/backup.py` 的硬规矩：**任何错误路径都 exit 0**。失败信息只写到 `data/.backup.log`，cron 永远不会收到错误退出码。
+
+```python
+sys.exit(0)   # never crash cron
+```
+
+#### 智能选 backend：rsync vs rclone
+
+```python
+def _classify(target: str) -> str:
+    head, _, _ = target.partition(":")
+    if target.startswith("/") or "@" in head:
+        return "rsync"
+    if shutil.which("rclone"):
+        return "rclone"
+    if shutil.which("rsync"):
+        return "rsync"
+    return "none"
+```
+
+`/Volumes/External/syncswim/` → rsync。  
+`user@nas.local:/srv/syncswim/` → rsync。  
+`icloud:syncswim/` → rclone。  
+
+这个启发式覆盖了 99% 的常见 case，剩下 1% 让用户显式 `--target` 指定。
+
+#### 配置层级
+
+`--target` arg > `BACKUP_TARGET` 环境变量 > `data/.backup_target` 单行文件。
+
+让 cron 可以零配置：
+```bash
+echo "/Volumes/External/syncswim/" > data/.backup_target
+*/15 * * * * /usr/bin/python3 /path/to/tools/backup.py
+```
+
+cron 行**完全没有 secrets**。target 路径是用户机器局部信息，落在 `data/.backup_target`（已 .gitignore），不入仓不进 cron 配置。
+
+#### --delete-after vs --delete-before
+
+`rsync -a --delete-after`：**先传输、后删除**。如果中途网络断，destination 上的旧文件还在，没有"两边都没数据"的灾难窗口。这是个看似小但救命的细节。
+
+### 8.3 教练备注 (C)
+
+#### 为什么要
+
+数据指标抓不到的事：
+- "今天教三个新人侧空翻"（context）
+- "运动员 B 说肩有点酸"（外部信息）
+- "下次重点抓 leg_deviation"（教练自己的提醒）
+
+现在教练只能脑子里记。一周后翻历史看到这场 set 评分突然下降，不知道是因为运动员状态、教学内容还是设备问题。
+
+#### 实现：file-as-content，不引入数据库
+
+每个 set 目录加一个 `note.md`。文件存在 = 有备注，不存在 = 没备注。**没数据库、没 schema 迁移、没并发锁**（一个 set 不会同时有两个教练编辑）。
+
+```
+data/set_NNN_xxx/
+  ...
+  note.md         ← 教练手写的 markdown，free-form
+```
+
+PUT 端点接收文本：
+- 非空 → atomic write (`tmp + os.replace`) 防写到一半进程崩
+- whitespace-only / 空 → **删除文件** 而不是写空文件
+
+后者很关键：保持"文件存在 = 有内容"的不变量。如果空文件也能存在，下游 `os.path.exists(note_path)` 就要做额外的 stat 检查文件大小。**让 file system 状态和业务语义一对一**。
+
+#### 前端：内联编辑，不弹模态
+
+分析页顶部加备注卡，跟评分行并列。textarea + 保存/还原按钮。**不弹模态**因为：
+
+- 教练通常是"看到分析页 → 想起一件事 → 写下来"，不是"专门进模态写备注"
+- 备注是分析页的延伸，不是另起一段心流
+
+这种"就地编辑" UX 比模态痛快得多。
+
+### 三件事的共同模式
+
+写完三件事回头看，有几个共同模式：
+
+1. **不用数据库的诱惑要顶住**：athlete_store.json、note.md、`.backup_target` 都是文件。每个的 schema、并发模型、备份策略都比"加个 SQLite 表"简单得多。但不是所有数据都能这样 — set 数 >500 后历史页就慢了（task.md J 工程债）。**当下能用文件就用文件**，等真扛不住再迁。
+2. **frontend-only 改动 > 后端改动**：8.1 完全没改后端 — 复用 7.2 的 `/api/athletes/{id}/bind`，只是把"立即调"改成"暂存后批量调"。这种"在已有 endpoint 之上做行为变化"的能力，正是 7.2 留下来的契约空间。
+3. **缺省值是产品语言**：备份脚本"无 target → log 一行 skip 然后 exit 0"、备注端点"不存在 → 返回 empty 不是 404"、live binding"无 ID 检测到 → 提示 friendly empty state 不是 alert"。**用户从未做过任何配置时，系统的反应就是产品对待用户的态度**。
+4. **`exit 0` / silent fallback / friendly empty state 不是偷懒，是工程纪律**：错误路径要"安静"才能让正常路径被注意到。如果备份失败也 exit 0、备注空也 200、live 模态也 friendly empty，教练才会真正信任系统不会"突然抽风"。**信任是产品最难赢、最易失的东西**。
+
+### 验证
+
+| 模块 | 测试 |
+|---|---|
+| 8.1 实时绑定 | JS 静态语法、节点对齐人工 review、待 dogfood 实测 stop → flush 流程 |
+| 8.2 备份脚本 | `--dry-run` 在无 target 时 log "skip" 而非崩溃 |
+| 8.3 set note | TestClient 7 assertions（phantom 404 / empty 默认 / PUT-GET 往返 / whitespace 删除 / 空 idempotent / 原子写不留 .tmp） |
+| 整体 | pytest 回归 9 failed / 94 passed = baseline |
+
+### 收获
+
+1. **小特性是产品成熟的标志**：phase 1-7 是核心能力，phase 8 是"把这些能力变好用"。一个产品在 phase 1 看起来很有"工程味"，到 phase 8 才开始有"产品味"。
+2. **行为变化不一定要 schema 变化**：8.1 没改后端、8.2 没碰 fastapi、8.3 用文件不是表。**优先在已有契约空间内做行为变化**，能等再加 schema。
+3. **永远 exit 0 是 cron 友好的护城河**：任何 cron 脚本都该把这条当默认。日志记下错误，cron 安静跑。一封"timed out"邮件能毁掉一周的好心情。
+4. **file-as-content vs database-as-content**：file 模式简单但不 scale；database 简单 query 但 schema 演进难。当数据是"独立的、append-mostly、并发低"时（一个 set 一个 note），file 完胜。
+5. **frontend pending-state 的设计模式很强大**：暂存 + 批量 flush 的模式（8.1）适用于很多"操作触发时不知道后端 ID"的场景。值得作为一个常用 pattern 记住。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。
