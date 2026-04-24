@@ -2357,4 +2357,173 @@ PUT 端点接收文本：
 
 ---
 
+## 问题 #31：PDF 报告 —— 选库的两次反复
+
+### 痛点
+
+教练训完想发训练报告给运动员、家长、领导。8.4 之前的唯一方式：**截屏**。截屏的问题：
+- 单页只能放一部分；要发雷达 + 指标 + 关键帧得截 3-5 张
+- 没有元数据（录制时间、运动员姓名、综合评分大字号）
+- 接收方不知道这是"哪场训练"，要靠教练在微信里补充说明
+- 看起来像"工程师在 demo dashboard"，不像"教练在递交报告"
+
+PDF 是最自然的解：一份文件，A4 排版，发一次就完。**专业感** = 信任 = 教练能用这套系统对外。
+
+### 选库：从 weasyprint 走回 matplotlib
+
+#### 第一轮：选 weasyprint
+
+直觉选择 — HTML/CSS 控制力最强，渲染质量也最好。`uv pip install weasyprint` 装上了。
+
+跑第一段测试代码：
+
+```
+OSError: cannot load library 'libpango-1.0-0': ...
+WeasyPrint could not import some external libraries.
+```
+
+WeasyPrint 依赖 native libs：pango / cairo / gdk-pixbuf。macOS 需要 `brew install pango cairo gdk-pixbuf libffi`。
+
+这是个小坑：**用户首次装 weasyprint 要跨过 brew 这道墙**。Linux 也类似（`apt install libpango-1.0-0` 等）。
+
+#### 第二轮：matplotlib PdfPages
+
+回到现实：项目本来就装了 matplotlib（`analyze.py` 用它做时序图）。matplotlib 自带 `backend_pdf.PdfPages`，能直接出 PDF：
+- **零新 deps**（连 pip install 都不用）
+- 跨平台无 native libs
+- 单页一个 figure，控制力够用
+- 中文字体可在 `rcParams` 里指定
+
+代价：HTML 那种"自由排版"没了，需要用 `add_axes([x, y, w, h])` 手动定位。但训练报告的版式简单（标题 + 数字 + 图 + 表），matplotlib 完全 hold 得住。
+
+**反思**：第一次直觉选了"渲染质量最高"的，没考虑"装得多痛"。把"装的成本" 当成一项设计 constraint 后，matplotlib 立刻成了正确答案。**别把"最好"和"最合适"混淆**。
+
+最后我把 weasyprint 卸了（`uv pip uninstall weasyprint`），requirements.txt 不动。
+
+### 中文字体的"silent fail"
+
+matplotlib 默认 font.family 是 `DejaVu Sans`，**对中文是空白方块**。问题在于 — **不报错**。代码跑得很好，PDF 也生成，看起来一切正常 — 直到真的打开 PDF 看到 `□□□□□`。
+
+修复：用 fallback 链覆盖跨平台：
+
+```python
+matplotlib.rcParams["font.family"] = [
+    "Heiti TC",            # macOS bundled
+    "Hiragino Sans GB",    # macOS bundled
+    "Songti SC",           # macOS bundled
+    "Noto Sans CJK SC",    # Linux: apt install fonts-noto-cjk
+    "Microsoft YaHei",     # Windows
+    "sans-serif",
+]
+```
+
+发现哪些字体可用的姿势：
+
+```python
+import matplotlib.font_manager as fm
+fm.findfont("Heiti TC", fallback_to_default=False)
+```
+
+返回 `/System/Library/Fonts/STHeiti Medium.ttc` → 字体存在；返回 DejaVu 路径 → 字体不存在。
+
+#### 副作用：每次渲染产生噪音
+
+跨平台 fallback 列表在 macOS 上跑，会对每个不存在的字体打 `findfont: Font family 'Microsoft YaHei' not found.`。一份 3 页 PDF 打了 5 行噪音。
+
+修复：
+
+```python
+logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+```
+
+把 fallback warning 降级到 ERROR 级别，UserWarning-level 的查找失败不再噪音。
+
+### 与 dashboard JS 雷达对齐
+
+PDF 的雷达图必须跟 dashboard 上的一致 —— 否则教练对外发的数字、自己看的数字两套。这是 silent divergence 最常见的原因之一。
+
+```js
+// app.js
+function normalizeForRadar(name, val) {
+    switch (name) {
+        case 'leg_deviation': return Math.max(0, Math.min(100, (30 - val) / 30 * 100));
+        ...
+```
+
+```python
+# tools/export_pdf.py
+def _normalize_for_radar(name: str, val: float | None) -> float:
+    if name == "leg_deviation":
+        return max(0.0, min(100.0, (30 - val) / 30 * 100))
+    ...
+```
+
+两套实现保持手动同步是个**临时妥协**。理想做法：把 normalize 逻辑下沉到 `dashboard.core/`，前后端都通过 API 拉取归一化的值（前端就不用算了）。但这是大改动，留给未来。**当下用代码注释 + DEVLOG 把这个 coupling 显式化**，至少让未来的自己 / 同事知道改一处就要改两处。
+
+### 端点设计：lazy import + 三级 fallback
+
+`/api/sets/{name}/report.pdf` 实现：
+
+```python
+@router.get("/sets/{name}/report.pdf")
+async def set_report_pdf(name: str):
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    try:
+        from tools.export_pdf import render_pdf      # lazy
+    except ImportError as e:
+        return JSONResponse({"error": ...}, status_code=503)
+    try:
+        render_pdf(Path(set_dir), Path(output))
+    except ValueError as e:                          # no metrics
+        return JSONResponse({"error": ...}, status_code=404)
+    except Exception as e:                           # render bug
+        return JSONResponse({"error": ...}, status_code=500)
+    return FileResponse(output, media_type="application/pdf",
+                        filename=f"{name}_report.pdf")
+```
+
+**lazy import 的两个收益**：
+1. 服务启动快（不每次启动都加载 matplotlib，~1-2s）
+2. 未来 matplotlib 升级万一坏了 PDF 渲染，dashboard 的其他部分还能工作
+
+**三级 status code**：
+- 404：set 不存在或无指标可算
+- 503：PDF backend 整个挂了（matplotlib 装坏了）
+- 500：本场 set 渲染失败（具体 set 的某些数据触发了 bug）
+
+教练看到 404 会想"哦这场没数据"；看到 503 会找管理员；看到 500 会换一场试试。**status code = 用户该做的下一步**。
+
+### Standalone CLI + endpoint 双入口
+
+```bash
+python tools/export_pdf.py set_001_imported_xxx
+python tools/export_pdf.py set_NNN -o /tmp/report.pdf
+```
+
+跟 endpoint 共享同一个 `render_pdf()` 函数。CLI 的存在让我们能：
+- 在 dashboard 没起的时候批量出报告（脚本/cron）
+- 调试渲染 bug 不用启 server
+- 未来加 `tools/export_pdf.py --batch data/set_*` 一行命令出当周所有报告
+
+**"endpoint 是 CLI 的网络包装"** 是清晰分工的一种姿态。逻辑在 CLI，I/O 在 endpoint。下游想加任何新入口（比如 grpc / cron / 命令行 batch）都不用改 render 逻辑。
+
+### 验证
+
+- ✅ 静态语法（py + js）
+- ✅ standalone CLI 用 `data/set_001_*` 跑出 131KB PDF
+- ✅ FastAPI TestClient smoke：phantom 404 + 真实 set 返回 application/pdf
+- ✅ pytest 回归 9 failed / 94 passed = baseline
+
+### 收获
+
+1. **库选型把"装的成本"当 constraint**：不是"哪个库渲染最好"，而是"哪个库渲染够好且装着不痛"。weasyprint 渲染更好，但 native deps 是用户首次装的痛；matplotlib 渲染够好，零新 deps。**痛感和质量都要量化**。
+2. **silent fail 是中文字体的常态**：matplotlib 找不到字体不报错，代码跑得很好但产物不能看。**渲染相关的代码必须人眼校验**，不能只信 "exit 0"。
+3. **跨平台 fallback list 的副作用**：每次渲染打 N 行 warning。`logging.getLogger().setLevel()` 是个常用静音手段，比 `warnings.filterwarnings()` 更精准。
+4. **JS / Py 对偶函数手动同步是临时债**：normalize_for_radar 同时存在两份实现，将来一定 drift。用注释 + DEVLOG 把 coupling **显式化**，至少改一处时能想起改两处。理想做法是下沉到后端单一来源，但当下不值这个改动量。
+5. **CLI + endpoint 同一函数**：把渲染逻辑做成 standalone 可调用，endpoint 只是网络包装。**逻辑层和 I/O 层分离**是任何系统的健康标志。
+6. **status code 是用户行为信号**：404 / 503 / 500 不是抽象 HTTP 数字，对应"换一场 / 找管理员 / 换一场试"三种用户响应。设计错误响应时想"用户看到这个会做什么"。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

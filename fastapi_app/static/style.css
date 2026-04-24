@@ -3039,6 +3039,27 @@ kbd {
     border-color: var(--secondary);
 }
 
+.vp-pdf-btn {
+    margin-right: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition);
+}
+
+.vp-pdf-btn:hover {
+    background: #10B981;
+    color: #fff;
+    border-color: #10B981;
+}
+
 .ath-modal {
     min-width: 480px;
     max-width: 90vw;

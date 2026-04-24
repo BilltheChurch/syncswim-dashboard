@@ -249,11 +249,15 @@ data/
 - [x] [app.js](fastapi_app/static/app.js) 分析页顶部加备注卡：textarea + 保存/还原按钮 + meta 显示更新时间
 - [x] FastAPI TestClient 7 assertions（phantom 404 / empty 默认 / PUT-GET 往返 / whitespace 删除 / 空 idempotent / 原子写不留 .tmp）
 
-### 8.4 PDF / 截图报告导出（D）— PR #6
-- [ ] `/api/sets/{name}/report.pdf` 端点
-- [ ] 用 weasyprint 或 Playwright 渲染分析页 HTML 到 PDF
-- [ ] 包含：摘要、雷达图、关键帧、指标卡、教练备注
-- [ ] 分析页"导出"按钮
+### 8.4 PDF 报告导出（D）— PR #5 ✅
+- [x] [tools/export_pdf.py](tools/export_pdf.py)：standalone CLI，3 页 A4（封面+雷达 / 详细指标+关键帧 / 备注+IMU）
+- [x] **不引入 weasyprint** — 用项目已有的 matplotlib PdfPages，避开 `brew install pango/cairo` 等 native deps
+- [x] CJK 字体 fallback 链：Heiti TC → Hiragino Sans GB → Songti SC → Noto Sans CJK SC → Microsoft YaHei → sans-serif
+- [x] `_normalize_for_radar()` 与前端 JS `normalizeForRadar` 对齐，PDF 雷达图与 dashboard 一致
+- [x] `GET /api/sets/{name}/report.pdf` 端点：lazy import + ValueError → 404 + ImportError → 503
+- [x] 分析页视频卡片头部加 `<a id="vp-pdf-btn">PDF</a>`（绿色 hover），新窗口下载
+- [x] FastAPI TestClient smoke：phantom 404 + real set 返回 130 KB application/pdf
+- [x] DEVLOG #31
 
 ### 8.5 录制中打标（E）— PR #7
 - [ ] 实时页按 `M` → 在当前时间点插一个标记

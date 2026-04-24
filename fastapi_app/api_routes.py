@@ -971,6 +971,45 @@ async def unbind_track(athlete_id: str, req: _BindReq):
     return {"status": "unbound", "set": req.set, "track_id": req.track_id}
 
 
+# ── PDF report export (phase 8.4) ──────────────────────────────
+# Coach hits "导出 PDF" → backend renders an A4 report and streams
+# it back as application/pdf. Re-uses tools/export_pdf.py rather
+# than duplicating the layout — the standalone CLI keeps the
+# rendering testable in isolation.
+
+@router.get("/sets/{name}/report.pdf")
+async def set_report_pdf(name: str):
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    # Lazy import — keeps server startup fast and the rest of the
+    # API working even if a future matplotlib upgrade breaks PDF
+    # rendering. Coach without PDF still has every other feature.
+    try:
+        from tools.export_pdf import render_pdf
+    except ImportError as e:
+        return JSONResponse(
+            {"error": f"PDF backend not available: {e}"},
+            status_code=503,
+        )
+    output = os.path.join(set_dir, "report.pdf")
+    try:
+        from pathlib import Path
+        render_pdf(Path(set_dir), Path(output))
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=404)
+    except Exception as e:
+        return JSONResponse(
+            {"error": f"PDF render failed: {e}"}, status_code=500
+        )
+    # Stream the file with a coach-friendly filename
+    return FileResponse(
+        output,
+        media_type="application/pdf",
+        filename=f"{name}_report.pdf",
+    )
+
+
 # ── Per-Set notes (phase 8.3) ──────────────────────────────────
 # Free-form markdown stored as ``note.md`` next to the recording
 # files. Coach uses it for context the metrics can't capture
