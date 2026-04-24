@@ -1436,6 +1436,9 @@ function renderReport(name, report) {
             <div class="vp-header">
                 <span class="vp-title">视频回放</span>
                 <button class="vp-athletes-btn" id="vp-athletes-btn" type="button" title="给检测到的运动员命名">队员</button>
+                <a class="vp-pdf-btn" id="vp-pdf-btn" target="_blank"
+                   href="/api/sets/${encodeURIComponent(name)}/report.pdf"
+                   title="导出 PDF 训练报告（含评分、雷达、关键帧、备注）">PDF</a>
                 <label class="vp-overlay-toggle active" id="vp-toggle">
                     <span>骨架叠加</span>
                     <span class="toggle-switch"></span>
