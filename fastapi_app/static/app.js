@@ -246,6 +246,9 @@ document.addEventListener('keydown', e => {
         case 't': case 'T':
             $('#btn-annotate').click();
             break;
+        case 'm': case 'M':
+            captureLiveMarker();
+            break;
     }
 });
 
@@ -282,6 +285,14 @@ let _lastAspect = 0;  // cached image aspect ratio for wrapper sizing
 // when their attention is on the swimmers, not on the dashboard.
 const _liveSeenTrackIds = new Set();   // every track_id observed in the live ws stream
 const _pendingLiveBindings = new Map(); // track_id → {athleteId, name, color}
+
+// ── Live-page markers (phase 8.5) ────────────────────────────────
+// Coach presses M during recording → quick label prompt → marker
+// queued with the offset relative to recording start. On stop the
+// whole queue is POSTed to /api/sets/{name}/markers. Same "delay
+// the bind until we know the set name" pattern as 8.1.
+let _recordingStartedAt = 0;            // ms epoch; 0 means not recording
+const _pendingMarkers = [];             // [{ts_offset, label, note}]
 
 /**
  * Size the video wrapper to match the image's aspect ratio while fitting
@@ -914,6 +925,12 @@ $('#btn-start').addEventListener('click', async () => {
             _liveSeenTrackIds.clear();
             _pendingLiveBindings.clear();
             updateLivePendingBadge();
+            // Stamp recording start so M-key markers can compute
+            // an offset from "now". Wall-clock + offset is robust
+            // to clock drift (only the relative interval matters).
+            _recordingStartedAt = Date.now();
+            _pendingMarkers.length = 0;
+            updateLiveMarkerBadge();
             toast(`开始录制 Set #${j.set_number}`, 'success');
         }
     } catch {
@@ -929,17 +946,82 @@ $('#btn-stop').addEventListener('click', async () => {
             toast(j.error, 'error');
             return;
         }
-        // Flush any pending live bindings to the freshly created Set.
-        // ``set_dir`` is an absolute (or relative) path; we want the
-        // basename to match the Set name in athlete_store.
-        if (j.set_dir && _pendingLiveBindings.size > 0) {
-            const setName = String(j.set_dir).split(/[\\/]/).pop();
+        const setName = j.set_dir
+            ? String(j.set_dir).split(/[\\/]/).pop()
+            : null;
+        // Flush both queues to the freshly created Set.
+        if (setName && _pendingLiveBindings.size > 0) {
             await flushLiveBindings(setName);
         }
+        if (setName && _pendingMarkers.length > 0) {
+            await flushLiveMarkers(setName);
+        }
+        _recordingStartedAt = 0;
     } catch {
         toast('停止失败', 'error');
     }
 });
+
+/** POST queued markers to the just-created set. Empty queue is
+ *  a no-op handled by the backend (returns []). */
+async function flushLiveMarkers(setName) {
+    const queue = _pendingMarkers.slice();
+    if (queue.length === 0) return;
+    try {
+        const r = await fetch(
+            `/api/sets/${encodeURIComponent(setName)}/markers`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markers: queue }),
+            },
+        );
+        if (r.ok) {
+            toast(`已保存 ${queue.length} 个标记`, 'success', 1800);
+        } else {
+            toast('标记保存失败 — 进分析页可手动加', 'warn');
+        }
+    } catch {
+        toast('标记保存失败', 'error');
+    }
+    _pendingMarkers.length = 0;
+    updateLiveMarkerBadge();
+}
+
+function updateLiveMarkerBadge() {
+    const badge = $('#live-marker-badge');
+    if (!badge) return;
+    const n = _pendingMarkers.length;
+    badge.textContent = String(n);
+    badge.hidden = (n === 0);
+}
+
+/** Push a marker at the current recording offset. Triggered by M
+ *  key on the live page. The label prompt uses native `prompt()`
+ *  for the same MVP-speed reason as the athlete-create flow in 8.1
+ *  — replacement with an inline input is on the polish list. */
+function captureLiveMarker() {
+    if (!_recordingStartedAt) {
+        toast('未在录制 — 标记仅在 REC 状态可用', 'warn', 1800);
+        return;
+    }
+    const tsOffset = (Date.now() - _recordingStartedAt) / 1000;
+    const label = window.prompt(
+        `在 ${tsOffset.toFixed(1)}s 处标记 — 输入标签 (例如：翻身/出水/技术错误)`,
+        '',
+    );
+    if (label === null) return;   // user cancelled
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    _pendingMarkers.push({
+        ts_offset: tsOffset,
+        label: trimmed,
+        note: '',
+    });
+    updateLiveMarkerBadge();
+    toast(`#${_pendingMarkers.length} ${trimmed} @ ${tsOffset.toFixed(1)}s`,
+          'info', 1500);
+}
 
 /** Replay queued live bindings against the just-created set name.
  *  Reports per-binding success/failure via toasts and clears the
@@ -1130,6 +1212,10 @@ async function openLiveAthleteManager() {
 const _liveAthBtn = $('#btn-live-athletes');
 if (_liveAthBtn) {
     _liveAthBtn.addEventListener('click', openLiveAthleteManager);
+}
+const _liveMarkBtn = $('#btn-mark');
+if (_liveMarkBtn) {
+    _liveMarkBtn.addEventListener('click', captureLiveMarker);
 }
 
 let currentRotation = 0;
@@ -1448,6 +1534,7 @@ function renderReport(name, report) {
                 <video id="vp-video" class="vp-video" controls src="/api/sets/${encodeURIComponent(name)}/video"></video>
                 <canvas id="vp-skeleton" class="vp-skeleton-canvas"></canvas>
             </div>
+            <div class="vp-marker-strip" id="vp-marker-strip" hidden></div>
         </div>
     ` : `
         <div class="video-player-card">
@@ -1575,7 +1662,69 @@ function renderReport(name, report) {
         aBtn.addEventListener('click', () => openAthleteManager(name));
     }
     setupSetNote(name);
+    setupMarkerStrip(name);
     setupSkeletonOverlay(name);
+}
+
+/** Render coach markers (phase 8.5) as a row of clickable triangles
+ *  underneath the video. Each click seeks the video to that offset.
+ *  Empty marker list → strip stays hidden so the layout doesn't
+ *  reserve unused space. */
+async function setupMarkerStrip(name) {
+    const strip = $('#vp-marker-strip');
+    const video = $('#vp-video');
+    if (!strip || !video) return;
+
+    let markers = [];
+    try {
+        const r = await fetch(`/api/sets/${encodeURIComponent(name)}/markers`);
+        if (r.ok) markers = (await r.json()).markers || [];
+    } catch {}
+
+    if (markers.length === 0) {
+        strip.hidden = true;
+        return;
+    }
+    strip.hidden = false;
+
+    function escapeAttrShort(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    // Wait for metadata so we know the duration. Without this the
+    // first paint puts every marker at offset 0 (since duration is NaN
+    // before loadedmetadata fires).
+    function render() {
+        const duration = (isFinite(video.duration) && video.duration > 0)
+            ? video.duration
+            : Math.max(...markers.map(m => m.ts_offset)) + 1;
+        strip.innerHTML = markers.map((m, i) => {
+            const pct = Math.max(0, Math.min(100, (m.ts_offset / duration) * 100));
+            const tip = `${m.label} @ ${m.ts_offset.toFixed(1)}s`;
+            return `<button class="vp-marker"
+                style="left:${pct.toFixed(2)}%"
+                data-ts="${m.ts_offset}"
+                title="${escapeAttrShort(tip)}">
+                <span class="vp-marker-tri"></span>
+                <span class="vp-marker-label">${escapeAttrShort(m.label)}</span>
+            </button>`;
+        }).join('');
+
+        strip.querySelectorAll('.vp-marker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ts = parseFloat(btn.dataset.ts);
+                if (isFinite(ts)) {
+                    video.currentTime = ts;
+                    video.play().catch(() => {});
+                }
+            });
+        });
+    }
+
+    if (video.readyState >= 1) render();
+    else video.addEventListener('loadedmetadata', render, { once: true });
 }
 
 /** Wire the per-Set coach-note textarea (phase 8.3).
@@ -2244,7 +2393,61 @@ let _compareState = {
     sortedByDate: [],     // reports sorted by date asc (for line chart)
 };
 
+/** Fetch trend alerts (phase 8.6) and render the banner above the
+ *  compare-tab picker. No alerts → banner stays hidden so an empty
+ *  state doesn't look like a bug. */
+async function fetchAndRenderAlerts() {
+    const banner = $('#cmp-alerts-banner');
+    if (!banner) return;
+    let alerts = [];
+    try {
+        const r = await fetch('/api/alerts');
+        if (r.ok) alerts = (await r.json()).alerts || [];
+    } catch {
+        banner.hidden = true;
+        return;
+    }
+    if (alerts.length === 0) {
+        banner.hidden = true;
+        banner.innerHTML = '';
+        return;
+    }
+    banner.hidden = false;
+
+    function escAttr(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    banner.innerHTML = `
+        <div class="cmp-alerts-header">
+            <span class="cmp-alerts-title">趋势告警</span>
+            <span class="cmp-alerts-count">${alerts.length}</span>
+        </div>
+        <div class="cmp-alerts-list">
+            ${alerts.map(a => `
+                <div class="cmp-alert cmp-alert-${escAttr(a.severity)}">
+                    <span class="cmp-alert-athlete"
+                          style="--athlete-color:${a.athlete_color || '#A855F7'}">
+                        ${escAttr(a.athlete_name)}
+                    </span>
+                    <span class="cmp-alert-msg">${escAttr(a.message)}</span>
+                    <span class="cmp-alert-trail">
+                        ${a.values.map((v, i) => `<code>${v}</code>${i < a.values.length - 1 ? ' → ' : ''}`).join('')}
+                    </span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadCompare() {
+    // Trend alerts go above the picker so the coach sees the
+    // "what's worth your attention" view BEFORE diving into raw
+    // session-by-session comparison.
+    fetchAndRenderAlerts();   // intentionally not awaited — banner appears when ready
+
     const content = $('#compare-content');
     content.innerHTML = `
         <div class="skel-card"><div class="skeleton skel-block"></div></div>

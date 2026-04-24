@@ -3060,6 +3060,54 @@ kbd {
     border-color: #10B981;
 }
 
+/* ── Live-page marker strip (phase 8.5) ────────────────── */
+.vp-marker-strip {
+    position: relative;
+    height: 28px;
+    margin: 6px 4px 0;
+    border-top: 1px solid var(--border);
+}
+.vp-marker-strip[hidden] { display: none; }
+
+.vp-marker {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: color var(--transition);
+    font-size: 0.66rem;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.vp-marker:hover { color: #F59E0B; }
+.vp-marker-tri {
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #F59E0B;
+    margin-top: 0;
+}
+.vp-marker-label {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text-hi);
+    white-space: nowrap;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .ath-modal {
     min-width: 480px;
     max-width: 90vw;
@@ -3350,6 +3398,89 @@ kbd {
     height: 8px;
     border-radius: 50%;
     background: var(--lp);
+}
+
+/* ── Trend alerts banner (phase 8.6) ──────────────────── */
+.cmp-alerts-banner {
+    background: var(--card-bg, rgba(255,255,255,0.03));
+    border: 1px solid var(--border);
+    border-left: 3px solid #F59E0B;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+.cmp-alerts-banner[hidden] { display: none; }
+
+.cmp-alerts-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.cmp-alerts-title {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+}
+.cmp-alerts-count {
+    background: #F59E0B;
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.cmp-alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cmp-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+}
+.cmp-alert-warn {
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.cmp-alert-info {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.30);
+}
+.cmp-alert-athlete {
+    --athlete-color: #A855F7;
+    background: var(--athlete-color);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.cmp-alert-msg {
+    color: var(--text-hi);
+    flex: 1;
+}
+.cmp-alert-trail {
+    font-family: 'Fira Code', monospace;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+.cmp-alert-trail code {
+    background: rgba(0,0,0,0.25);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text-dim);
 }
 
 /* ── Live-page athlete badge (phase 8.1) ───────────────────────── */

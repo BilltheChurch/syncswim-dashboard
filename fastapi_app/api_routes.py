@@ -1074,6 +1074,262 @@ async def put_set_note(name: str, req: _NoteReq):
     return _note_payload(note_path, text)
 
 
+# ── Per-Set markers (phase 8.5) ────────────────────────────────
+# Coach presses ``M`` during recording to flag an interesting
+# moment ("bad turn at this point", "textbook leg extension here").
+# Markers persist as ``markers.csv`` in the Set directory and
+# render on the analysis page's time-series chart so the coach
+# can jump straight to the flagged frames during review.
+
+import csv as _csv  # scoped alias to avoid clashing with local `csv` names
+
+MARKER_HEADER = ["ts_offset", "label", "note", "created_at"]
+
+
+class _Marker(BaseModel):
+    ts_offset: float
+    label: str
+    note: Optional[str] = ""
+
+
+class _MarkersBatch(BaseModel):
+    markers: list[_Marker]
+
+
+def _markers_path(set_dir: str) -> str:
+    return os.path.join(set_dir, "markers.csv")
+
+
+def _load_markers(set_dir: str) -> list[dict]:
+    path = _markers_path(set_dir)
+    if not os.path.exists(path):
+        return []
+    out: list[dict] = []
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                try:
+                    out.append({
+                        "ts_offset": float(row.get("ts_offset", 0) or 0),
+                        "label": (row.get("label") or "").strip(),
+                        "note": (row.get("note") or "").strip(),
+                        "created_at": row.get("created_at") or "",
+                    })
+                except (TypeError, ValueError):
+                    continue
+    except OSError:
+        return []
+    # Sort by ts_offset for deterministic rendering
+    out.sort(key=lambda m: m["ts_offset"])
+    return out
+
+
+@router.get("/sets/{name}/markers")
+async def get_set_markers(name: str):
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    return {"markers": _load_markers(set_dir)}
+
+
+@router.post("/sets/{name}/markers")
+async def post_set_markers(name: str, req: _MarkersBatch):
+    """Append one or more markers to the Set's markers.csv.
+
+    Live recorder queues markers client-side (coach presses M during
+    recording) and POSTs them all at once on stop. Empty batches are
+    allowed (harmless no-op) so the frontend doesn't have to special-
+    case "no markers this session".
+    """
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    path = _markers_path(set_dir)
+    existed = os.path.exists(path)
+    try:
+        with open(path, "a", encoding="utf-8", newline="") as f:
+            w = _csv.writer(f)
+            if not existed:
+                w.writerow(MARKER_HEADER)
+            now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            for m in req.markers:
+                label = (m.label or "").strip()
+                if not label:
+                    continue
+                w.writerow([
+                    f"{m.ts_offset:.3f}",
+                    label,
+                    (m.note or "").strip(),
+                    now,
+                ])
+    except OSError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    return {"markers": _load_markers(set_dir)}
+
+
+@router.delete("/sets/{name}/markers")
+async def clear_set_markers(name: str):
+    """Nuclear option — remove all markers for this Set. Used by the
+    analysis page when the coach wants a clean slate. Individual
+    marker deletion is deferred to a future PR (needs stable IDs)."""
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    path = _markers_path(set_dir)
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+    return {"markers": []}
+
+
+# ── Trend alerts (phase 8.6) ────────────────────────────────────
+# Rule engine that scans every athlete's binding history and surfaces
+# negative trends the coach might miss scrolling through raw numbers:
+#   - explosive_power dropping 3 sessions in a row     → 疲劳预警
+#   - leg_deviation rising 3 sessions in a row         → 技术退步
+#   - overall_score < threshold 2 sessions in a row    → 状态预警
+#
+# The rules are intentionally hardcoded in the first version. Once
+# the coach has dogfooded with real data we'll pull them into
+# config.toml so they can be tuned per-team.
+
+_ALERT_RULES = [
+    {
+        "id": "explosive_power_drop",
+        "metric": "explosive_power",
+        "window": 3,
+        "direction": "down",         # monotonically decreasing
+        "severity": "warn",
+        "message": "爆发力连续 {n} 场下降 — 可能处于疲劳或过载状态",
+    },
+    {
+        "id": "leg_deviation_up",
+        "metric": "leg_deviation",
+        "window": 3,
+        "direction": "up",           # monotonically increasing (worse)
+        "severity": "warn",
+        "message": "腿部偏差连续 {n} 场上升 — 建议回顾技术动作",
+    },
+    {
+        "id": "overall_low",
+        "metric": "overall_score",
+        "window": 2,
+        "direction": "below",
+        "threshold": 6.0,
+        "severity": "info",
+        "message": "综合评分连续 {n} 场低于 {threshold} — 留意状态",
+    },
+]
+
+
+def _metric_value_in_set(set_name: str, metric_name: str) -> float | None:
+    """Pull a single metric value out of a Set, without re-running the
+    full analysis pipeline. Special-cases ``overall_score``."""
+    set_dir = _set_dir(set_name)
+    if not os.path.isdir(set_dir):
+        return None
+    try:
+        report = compute_all_metrics(set_dir)
+    except Exception:
+        return None
+    if report is None:
+        return None
+    if metric_name == "overall_score":
+        return (float(report.overall_score)
+                if report.overall_score is not None else None)
+    for m in report.metrics:
+        if m.name == metric_name and m.value is not None:
+            return float(m.value)
+    return None
+
+
+def _set_date_key(name: str) -> str:
+    """Sortable date key from the set directory name
+    (``set_NNN_YYYYMMDD_HHMMSS`` or ``set_NNN_imported_..._YYYYMMDD_HHMMSS``)."""
+    import re
+    m = re.search(r"_(\d{8})_(\d{6})$", name)
+    return (m.group(1) + m.group(2)) if m else name
+
+
+def _apply_rule(rule: dict, values: list[tuple[str, float]]) -> dict | None:
+    """Return an alert dict or None. ``values`` is already
+    chronologically sorted (oldest first)."""
+    window = int(rule.get("window", 3))
+    if len(values) < window:
+        return None
+    last = values[-window:]
+    direction = rule.get("direction")
+    nums = [v for _, v in last]
+
+    triggered = False
+    if direction == "down":
+        # Strictly decreasing — tolerate equal only if you want
+        # softer rules; we want a clear signal so require strict.
+        triggered = all(nums[i] < nums[i - 1] for i in range(1, len(nums)))
+    elif direction == "up":
+        triggered = all(nums[i] > nums[i - 1] for i in range(1, len(nums)))
+    elif direction == "below":
+        threshold = float(rule.get("threshold", 0.0))
+        triggered = all(v < threshold for v in nums)
+
+    if not triggered:
+        return None
+    return {
+        "rule_id": rule["id"],
+        "metric": rule["metric"],
+        "severity": rule["severity"],
+        "message": rule["message"].format(
+            n=window, threshold=rule.get("threshold", "")
+        ),
+        "sets": [s for s, _ in last],
+        "values": [round(v, 2) for v in nums],
+    }
+
+
+@router.get("/alerts")
+async def get_alerts():
+    """Scan every bound athlete's history and emit an alert per
+    triggered rule. Returns an empty list (not 404) when there are
+    no athletes or no triggered rules — the dashboard renders "一切
+    正常" rather than an error page in that case.
+    """
+    if _athletes is None:
+        return {"alerts": []}
+
+    alerts: list[dict] = []
+    for ath in _athletes.list_athletes():
+        bindings = ath.get("bindings") or []
+        if len(bindings) < 2:
+            continue
+        # Group bindings by set, chronologically
+        set_names = sorted(
+            {b.get("set") for b in bindings if b.get("set")},
+            key=_set_date_key,
+        )
+        if len(set_names) < 2:
+            continue
+        for rule in _ALERT_RULES:
+            # Pull the metric value per set for this athlete. Skip
+            # Sets that don't have the metric so a one-off no-data
+            # session doesn't break an otherwise-valid trend.
+            series: list[tuple[str, float]] = []
+            for s in set_names:
+                v = _metric_value_in_set(s, rule["metric"])
+                if v is not None:
+                    series.append((s, v))
+            alert = _apply_rule(rule, series)
+            if alert is None:
+                continue
+            alert["athlete_id"] = ath["id"]
+            alert["athlete_name"] = ath["name"]
+            alert["athlete_color"] = ath.get("color")
+            alerts.append(alert)
+    return {"alerts": alerts}
+
+
 # ── Cross-Set comparison (phase 7.3) ───────────────────────────
 # These endpoints power the "对比" tab. They reuse the per-Set
 # report path so the metric values shown in comparison are

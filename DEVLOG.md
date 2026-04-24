@@ -2526,4 +2526,144 @@ python tools/export_pdf.py set_NNN -o /tmp/report.pdf
 
 ---
 
+## 问题 #32：录制中打标 + 趋势告警 —— "看见 vs 让用户看见"
+
+阶段 8 第二波：**8.5 录制中打标 (E) + 8.6 自动趋势告警 (F)**。前者是教练在录制时把"哪一刻有问题"的 mental note 锚到时间轴上；后者是把多场训练数据里的"长期趋势退步"主动推到教练眼前，而不是等他自己刷历史。
+
+### 8.5 录制中打标 — 跟 8.1 同一套"pending + flush"模式
+
+#### 痛点
+
+教练录制时看到运动员翻身没翻好 — 想锚一下"这个时刻有问题"，回放时直接跳过去。**之前没有这个能力**：教练只能脑子记"大概第 12 秒"，回放时再手动滑进度条试。
+
+#### 模式：跟 8.1 完全一致
+
+8.1 的"教练录制中给 #3 起名 → btn-stop 后 flush 到刚出现的 set" 模式，被原样套到 8.5：
+
+```js
+let _recordingStartedAt = 0;          // ms epoch; 0 means not recording
+const _pendingMarkers = [];           // [{ts_offset, label, note}]
+
+// btn-start: stamp + clear
+_recordingStartedAt = Date.now();
+_pendingMarkers.length = 0;
+
+// M key during recording:
+const tsOffset = (Date.now() - _recordingStartedAt) / 1000;
+_pendingMarkers.push({ ts_offset: tsOffset, label, note: '' });
+
+// btn-stop response carries set_dir → flushLiveMarkers(setName)
+```
+
+**重复模式不是 bug，是产品深思熟虑的体现**。8.1 的 pending pattern 现在被 8.5 复用，将来 phase 9 / 10 还会被复用。值得提炼成更通用的"`_recordingPendingQueue<T>`" 抽象。但当下两份独立实现读起来更直白，不优化。
+
+#### "wall-clock + 偏移" 而不是 "video time"
+
+录制 stop 后视频被 H.264 转码（DEVLOG #13/#15 提过），转码可能改 fps。但 marker 的 `ts_offset` 是用 `Date.now()` 减去 `_recordingStartedAt` 算的**真实秒数**，跟视频 fps 无关。
+
+回放时分析页用 `marker.ts_offset / video.duration` 做 ratio 映射 → 设 `video.currentTime`。这一对组合能容忍 source/transcoded fps 不同（同 DEVLOG #13 的设计哲学）。
+
+#### "blank label silently dropped" 是教练友好
+
+POST endpoint 收到 `{label: '   '}` 时，**不**返回 400，**也不**记一条空 marker。直接 silently 跳过：
+
+```python
+if not label:
+    continue
+```
+
+教练按 M 键，prompt 弹出，按了 Esc 或者只输了空格 — 这种情况"什么都没发生"是最自然的 UX。返回 400 让教练再试一次反而粗暴。
+
+### 8.6 趋势告警 — 把长期视角主动推到教练眼前
+
+#### 痛点
+
+DEVLOG #23 早就指出 `explosive_power / energy_index / motion_complexity` 这种 IMU 独有指标"单看没意义、横向才放光"。7.3 给了对比页 — 但教练得**主动**去翻才看得到趋势。**他实际不会主动翻**：每天忙完不一定有心思去对比。
+
+8.6 把这个翻转过来：**系统主动告诉教练"张三的爆发力连续 3 场下降了"**。教练打开对比页第一眼就看见。
+
+#### 规则集：先 hardcode 三条
+
+```python
+_ALERT_RULES = [
+    {"id": "explosive_power_drop", "metric": "explosive_power",
+     "window": 3, "direction": "down", "severity": "warn",
+     "message": "爆发力连续 {n} 场下降 — 可能处于疲劳或过载状态"},
+
+    {"id": "leg_deviation_up", "metric": "leg_deviation",
+     "window": 3, "direction": "up", "severity": "warn",
+     "message": "腿部偏差连续 {n} 场上升 — 建议回顾技术动作"},
+
+    {"id": "overall_low", "metric": "overall_score",
+     "window": 2, "direction": "below", "threshold": 6.0,
+     "severity": "info",
+     "message": "综合评分连续 {n} 场低于 {threshold} — 留意状态"},
+]
+```
+
+第一版**故意 hardcode** 而不是塞进 `config.toml`：dogfood 之前我们不知道哪条规则真的有用、阈值合理与否。**让真实使用淘汰假设**，等总统大人用过几周再决定哪些规则进生产、哪些阈值要调。
+
+#### 三种 direction 的语义
+
+- `down` — 严格单调递减（每场都比上场低）
+- `up` — 严格单调递增
+- `below` — 连续 N 场低于 threshold
+
+**为什么严格单调而不是"平均下降"**？因为严格单调是"信号"，平均下降是"噪音 + 偶尔反弹"。教练对前者反应大，对后者免疫力强。**信号要强才值得告警**。
+
+#### 时间排序：靠 set 名字而不是 mtime
+
+```python
+def _set_date_key(name: str) -> str:
+    m = re.search(r"_(\d{8})_(\d{6})$", name)
+    return (m.group(1) + m.group(2)) if m else name
+```
+
+文件 mtime 不可靠（重新拷贝就改了）。Set 名字格式是 `set_NNN_YYYYMMDD_HHMMSS`，**录制时间已经编码在名字里**。直接 lex sort 就拿到时序。
+
+`8.0` 的 `imported` set 名字格式是 `set_NNN_imported_<stem>_YYYYMMDD_HHMMSS`，正则同样匹配（贪婪到末尾）。
+
+#### 缺 metric 不破坏 trend
+
+```python
+for s in set_names:
+    v = _metric_value_in_set(s, rule["metric"])
+    if v is not None:
+        series.append((s, v))
+alert = _apply_rule(rule, series)
+```
+
+某场 set 没视觉数据 → `leg_deviation` 算不出 → **跳过这场**而不是把它当 0。一次 IMU 没连不应该让"3 场单调下降"变成"4 场（含中间的 0）下降"。
+
+#### Banner 设计：不显示 = 一切正常
+
+```js
+if (alerts.length === 0) {
+    banner.hidden = true;
+    return;
+}
+```
+
+**没有告警时整条 hidden**，不显示"暂无告警"占位。让"看不见 banner = 不用担心"成为 UI 不变量。如果显示空状态，教练会习惯性扫一眼，反而稀释了真有告警时的注意力。
+
+### 验证
+
+| 模块 | 测试 |
+|---|---|
+| markers endpoint | TestClient：phantom 404、empty 默认、POST batch + 排序、blank label silently dropped、append、DELETE 清空 |
+| alerts endpoint | TestClient：无 athletes → empty、1 binding → empty (window 不足)、绑定后扫描 |
+| 整体 | JS / Py 静态语法、pytest 9 failed / 94 passed = baseline |
+| 前端 | M 键 + prompt + flush 流程：人工 review，待 dogfood 实测 |
+
+### 收获
+
+1. **重复模式不是 bug 是产品深度**：8.1 的 pending + flush 在 8.5 复用了。第三次出现时再考虑抽象，前两次让代码冗余但直观。**抽象的成本是可读性损失**，要等"模式真的稳定"再付。
+2. **wall-clock + offset > video-time**：转码 / 重新封装会让 video time 偏移。用挂钟时间记录"事件"，用 ratio 映射回任意 video，永远对得上。
+3. **silent drop 比 400 友好**：用户操作错误时"什么都没发生"通常比"红色错误条"更好。仅在用户**期望**操作生效时（PUT 显式提交）才报错。
+4. **hardcode rule 是 dogfood 前的负责任做法**：把规则塞 config 假装"灵活" → 真实数据可能证明 80% 的规则没用。先让规则跑起来在真数据上看效果，再决定哪条值得 expose 给配置。
+5. **空状态 hidden 是 UI 信号清晰化**：让"没看到 banner = 一切正常" 成为不变量。空状态文字稀释真信号的注意力。
+6. **mtime 不可靠，编码到 filename 里的时间是真理**：set 命名约定包含 timestamp，所有"按时间排序"的代码都直接解析名字而不是问 filesystem。这是当初定 set 命名格式时埋下的伏笔，phase 8 才兑现。
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

@@ -259,15 +259,20 @@ data/
 - [x] FastAPI TestClient smoke：phantom 404 + real set 返回 130 KB application/pdf
 - [x] DEVLOG #31
 
-### 8.5 录制中打标（E）— PR #7
-- [ ] 实时页按 `M` → 在当前时间点插一个标记
-- [ ] `data/set_*/markers.csv`：`timestamp, label, note`
-- [ ] 回放时间轴上显示标记点，点击跳转
+### 8.5 录制中打标（E）— PR #6 ✅
+- [x] 后端 `/api/sets/{name}/markers` GET/POST/DELETE，写到 `data/set_*/markers.csv`（ts_offset, label, note, created_at）
+- [x] 实时页加「标记」按钮 + `M` 键 + `live-marker-badge` 暂存计数
+- [x] `_pendingMarkers` 暂存模式（同 8.1 的 pending bindings）：录制中按 M 弹 prompt 输入 label，btn-stop 后批量 POST 到真实 set
+- [x] 分析页 video card 下方加 `<div class="vp-marker-strip">` 三角形 + 标签，点击跳转 `video.currentTime`
+- [x] 设置页快捷键文档同步：M = 在当前时间点打标记
+- [x] FastAPI TestClient 11 assertions 含空批/blank label silently dropped/append/DELETE 清空
 
-### 8.6 自动趋势告警（F）— PR #7 或独立
-- [ ] 规则引擎：指标连续 N 场单调下降 / 超出阈值 → 告警
-- [ ] 告警面板（对比页 / 历史页入口）
-- [ ] 可选：Slack / Telegram webhook 推送（配置在 settings）
+### 8.6 自动趋势告警（F）— PR #6 ✅
+- [x] 后端 `_ALERT_RULES`：`explosive_power down × 3`、`leg_deviation up × 3`、`overall_score below 6.0 × 2`
+- [x] `_apply_rule()` 分 down / up / below 三种 direction；window 不足时 silent skip
+- [x] `/api/alerts` 扫所有 athletes 的 binding，按 `_set_date_key` 时间排序，每 athlete × 每 rule 一次评估
+- [x] 对比页顶部 `<div id="cmp-alerts-banner">` 告警条：每条含 athlete pill + 消息 + 数值轨迹（`8.7 → 7.9 → 7.2`）
+- [x] severity 分 warn (橙) / info (蓝)；空告警时整条 hidden 不显示空白
 
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
