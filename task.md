@@ -228,20 +228,26 @@ data/
 - [x] 端到端 smoke：5 不变量（6 文件齐全 / IMU header-only / vision 行数 / landmarks 1:1 video / JSONL 奇偶 detection 两路径均覆盖）
 - [x] DEVLOG #29
 
-### 8.1 实时页录制时绑定 athlete（A）— PR #4
-- [ ] 实时页复用 7.2 的「队员管理」模态，绑定目标是"当前录制"占位
-- [ ] 录制停止时把占位 set_name 替换成真实 set 目录名
-- [ ] 教练录制中看到 #3 → 立刻命名，不用等回分析页
+### 8.1 实时页录制时绑定 athlete（A）— PR #4 ✅
+- [x] [app.js](fastapi_app/static/app.js) 实时页加「队员」按钮 + `live-pending-badge` 计数
+- [x] 模块级 `_liveSeenTrackIds` + `_pendingLiveBindings`：ws_video onmessage 聚合所有 unique track_id
+- [x] `openLiveAthleteManager()` 复用 7.2 模态结构，绑定写到 pending 而非立即 POST
+- [x] btn-stop 拿 `set_dir` basename → `flushLiveBindings()` 批量 POST `/api/athletes/{id}/bind`
+- [x] btn-start 时清空 pending，badge 同步更新
+- [x] DEVLOG #30
 
-### 8.2 数据备份脚本（B）— PR #5（与 A 并入或拆分）
-- [ ] `tools/backup.py`：rclone / rsync 同步 data/ 到指定 remote
-- [ ] 文档：推荐 cron 设置 + 常见 remote（iCloud / S3 / 外置盘）
-- [ ] 错误处理：不中断 dashboard，失败只 log 不 kill
+### 8.2 数据备份脚本（B）— PR #4 ✅
+- [x] [tools/backup.py](tools/backup.py)：自动选 rsync / rclone backend，3 级 target 配置（CLI > env > `data/.backup_target`）
+- [x] **永远 exit 0** + log 到 `data/.backup.log`，cron 不报错
+- [x] rsync 用 `--delete-after --partial`：失败半途不丢数据
+- [x] [docs/backup.md](docs/backup.md)：3 个常见方案（外置盘 / 云 / NAS）+ 监控 + 常见坑
 
-### 8.3 历史 set 备注字段（C）
-- [ ] set 目录加 `note.md`（free-form markdown，教练手写）
-- [ ] `/api/sets/{name}/note` GET/PUT
-- [ ] 分析页顶部 + 历史卡片加"备注"可编辑区
+### 8.3 历史 set 备注字段（C）— PR #4 ✅
+- [x] `data/set_NNN_*/note.md`：free-form markdown
+- [x] `/api/sets/{name}/note` GET / PUT（PUT 空文本 = 删除文件，保持"file 存在 = 有内容"不变量）
+- [x] 原子写（tmp + os.replace）防写到一半进程崩
+- [x] [app.js](fastapi_app/static/app.js) 分析页顶部加备注卡：textarea + 保存/还原按钮 + meta 显示更新时间
+- [x] FastAPI TestClient 7 assertions（phantom 404 / empty 默认 / PUT-GET 往返 / whitespace 删除 / 空 idempotent / 原子写不留 .tmp）
 
 ### 8.4 PDF / 截图报告导出（D）— PR #6
 - [ ] `/api/sets/{name}/report.pdf` 端点

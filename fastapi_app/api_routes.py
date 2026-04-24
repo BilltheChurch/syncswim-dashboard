@@ -23,6 +23,7 @@ import json
 import os
 import shutil
 import urllib.request
+from datetime import datetime, timezone
 from typing import Optional
 
 import cv2
@@ -968,6 +969,70 @@ async def unbind_track(athlete_id: str, req: _BindReq):
     if not ok:
         return JSONResponse({"error": "binding not found"}, status_code=404)
     return {"status": "unbound", "set": req.set, "track_id": req.track_id}
+
+
+# ── Per-Set notes (phase 8.3) ──────────────────────────────────
+# Free-form markdown stored as ``note.md`` next to the recording
+# files. Coach uses it for context the metrics can't capture
+# ("today taught three new athletes the side-flip", "athlete 张三
+# complained of shoulder pain"). Empty PUT removes the file.
+
+class _NoteReq(BaseModel):
+    text: str
+
+
+def _note_payload(note_path: str, text: str) -> dict:
+    if not text:
+        return {"note": "", "updated_at": None}
+    try:
+        mtime = os.path.getmtime(note_path)
+        ts = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat(
+            timespec="seconds"
+        )
+    except OSError:
+        ts = None
+    return {"note": text, "updated_at": ts}
+
+
+@router.get("/sets/{name}/note")
+async def get_set_note(name: str):
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    note_path = os.path.join(set_dir, "note.md")
+    if not os.path.exists(note_path):
+        return {"note": "", "updated_at": None}
+    try:
+        with open(note_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    return _note_payload(note_path, text)
+
+
+@router.put("/sets/{name}/note")
+async def put_set_note(name: str, req: _NoteReq):
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "set not found"}, status_code=404)
+    note_path = os.path.join(set_dir, "note.md")
+    text = (req.text or "").strip()
+    try:
+        if not text:
+            # Empty submit = clean slate. Removing the file (vs writing
+            # empty content) keeps `os.path.exists()` checks elsewhere
+            # honest — "no note" means "no file".
+            if os.path.exists(note_path):
+                os.remove(note_path)
+            return {"note": "", "updated_at": None}
+        # Atomic write so a crash mid-save can't corrupt the note.
+        tmp = note_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, note_path)
+    except OSError as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    return _note_payload(note_path, text)
 
 
 # ── Cross-Set comparison (phase 7.3) ───────────────────────────

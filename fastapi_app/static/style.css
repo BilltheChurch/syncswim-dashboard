@@ -3330,3 +3330,78 @@ kbd {
     border-radius: 50%;
     background: var(--lp);
 }
+
+/* ── Live-page athlete badge (phase 8.1) ───────────────────────── */
+.live-pending-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 8px;
+    background: var(--secondary, #A855F7);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
+}
+.live-pending-badge[hidden] { display: none; }
+
+/* ── Per-Set coach note (phase 8.3) ───────────────────── */
+.set-note-card {
+    background: var(--card-bg, rgba(255,255,255,0.03));
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--secondary, #A855F7);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0 16px;
+}
+.set-note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.set-note-title {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.set-note-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Fira Code', monospace;
+}
+.set-note-text {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    color: var(--text-hi);
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-family: 'Fira Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 56px;
+    max-height: 240px;
+}
+.set-note-text:focus {
+    outline: none;
+    border-color: var(--secondary, #A855F7);
+}
+.set-note-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+.set-note-status {
+    margin-right: auto;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}

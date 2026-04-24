@@ -274,6 +274,15 @@ let _lastFrameTs = 0;
 let _frameEma = 0;
 let _lastAspect = 0;  // cached image aspect ratio for wrapper sizing
 
+// ── Live-page athlete binding (phase 8.1) ────────────────────────
+// Coach can name athletes during recording (or even before).
+// Bindings are queued in memory until recording stops, then flushed
+// to the just-created Set. This way the coach doesn't have to come
+// back to the analysis page after every recording — naming happens
+// when their attention is on the swimmers, not on the dashboard.
+const _liveSeenTrackIds = new Set();   // every track_id observed in the live ws stream
+const _pendingLiveBindings = new Map(); // track_id → {athleteId, name, color}
+
 /**
  * Size the video wrapper to match the image's aspect ratio while fitting
  * inside the available column height (after controls) and width.
@@ -348,6 +357,13 @@ function connectVideoWs() {
             const all = data.all_landmarks || [];
             const allAngles = data.all_angles || [];
             const trackIds = data.track_ids || [];
+            // Aggregate every observed track_id so the live athlete
+            // manager modal (phase 8.1) always shows the most recent
+            // roster of identities the coach can name. Cleared on
+            // every recording start so each session starts fresh.
+            for (const tid of trackIds) {
+                if (tid != null) _liveSeenTrackIds.add(tid);
+            }
             if (all.length > 1) {
                 for (let i = 1; i < all.length; i++) {
                     drawSecondaryPose(ctx, canvas, all[i], allAngles[i], i, trackIds[i]);
@@ -892,7 +908,14 @@ $('#btn-start').addEventListener('click', async () => {
         const r = await fetch('/api/recording/start', { method: 'POST' });
         const j = await r.json();
         if (j.error) toast(j.error, 'error');
-        else toast(`开始录制 Set #${j.set_number}`, 'success');
+        else {
+            // Reset the live-page roster so this session starts fresh
+            // (BYTETracker reset on the server side; the UI follows).
+            _liveSeenTrackIds.clear();
+            _pendingLiveBindings.clear();
+            updateLivePendingBadge();
+            toast(`开始录制 Set #${j.set_number}`, 'success');
+        }
     } catch {
         toast('录制启动失败', 'error');
     }
@@ -902,11 +925,212 @@ $('#btn-stop').addEventListener('click', async () => {
     try {
         const r = await fetch('/api/recording/stop', { method: 'POST' });
         const j = await r.json();
-        if (j.error) toast(j.error, 'error');
+        if (j.error) {
+            toast(j.error, 'error');
+            return;
+        }
+        // Flush any pending live bindings to the freshly created Set.
+        // ``set_dir`` is an absolute (or relative) path; we want the
+        // basename to match the Set name in athlete_store.
+        if (j.set_dir && _pendingLiveBindings.size > 0) {
+            const setName = String(j.set_dir).split(/[\\/]/).pop();
+            await flushLiveBindings(setName);
+        }
     } catch {
         toast('停止失败', 'error');
     }
 });
+
+/** Replay queued live bindings against the just-created set name.
+ *  Reports per-binding success/failure via toasts and clears the
+ *  pending map at the end (whether or not every bind succeeded —
+ *  the coach can manually fix stragglers in the analysis page). */
+async function flushLiveBindings(setName) {
+    const entries = [..._pendingLiveBindings.entries()];
+    let ok = 0, fail = 0;
+    for (const [trackId, ath] of entries) {
+        try {
+            const r = await fetch(
+                `/api/athletes/${encodeURIComponent(ath.athleteId)}/bind`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ set: setName, track_id: trackId }),
+                },
+            );
+            if (r.ok) ok++;
+            else fail++;
+        } catch {
+            fail++;
+        }
+    }
+    _pendingLiveBindings.clear();
+    updateLivePendingBadge();
+    if (ok > 0) {
+        toast(`已绑定 ${ok} 名运动员到 ${setName}`, 'success');
+    }
+    if (fail > 0) {
+        toast(`${fail} 个绑定失败 — 进分析页可手动修复`, 'warn');
+    }
+}
+
+function updateLivePendingBadge() {
+    const badge = $('#live-pending-badge');
+    if (!badge) return;
+    const n = _pendingLiveBindings.size;
+    badge.textContent = String(n);
+    badge.hidden = (n === 0);
+}
+
+/** Live-page version of the athlete-manager modal (phase 8.1).
+ *  Differences from the analysis-page version:
+ *    - Identities come from _liveSeenTrackIds (aggregated from ws),
+ *      not a stored Set's all_ids array.
+ *    - Bindings are queued in _pendingLiveBindings instead of being
+ *      committed to the server immediately. Recording stop will flush
+ *      them to the just-created Set name.
+ *    - This decoupling lets the coach name athletes BEFORE the Set
+ *      exists on disk — which matches the natural workflow ("I see
+ *      who's swimming, let me name them while I watch"). */
+async function openLiveAthleteManager() {
+    const detectedIds = [..._liveSeenTrackIds].sort((a, b) => a - b);
+
+    let athletes = [];
+    try {
+        const r = await fetch('/api/athletes');
+        if (r.ok) athletes = (await r.json()).athletes || [];
+    } catch {}
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    function isRecording() {
+        const lbl = $('#rec-label');
+        return !!(lbl && lbl.textContent.trim() === 'REC');
+    }
+
+    function rowsHTML() {
+        if (detectedIds.length === 0) {
+            return `<div class="ath-empty">实时画面里还没有检测到带稳定 ID 的运动员。
+                等姿态被识别到（且 BYTETracker 分配了 ID）就会在这里出现。</div>`;
+        }
+        return detectedIds.map(id => {
+            const swatch = `<span class="ath-swatch" style="background:${TEAM_COLORS[id % TEAM_COLORS.length]}"></span>`;
+            const idTag = `<span class="ath-id">#${id}</span>`;
+            const pending = _pendingLiveBindings.get(id);
+            if (pending) {
+                return `<div class="ath-row" data-track-id="${id}">
+                    ${swatch}${idTag}
+                    <span class="ath-name">${escapeAttr(pending.name)}</span>
+                    <button class="ath-unbind" data-track-id="${id}">取消</button>
+                </div>`;
+            }
+            const opts = athletes.map(a =>
+                `<option value="${escapeAttr(a.id)}">${escapeAttr(a.name)}</option>`
+            ).join('');
+            return `<div class="ath-row" data-track-id="${id}">
+                ${swatch}${idTag}
+                <select class="ath-select" data-track-id="${id}">
+                    <option value="">— 选择运动员 —</option>
+                    ${opts}
+                    <option value="__new__">＋ 新建运动员…</option>
+                </select>
+            </div>`;
+        }).join('');
+    }
+
+    function render() {
+        const recState = isRecording() ? '录制中' : '空闲';
+        const flushHint = isRecording()
+            ? '录制结束时这些命名会自动绑入本场 set。'
+            : '当前没有在录制 — 命名先暂存，下次按 R 开始录制后停止时会落到那场 set。';
+        overlay.innerHTML = `
+          <div class="modal-box ath-modal">
+              <div class="modal-title">队员命名 · 实时（${recState}）</div>
+              <div class="modal-body">
+                  <div class="ath-hint">
+                      给当前画面里的 <code>#ID</code> 起名。${flushHint}
+                      绑定是 per-Set 的，因为 BYTETracker 每场录制重置（DEVLOG #25/#26）。
+                  </div>
+                  <div class="ath-rows">${rowsHTML()}</div>
+              </div>
+              <div class="modal-actions">
+                  <button class="modal-btn modal-btn-cancel" id="live-ath-close">关闭</button>
+              </div>
+          </div>`;
+        overlay.querySelector('#live-ath-close').onclick = closeModal;
+        overlay.querySelectorAll('.ath-select').forEach(sel => {
+            sel.addEventListener('change', () => onPick(sel));
+        });
+        overlay.querySelectorAll('.ath-unbind').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tid = parseInt(btn.dataset.trackId, 10);
+                _pendingLiveBindings.delete(tid);
+                updateLivePendingBadge();
+                render();
+            });
+        });
+    }
+
+    async function onPick(sel) {
+        const trackId = parseInt(sel.dataset.trackId, 10);
+        let athleteId = sel.value;
+        if (!athleteId) return;
+        let athleteObj = null;
+
+        if (athleteId === '__new__') {
+            const name = window.prompt('运动员姓名：');
+            if (!name || !name.trim()) { sel.value = ''; return; }
+            try {
+                const r = await fetch('/api/athletes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim() }),
+                });
+                if (!r.ok) throw 0;
+                athleteObj = await r.json();
+                athletes.push(athleteObj);
+                athleteId = athleteObj.id;
+            } catch {
+                toast('创建运动员失败', 'error');
+                sel.value = '';
+                return;
+            }
+        } else {
+            athleteObj = athletes.find(a => a.id === athleteId);
+            if (!athleteObj) {
+                toast('运动员未找到', 'error');
+                sel.value = '';
+                return;
+            }
+        }
+
+        _pendingLiveBindings.set(trackId, {
+            athleteId,
+            name: athleteObj.name,
+            color: athleteObj.color || null,
+        });
+        toast(`#${trackId} → ${athleteObj.name}（待绑定）`, 'info');
+        updateLivePendingBadge();
+        render();
+    }
+
+    function closeModal() {
+        overlay.remove();
+        document.removeEventListener('keydown', keyHandler);
+    }
+    const keyHandler = (e) => { if (e.key === 'Escape') closeModal(); };
+    document.addEventListener('keydown', keyHandler);
+    overlay.onclick = e => { if (e.target === overlay) closeModal(); };
+
+    render();
+    $('#modal-root').appendChild(overlay);
+}
+
+const _liveAthBtn = $('#btn-live-athletes');
+if (_liveAthBtn) {
+    _liveAthBtn.addEventListener('click', openLiveAthleteManager);
+}
 
 let currentRotation = 0;
 $('#btn-rotate').addEventListener('click', async () => {
@@ -1265,9 +1489,32 @@ function renderReport(name, report) {
     // ── Sensor card ──
     const sensorHTML = buildSensorSection(report);
 
+    // ── Coach note card (phase 8.3) ──
+    // Free-form markdown that captures context the metrics can't —
+    // "today taught 3 newbies side-flip" / "athlete A complained of
+    // shoulder pain". Edits go via PUT /api/sets/{name}/note.
+    const noteHTML = `
+        <div class="set-note-card">
+            <div class="set-note-header">
+                <span class="set-note-title">教练备注</span>
+                <span class="set-note-meta" id="set-note-meta">加载中…</span>
+            </div>
+            <textarea id="set-note-text" class="set-note-text"
+                      placeholder="今天教三个新人侧空翻；运动员张三说肩有点酸；下次重点抓 leg_deviation..."
+                      rows="3"></textarea>
+            <div class="set-note-actions">
+                <span class="set-note-status" id="set-note-status"></span>
+                <button class="modal-btn modal-btn-cancel" id="set-note-cancel">还原</button>
+                <button class="modal-btn modal-btn-confirm" id="set-note-save"
+                        style="background:var(--primary);border-color:var(--primary)">保存</button>
+            </div>
+        </div>
+    `;
+
     // ── Compose ──
     $('#analysis-content').innerHTML = `
         ${summaryHTML}
+        ${noteHTML}
         ${scoreRowHTML}
         ${groupsHTML}
         <div class="video-analysis-row">
@@ -1324,7 +1571,72 @@ function renderReport(name, report) {
     if (aBtn) {
         aBtn.addEventListener('click', () => openAthleteManager(name));
     }
+    setupSetNote(name);
     setupSkeletonOverlay(name);
+}
+
+/** Wire the per-Set coach-note textarea (phase 8.3).
+ *  Loads the current note via GET, saves via PUT, "还原" reverts
+ *  the textarea to whatever was last persisted on the server. */
+async function setupSetNote(name) {
+    const textEl = $('#set-note-text');
+    const metaEl = $('#set-note-meta');
+    const statusEl = $('#set-note-status');
+    const saveBtn = $('#set-note-save');
+    const cancelBtn = $('#set-note-cancel');
+    if (!textEl || !metaEl) return;
+
+    let serverText = '';
+
+    function fmtMeta(updated) {
+        if (!updated) return '尚无备注';
+        // 2026-04-23T05:42:57+00:00 → 04-23 05:42
+        const m = updated.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        return m ? `更新于 ${m[2]}-${m[3]} ${m[4]}:${m[5]}` : `更新于 ${updated}`;
+    }
+
+    try {
+        const r = await fetch(`/api/sets/${encodeURIComponent(name)}/note`);
+        if (r.ok) {
+            const j = await r.json();
+            serverText = j.note || '';
+            textEl.value = serverText;
+            metaEl.textContent = fmtMeta(j.updated_at);
+        } else {
+            metaEl.textContent = '加载失败';
+        }
+    } catch {
+        metaEl.textContent = '加载失败';
+    }
+
+    saveBtn.onclick = async () => {
+        const text = textEl.value;
+        statusEl.textContent = '保存中…';
+        try {
+            const r = await fetch(
+                `/api/sets/${encodeURIComponent(name)}/note`,
+                {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                },
+            );
+            if (!r.ok) throw 0;
+            const j = await r.json();
+            serverText = j.note || '';
+            metaEl.textContent = fmtMeta(j.updated_at);
+            statusEl.textContent = '';
+            toast('备注已保存', 'success', 1500);
+        } catch {
+            statusEl.textContent = '';
+            toast('保存失败', 'error');
+        }
+    };
+
+    cancelBtn.onclick = () => {
+        textEl.value = serverText;
+        statusEl.textContent = '';
+    };
 }
 
 // ─── Build metric cards (detailed) ────────────────────
