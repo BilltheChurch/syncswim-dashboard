@@ -246,6 +246,9 @@ document.addEventListener('keydown', e => {
         case 't': case 'T':
             $('#btn-annotate').click();
             break;
+        case 'm': case 'M':
+            captureLiveMarker();
+            break;
     }
 });
 
@@ -282,6 +285,37 @@ let _lastAspect = 0;  // cached image aspect ratio for wrapper sizing
 // when their attention is on the swimmers, not on the dashboard.
 const _liveSeenTrackIds = new Set();   // every track_id observed in the live ws stream
 const _pendingLiveBindings = new Map(); // track_id → {athleteId, name, color}
+
+// ── Live-page markers (phase 8.5) ────────────────────────────────
+// Coach presses M during recording → quick label prompt → marker
+// queued with the offset relative to recording start. On stop the
+// whole queue is POSTed to /api/sets/{name}/markers. Same "delay
+// the bind until we know the set name" pattern as 8.1.
+const _pendingMarkers = [];             // [{ts_offset, label, note}]
+// Failed-flush retry queue (Codex review P1): if a network error
+// drops the POST, the markers stay here paired with the SetName
+// they belong to so the next stop can replay them rather than
+// silently lose data.
+const _failedMarkerFlushes = [];        // [{setName, markers: [...]}]
+
+// Authoritative recording state, populated by updateRecStatus()
+// from the metrics ws push. The local btn-start/btn-stop handlers
+// SHOULD NOT mutate these — they only trigger the underlying
+// HTTP calls and let the resulting ws status update flow back
+// here. This keeps every UI gate (M-key marker, athlete-bind
+// modal, …) working even when the start/stop is triggered from
+// the M5 BLE button instead of the dashboard. (Codex review P2.)
+const _liveRecState = {
+    recording: false,
+    elapsed: 0,           // seconds since recording start
+    set_number: 0,
+};
+// btn-stop click sets this so updateRecStatus knows the IDLE
+// transition is already being handled by the click handler (which
+// has the fast `set_dir` from the stop response). BLE-triggered
+// stops leave it false → updateRecStatus auto-flushes via a
+// fallback GET /api/sets lookup.
+let _lastStopHandledByButton = false;
 
 /**
  * Size the video wrapper to match the image's aspect ratio while fitting
@@ -870,6 +904,26 @@ function updateRecStatus(data) {
     const rsTime   = $('#rs-time');
     const rsSet    = $('#rs-set');
 
+    // Authoritative source of truth for the live page (Codex P2).
+    // Detect REC → IDLE transition for BLE-button-A stops that
+    // bypass the dashboard btn-stop handler.
+    const wasRecording = _liveRecState.recording;
+    _liveRecState.recording = !!data.recording;
+    _liveRecState.elapsed = Number(data.elapsed) || 0;
+    _liveRecState.set_number = data.set_number || 0;
+    if (wasRecording && !data.recording) {
+        if (_lastStopHandledByButton) {
+            // btn-stop handler is already flushing with the fast
+            // set_dir from the response. Consume the flag.
+            _lastStopHandledByButton = false;
+        } else {
+            // BLE button A (or another client) stopped the recording.
+            // Look up the freshest set name and flush queued bindings/
+            // markers ourselves so the coach's pre-stop work isn't lost.
+            autoFlushPendingOnBleStop();
+        }
+    }
+
     if (data.recording) {
         const timeStr = formatDuration(data.elapsed);
         if (recDot)   { recDot.className = 'rec-dot recording'; }
@@ -914,6 +968,13 @@ $('#btn-start').addEventListener('click', async () => {
             _liveSeenTrackIds.clear();
             _pendingLiveBindings.clear();
             updateLivePendingBadge();
+            // Clear any leftover marker queue from a previous session.
+            // (Authoritative recording state + offset come from the ws
+            // status push now — see _liveRecState; we no longer stamp
+            // a local start timestamp because BLE-triggered starts
+            // would leave it stale. Codex review P2.)
+            _pendingMarkers.length = 0;
+            updateLiveMarkerBadge();
             toast(`开始录制 Set #${j.set_number}`, 'success');
         }
     } catch {
@@ -922,24 +983,169 @@ $('#btn-start').addEventListener('click', async () => {
 });
 
 $('#btn-stop').addEventListener('click', async () => {
+    // Tell updateRecStatus that this IDLE transition is already
+    // handled by us (with the fast set_dir from the response).
+    // BLE-triggered stops leave it false and the ws path takes over.
+    _lastStopHandledByButton = true;
     try {
         const r = await fetch('/api/recording/stop', { method: 'POST' });
         const j = await r.json();
         if (j.error) {
+            _lastStopHandledByButton = false;   // restore so ws fallback can try
             toast(j.error, 'error');
             return;
         }
-        // Flush any pending live bindings to the freshly created Set.
-        // ``set_dir`` is an absolute (or relative) path; we want the
-        // basename to match the Set name in athlete_store.
-        if (j.set_dir && _pendingLiveBindings.size > 0) {
-            const setName = String(j.set_dir).split(/[\\/]/).pop();
-            await flushLiveBindings(setName);
+        const setName = j.set_dir
+            ? String(j.set_dir).split(/[\\/]/).pop()
+            : null;
+        // Flush both queues to the freshly created Set.
+        if (setName) {
+            if (_pendingLiveBindings.size > 0) await flushLiveBindings(setName);
+            // Always call flushLiveMarkers — it'll also retry any
+            // previously-failed flushes even when this session has
+            // no new markers to push.
+            await flushLiveMarkers(setName);
         }
     } catch {
+        _lastStopHandledByButton = false;
         toast('停止失败', 'error');
     }
 });
+
+/** POST queued markers to the given set. On success the local queue
+ *  clears; on failure the markers are kept under the same setName
+ *  so the next flush retries them with the right destination
+ *  (Codex P1: don't lose data on transient network errors). */
+async function flushLiveMarkers(setName) {
+    // 1) Retry any previously-failed flushes first, each with their
+    //    own original setName (they belong to OLD recordings, not
+    //    the one currently stopping).
+    if (_failedMarkerFlushes.length > 0) {
+        const stillFailed = [];
+        let retried = 0;
+        for (const f of _failedMarkerFlushes) {
+            const ok = await _postMarkers(f.setName, f.markers);
+            if (ok) retried += f.markers.length;
+            else stillFailed.push(f);
+        }
+        _failedMarkerFlushes.length = 0;
+        _failedMarkerFlushes.push(...stillFailed);
+        if (retried > 0) {
+            toast(`已重试保存 ${retried} 个旧标记`, 'success', 1800);
+        }
+    }
+
+    // 2) Push the new queue (if any) to setName.
+    const queue = _pendingMarkers.slice();
+    if (queue.length === 0) return;
+    const ok = await _postMarkers(setName, queue);
+    if (ok) {
+        _pendingMarkers.length = 0;
+        updateLiveMarkerBadge();
+        toast(`已保存 ${queue.length} 个标记`, 'success', 1800);
+    } else {
+        // Move to the failed-flush queue paired with THIS setName so
+        // we don't accidentally POST them to the next session's set.
+        _failedMarkerFlushes.push({ setName, markers: queue });
+        _pendingMarkers.length = 0;
+        updateLiveMarkerBadge();
+        toast(
+            `${queue.length} 个标记保存失败 — 已保留，下次停止录制时会自动重试`,
+            'warn', 3500,
+        );
+    }
+}
+
+/** Fallback flush for BLE-button-A-triggered stops where the
+ *  dashboard btn-stop handler never ran. We don't have a fast
+ *  set_dir from a stop response here, so we ask the server which
+ *  set is the latest and flush against that. (Phase 8.5 + Codex
+ *  review P2 fallout — without this, BLE-stopped sessions would
+ *  silently lose any in-session bindings or markers.) */
+async function autoFlushPendingOnBleStop() {
+    if (_pendingLiveBindings.size === 0
+            && _pendingMarkers.length === 0
+            && _failedMarkerFlushes.length === 0) {
+        return;
+    }
+    let setName = null;
+    try {
+        const r = await fetch('/api/sets');
+        const sets = await r.json();
+        if (Array.isArray(sets) && sets.length > 0 && sets[0].name) {
+            setName = sets[0].name;
+        }
+    } catch {
+        // Treat as an unrecoverable lookup error — keep both queues so a
+        // future stop can retry. Don't toast loudly because the coach
+        // didn't actively trigger this code path.
+        return;
+    }
+    if (!setName) return;
+    if (_pendingLiveBindings.size > 0) await flushLiveBindings(setName);
+    // Always call: handles new + previously-failed retries together.
+    await flushLiveMarkers(setName);
+}
+
+/** Low-level POST helper. Returns true on 2xx, false on anything else
+ *  including network errors. Used by flushLiveMarkers + its retry path. */
+async function _postMarkers(setName, markers) {
+    try {
+        const r = await fetch(
+            `/api/sets/${encodeURIComponent(setName)}/markers`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markers }),
+            },
+        );
+        return r.ok;
+    } catch {
+        return false;
+    }
+}
+
+function updateLiveMarkerBadge() {
+    const badge = $('#live-marker-badge');
+    if (!badge) return;
+    const n = _pendingMarkers.length;
+    badge.textContent = String(n);
+    badge.hidden = (n === 0);
+}
+
+/** Push a marker at the current recording offset. Triggered by M
+ *  key on the live page. Uses the authoritative ``_liveRecState``
+ *  (populated by the metrics ws push) for both the gate and the
+ *  offset, so BLE-button-A-triggered recordings work the same way
+ *  as dashboard-button recordings (Codex review P2). The label
+ *  prompt is still native ``window.prompt()`` — same MVP speed
+ *  trade-off as the athlete-create flow in 8.1. */
+function captureLiveMarker() {
+    if (!_liveRecState.recording) {
+        toast('未在录制 — 标记仅在 REC 状态可用', 'warn', 1800);
+        return;
+    }
+    // Backend-authoritative offset: server sends the exact elapsed
+    // seconds in the metrics ws push and we mirror it into
+    // _liveRecState.elapsed. This stays correct regardless of who
+    // triggered the recording or whether the page was just refreshed.
+    const tsOffset = _liveRecState.elapsed;
+    const label = window.prompt(
+        `在 ${tsOffset.toFixed(1)}s 处标记 — 输入标签 (例如：翻身/出水/技术错误)`,
+        '',
+    );
+    if (label === null) return;   // user cancelled
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    _pendingMarkers.push({
+        ts_offset: tsOffset,
+        label: trimmed,
+        note: '',
+    });
+    updateLiveMarkerBadge();
+    toast(`#${_pendingMarkers.length} ${trimmed} @ ${tsOffset.toFixed(1)}s`,
+          'info', 1500);
+}
 
 /** Replay queued live bindings against the just-created set name.
  *  Reports per-binding success/failure via toasts and clears the
@@ -1130,6 +1336,10 @@ async function openLiveAthleteManager() {
 const _liveAthBtn = $('#btn-live-athletes');
 if (_liveAthBtn) {
     _liveAthBtn.addEventListener('click', openLiveAthleteManager);
+}
+const _liveMarkBtn = $('#btn-mark');
+if (_liveMarkBtn) {
+    _liveMarkBtn.addEventListener('click', captureLiveMarker);
 }
 
 let currentRotation = 0;
@@ -1448,6 +1658,7 @@ function renderReport(name, report) {
                 <video id="vp-video" class="vp-video" controls src="/api/sets/${encodeURIComponent(name)}/video"></video>
                 <canvas id="vp-skeleton" class="vp-skeleton-canvas"></canvas>
             </div>
+            <div class="vp-marker-strip" id="vp-marker-strip" hidden></div>
         </div>
     ` : `
         <div class="video-player-card">
@@ -1575,7 +1786,69 @@ function renderReport(name, report) {
         aBtn.addEventListener('click', () => openAthleteManager(name));
     }
     setupSetNote(name);
+    setupMarkerStrip(name);
     setupSkeletonOverlay(name);
+}
+
+/** Render coach markers (phase 8.5) as a row of clickable triangles
+ *  underneath the video. Each click seeks the video to that offset.
+ *  Empty marker list → strip stays hidden so the layout doesn't
+ *  reserve unused space. */
+async function setupMarkerStrip(name) {
+    const strip = $('#vp-marker-strip');
+    const video = $('#vp-video');
+    if (!strip || !video) return;
+
+    let markers = [];
+    try {
+        const r = await fetch(`/api/sets/${encodeURIComponent(name)}/markers`);
+        if (r.ok) markers = (await r.json()).markers || [];
+    } catch {}
+
+    if (markers.length === 0) {
+        strip.hidden = true;
+        return;
+    }
+    strip.hidden = false;
+
+    function escapeAttrShort(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    // Wait for metadata so we know the duration. Without this the
+    // first paint puts every marker at offset 0 (since duration is NaN
+    // before loadedmetadata fires).
+    function render() {
+        const duration = (isFinite(video.duration) && video.duration > 0)
+            ? video.duration
+            : Math.max(...markers.map(m => m.ts_offset)) + 1;
+        strip.innerHTML = markers.map((m, i) => {
+            const pct = Math.max(0, Math.min(100, (m.ts_offset / duration) * 100));
+            const tip = `${m.label} @ ${m.ts_offset.toFixed(1)}s`;
+            return `<button class="vp-marker"
+                style="left:${pct.toFixed(2)}%"
+                data-ts="${m.ts_offset}"
+                title="${escapeAttrShort(tip)}">
+                <span class="vp-marker-tri"></span>
+                <span class="vp-marker-label">${escapeAttrShort(m.label)}</span>
+            </button>`;
+        }).join('');
+
+        strip.querySelectorAll('.vp-marker').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ts = parseFloat(btn.dataset.ts);
+                if (isFinite(ts)) {
+                    video.currentTime = ts;
+                    video.play().catch(() => {});
+                }
+            });
+        });
+    }
+
+    if (video.readyState >= 1) render();
+    else video.addEventListener('loadedmetadata', render, { once: true });
 }
 
 /** Wire the per-Set coach-note textarea (phase 8.3).
@@ -2244,7 +2517,61 @@ let _compareState = {
     sortedByDate: [],     // reports sorted by date asc (for line chart)
 };
 
+/** Fetch trend alerts (phase 8.6) and render the banner above the
+ *  compare-tab picker. No alerts → banner stays hidden so an empty
+ *  state doesn't look like a bug. */
+async function fetchAndRenderAlerts() {
+    const banner = $('#cmp-alerts-banner');
+    if (!banner) return;
+    let alerts = [];
+    try {
+        const r = await fetch('/api/alerts');
+        if (r.ok) alerts = (await r.json()).alerts || [];
+    } catch {
+        banner.hidden = true;
+        return;
+    }
+    if (alerts.length === 0) {
+        banner.hidden = true;
+        banner.innerHTML = '';
+        return;
+    }
+    banner.hidden = false;
+
+    function escAttr(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    banner.innerHTML = `
+        <div class="cmp-alerts-header">
+            <span class="cmp-alerts-title">趋势告警</span>
+            <span class="cmp-alerts-count">${alerts.length}</span>
+        </div>
+        <div class="cmp-alerts-list">
+            ${alerts.map(a => `
+                <div class="cmp-alert cmp-alert-${escAttr(a.severity)}">
+                    <span class="cmp-alert-athlete"
+                          style="--athlete-color:${a.athlete_color || '#A855F7'}">
+                        ${escAttr(a.athlete_name)}
+                    </span>
+                    <span class="cmp-alert-msg">${escAttr(a.message)}</span>
+                    <span class="cmp-alert-trail">
+                        ${a.values.map((v, i) => `<code>${v}</code>${i < a.values.length - 1 ? ' → ' : ''}`).join('')}
+                    </span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 async function loadCompare() {
+    // Trend alerts go above the picker so the coach sees the
+    // "what's worth your attention" view BEFORE diving into raw
+    // session-by-session comparison.
+    fetchAndRenderAlerts();   // intentionally not awaited — banner appears when ready
+
     const content = $('#compare-content');
     content.innerHTML = `
         <div class="skel-card"><div class="skeleton skel-block"></div></div>

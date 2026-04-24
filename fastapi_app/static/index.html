@@ -108,6 +108,11 @@
                             队员
                             <span class="live-pending-badge" id="live-pending-badge" hidden>0</span>
                         </button>
+                        <button id="btn-mark" class="ctrl-btn ctrl-btn-secondary" title="在当前时间点标记（M）">
+                            标记
+                            <kbd>M</kbd>
+                            <span class="live-pending-badge" id="live-marker-badge" hidden>0</span>
+                        </button>
                         <button id="btn-reconnect" class="ctrl-btn ctrl-btn-ghost">
                             <span class="ctrl-icon ctrl-icon-refresh"></span>重连 BLE
                         </button>
@@ -301,6 +306,7 @@
 
         <!-- ═══════════════ VIEW: COMPARE ═══════════════ -->
         <div id="view-compare" class="view">
+            <div id="cmp-alerts-banner" class="cmp-alerts-banner" hidden></div>
             <div class="compare-topbar">
                 <div class="compare-filter-group">
                     <label class="filter-label">运动员筛选</label>
@@ -469,6 +475,7 @@
                         <div class="sc-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd> <span>切换 Tab（实时 / 分析 / 历史 / 对比 / 设置）</span></div>
                         <div class="sc-row"><kbd>R</kbd> <span>开始录制</span></div>
                         <div class="sc-row"><kbd>␣</kbd> <span>停止录制</span></div>
+                        <div class="sc-row"><kbd>M</kbd> <span>在当前时间点打标记（仅录制中）</span></div>
                         <div class="sc-row"><kbd>S</kbd> <span>快照（带骨架）</span></div>
                         <div class="sc-row"><kbd>T</kbd> <span>切换骨架详细标注</span></div>
                         <div class="sc-row"><kbd>Esc</kbd> <span>关闭模态框</span></div>
