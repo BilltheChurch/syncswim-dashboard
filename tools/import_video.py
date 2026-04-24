@@ -143,11 +143,28 @@ def main():
                         help="Where to create the set directory (default: data/)")
     parser.add_argument("--model", default=DEFAULT_MODEL,
                         help="YOLOv8-pose weights for inference")
-    parser.add_argument("--conf", type=float, default=0.35,
-                        help="Detection confidence threshold")
-    parser.add_argument("--device", default="mps",
-                        help="Inference device: mps / cuda / cpu")
+    parser.add_argument(
+        "--conf", type=float, default=0.15,
+        help="Detection confidence threshold. Default 0.15 (lowered from "
+             "ultralytics' 0.35) — DEVLOG #33: water-pose scenes have "
+             "inherently low confidence scores because COCO didn't train "
+             "on partial-body underwater shots; 0.35 throws away most "
+             "legitimate detections.",
+    )
+    parser.add_argument(
+        "--device", default="mps",
+        help="Inference device: mps / cuda / cpu",
+    )
     parser.add_argument("--max-persons", type=int, default=8)
+    parser.add_argument(
+        "--imgsz", type=int, default=1280,
+        help="YOLO inference resolution. Default 1280 (vs ultralytics' "
+             "640) — DEVLOG #33: at 640 a swimmer's only visible feature "
+             "(ankles ~40 px) downsamples to single-digit pixels and the "
+             "detector misses them entirely. 1280 unlocks ~4× more "
+             "detections on dogfood data. Cost: ~4× wall-time, fine for "
+             "offline import (live recording stays at 640 for real-time).",
+    )
     parser.add_argument(
         "--rotate", type=int, choices=[0, 90, 180, 270], default=0,
         help="Rotate frames clockwise (use 90 for portrait phone footage)",
@@ -180,6 +197,7 @@ def main():
     det = YoloPoseDetector(
         model_path=args.model, conf=args.conf,
         max_persons=args.max_persons, device=args.device,
+        imgsz=args.imgsz,
     )
     # Reset BYTETracker state — same reason live recording does it
     # at every start_recording (see DEVLOG #25). Without this, IDs

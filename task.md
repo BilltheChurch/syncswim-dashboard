@@ -274,6 +274,36 @@ data/
 - [x] 对比页顶部 `<div id="cmp-alerts-banner">` 告警条：每条含 athlete pill + 消息 + 数值轨迹（`8.7 → 7.9 → 7.2`）
 - [x] severity 分 warn (橙) / info (蓝)；空告警时整条 hidden 不显示空白
 
+## 阶段九：YOLO 微调（dogfood 数据 → fine-tune）🚧 进行中
+
+**起因**：第一次 dogfood (3 段真实花泳视频，DEVLOG #33) 发现 zero-cost trick 调到极限后召回率仍只有 ~36%，**5 个运动员 32 秒被发了 99 个 ID（19.8× 通胀）**。bytetrack 给同一运动员每秒换一次身份。tracker 没问题 — detector 召回不够，tracker 必崩。**fine-tune 从 nice-to-have 变成必须**。
+
+### 9.0 dogfood 调参落地 — PR #7 ✅
+- [x] `tools/import_video.py` 默认 `--conf 0.15 --imgsz 1280`（offline 用最高质量）
+- [x] `fastapi_app/yolo_pose.py` 加 `imgsz` 构造参数（默认 640，向后兼容；live 录制保持 real-time）
+- [x] DEVLOG #33（4 档实验数据 + 19.8× ID 通胀根因 + Phase A/B 决策）
+
+### 9.1 Phase A — bbox detector fine-tune
+**目标**：召回率 36% → >70%。
+- [ ] 抽 ~150 帧（3 视频 × 每 15 帧 1 抽）
+- [ ] 在 CVAT 只标 bbox（"水里露出的人形"），不标 keypoints
+- [ ] train YOLOv8s **detect**（不是 pose），50-100 epochs，imgsz=1280
+- [ ] holdout 1 视频做 val（避免同视频相邻帧分两边导致 mAP 虚高 — DEVLOG #28）
+- [ ] 对比 mAP@50：fine-tuned vs `yolov8s-pose.pt` baseline
+- [ ] 落地：用新 detector 替换 yolo_pose 的 detect 部分（保留 yolov8s-pose 的 keypoint head）
+- [ ] 重 import 3 视频，看 ID 通胀降到多少
+
+### 9.2 Phase B — keypoint head fine-tune
+**目标**：让 keypoint 落到水里运动员**真实位置**（不是 COCO 模型猜的水下幻象）。
+- [ ] 复用 9.1 的 bbox 标注，**只补关键 4-6 个点**：双髋、双脚踝、双膝
+- [ ] 水下不可见的点全部 visibility=0（让 loss 不惩罚）
+- [ ] freeze backbone + detect head，只训 pose head
+- [ ] 验证：`leg_deviation` / `knee_extension` 这些指标在 dogfood 视频上是否给出合理数值（不再是 NaN/0）
+
+### 9.3 数据扩充（依赖总统大人现场补素材）
+- [ ] 总统下次去泳池录 5-10 段，覆盖：不同时段、不同泳池、不同动作（ballet leg / barracuda / 转体 / 出水）
+- [ ] 重新跑 9.1 + 9.2 → 期望 mAP 大幅提升 + 真正可用的 generalize
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）

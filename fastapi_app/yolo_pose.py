@@ -77,6 +77,7 @@ class YoloPoseDetector:
         iou: float = 0.45,
         max_persons: int = 8,
         device: str = "mps",
+        imgsz: int = 640,
     ):
         from ultralytics import YOLO
 
@@ -94,6 +95,12 @@ class YoloPoseDetector:
         self._iou = float(iou)
         self._max_persons = max(1, int(max_persons))
         self._device = device
+        # Inference resolution. Default 640 matches ultralytics' default.
+        # Bumping to 1280 helps small / partial-body targets (e.g. swimmers
+        # whose only visible features are ankles/feet at ~40px in a 720p
+        # frame): under 640 those features get downsampled to single-digit
+        # pixels and the detector misses them entirely. Cost: ~4× wall-time.
+        self._imgsz = int(imgsz)
 
         # Warm-up: run once on a tiny dummy frame so the first real
         # inference isn't stuck behind model compile / JIT / kernel cache.
@@ -136,6 +143,7 @@ class YoloPoseDetector:
                 iou=self._iou,
                 device=self._device,
                 max_det=self._max_persons,
+                imgsz=self._imgsz,
                 persist=True,
                 tracker="bytetrack.yaml",
             )
