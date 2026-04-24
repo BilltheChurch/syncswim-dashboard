@@ -1295,9 +1295,51 @@ async def get_alerts():
     triggered rule. Returns an empty list (not 404) when there are
     no athletes or no triggered rules — the dashboard renders "一切
     正常" rather than an error page in that case.
+
+    Performance note (Codex review P3): the naive nested-loop scan
+    used to call ``compute_all_metrics`` once per (athlete × rule ×
+    set) — O(N×R×S) heavy recomputations per request. With 10
+    athletes × 3 rules × 20 sets that's 600 calls @ ~50 ms each ≈
+    30 s per request, which dies in production. We now memoize per
+    set within the request: each unique set runs ``compute_all_metrics``
+    at most once, dropping complexity to O(unique_sets) heavy calls
+    plus O(N×R×S) cheap dict lookups.
     """
     if _athletes is None:
         return {"alerts": []}
+
+    # Per-request memoization: ``set_name → {metric_name: value}`` or
+    # ``None`` when the set is missing/unreadable. ``None`` is a real
+    # cache hit (vs absent key meaning "haven't tried yet"), so a
+    # broken set is only computed once per request rather than every
+    # rule it appears in.
+    set_cache: dict[str, dict[str, float] | None] = {}
+
+    def _metric(set_name: str, metric_name: str) -> float | None:
+        if set_name not in set_cache:
+            set_dir = _set_dir(set_name)
+            if not os.path.isdir(set_dir):
+                set_cache[set_name] = None
+            else:
+                try:
+                    report = compute_all_metrics(set_dir)
+                except Exception:
+                    set_cache[set_name] = None
+                else:
+                    if report is None:
+                        set_cache[set_name] = None
+                    else:
+                        d: dict[str, float] = {}
+                        if report.overall_score is not None:
+                            d["overall_score"] = float(report.overall_score)
+                        for m in report.metrics:
+                            if m.value is not None:
+                                d[m.name] = float(m.value)
+                        set_cache[set_name] = d
+        cache = set_cache[set_name]
+        if cache is None:
+            return None
+        return cache.get(metric_name)
 
     alerts: list[dict] = []
     for ath in _athletes.list_athletes():
@@ -1317,7 +1359,7 @@ async def get_alerts():
             # session doesn't break an otherwise-valid trend.
             series: list[tuple[str, float]] = []
             for s in set_names:
-                v = _metric_value_in_set(s, rule["metric"])
+                v = _metric(s, rule["metric"])
                 if v is not None:
                     series.append((s, v))
             alert = _apply_rule(rule, series)

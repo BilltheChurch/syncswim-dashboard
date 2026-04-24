@@ -291,8 +291,31 @@ const _pendingLiveBindings = new Map(); // track_id → {athleteId, name, color}
 // queued with the offset relative to recording start. On stop the
 // whole queue is POSTed to /api/sets/{name}/markers. Same "delay
 // the bind until we know the set name" pattern as 8.1.
-let _recordingStartedAt = 0;            // ms epoch; 0 means not recording
 const _pendingMarkers = [];             // [{ts_offset, label, note}]
+// Failed-flush retry queue (Codex review P1): if a network error
+// drops the POST, the markers stay here paired with the SetName
+// they belong to so the next stop can replay them rather than
+// silently lose data.
+const _failedMarkerFlushes = [];        // [{setName, markers: [...]}]
+
+// Authoritative recording state, populated by updateRecStatus()
+// from the metrics ws push. The local btn-start/btn-stop handlers
+// SHOULD NOT mutate these — they only trigger the underlying
+// HTTP calls and let the resulting ws status update flow back
+// here. This keeps every UI gate (M-key marker, athlete-bind
+// modal, …) working even when the start/stop is triggered from
+// the M5 BLE button instead of the dashboard. (Codex review P2.)
+const _liveRecState = {
+    recording: false,
+    elapsed: 0,           // seconds since recording start
+    set_number: 0,
+};
+// btn-stop click sets this so updateRecStatus knows the IDLE
+// transition is already being handled by the click handler (which
+// has the fast `set_dir` from the stop response). BLE-triggered
+// stops leave it false → updateRecStatus auto-flushes via a
+// fallback GET /api/sets lookup.
+let _lastStopHandledByButton = false;
 
 /**
  * Size the video wrapper to match the image's aspect ratio while fitting
@@ -881,6 +904,26 @@ function updateRecStatus(data) {
     const rsTime   = $('#rs-time');
     const rsSet    = $('#rs-set');
 
+    // Authoritative source of truth for the live page (Codex P2).
+    // Detect REC → IDLE transition for BLE-button-A stops that
+    // bypass the dashboard btn-stop handler.
+    const wasRecording = _liveRecState.recording;
+    _liveRecState.recording = !!data.recording;
+    _liveRecState.elapsed = Number(data.elapsed) || 0;
+    _liveRecState.set_number = data.set_number || 0;
+    if (wasRecording && !data.recording) {
+        if (_lastStopHandledByButton) {
+            // btn-stop handler is already flushing with the fast
+            // set_dir from the response. Consume the flag.
+            _lastStopHandledByButton = false;
+        } else {
+            // BLE button A (or another client) stopped the recording.
+            // Look up the freshest set name and flush queued bindings/
+            // markers ourselves so the coach's pre-stop work isn't lost.
+            autoFlushPendingOnBleStop();
+        }
+    }
+
     if (data.recording) {
         const timeStr = formatDuration(data.elapsed);
         if (recDot)   { recDot.className = 'rec-dot recording'; }
@@ -925,10 +968,11 @@ $('#btn-start').addEventListener('click', async () => {
             _liveSeenTrackIds.clear();
             _pendingLiveBindings.clear();
             updateLivePendingBadge();
-            // Stamp recording start so M-key markers can compute
-            // an offset from "now". Wall-clock + offset is robust
-            // to clock drift (only the relative interval matters).
-            _recordingStartedAt = Date.now();
+            // Clear any leftover marker queue from a previous session.
+            // (Authoritative recording state + offset come from the ws
+            // status push now — see _liveRecState; we no longer stamp
+            // a local start timestamp because BLE-triggered starts
+            // would leave it stale. Codex review P2.)
             _pendingMarkers.length = 0;
             updateLiveMarkerBadge();
             toast(`开始录制 Set #${j.set_number}`, 'success');
@@ -939,10 +983,15 @@ $('#btn-start').addEventListener('click', async () => {
 });
 
 $('#btn-stop').addEventListener('click', async () => {
+    // Tell updateRecStatus that this IDLE transition is already
+    // handled by us (with the fast set_dir from the response).
+    // BLE-triggered stops leave it false and the ws path takes over.
+    _lastStopHandledByButton = true;
     try {
         const r = await fetch('/api/recording/stop', { method: 'POST' });
         const j = await r.json();
         if (j.error) {
+            _lastStopHandledByButton = false;   // restore so ws fallback can try
             toast(j.error, 'error');
             return;
         }
@@ -950,42 +999,110 @@ $('#btn-stop').addEventListener('click', async () => {
             ? String(j.set_dir).split(/[\\/]/).pop()
             : null;
         // Flush both queues to the freshly created Set.
-        if (setName && _pendingLiveBindings.size > 0) {
-            await flushLiveBindings(setName);
-        }
-        if (setName && _pendingMarkers.length > 0) {
+        if (setName) {
+            if (_pendingLiveBindings.size > 0) await flushLiveBindings(setName);
+            // Always call flushLiveMarkers — it'll also retry any
+            // previously-failed flushes even when this session has
+            // no new markers to push.
             await flushLiveMarkers(setName);
         }
-        _recordingStartedAt = 0;
     } catch {
+        _lastStopHandledByButton = false;
         toast('停止失败', 'error');
     }
 });
 
-/** POST queued markers to the just-created set. Empty queue is
- *  a no-op handled by the backend (returns []). */
+/** POST queued markers to the given set. On success the local queue
+ *  clears; on failure the markers are kept under the same setName
+ *  so the next flush retries them with the right destination
+ *  (Codex P1: don't lose data on transient network errors). */
 async function flushLiveMarkers(setName) {
+    // 1) Retry any previously-failed flushes first, each with their
+    //    own original setName (they belong to OLD recordings, not
+    //    the one currently stopping).
+    if (_failedMarkerFlushes.length > 0) {
+        const stillFailed = [];
+        let retried = 0;
+        for (const f of _failedMarkerFlushes) {
+            const ok = await _postMarkers(f.setName, f.markers);
+            if (ok) retried += f.markers.length;
+            else stillFailed.push(f);
+        }
+        _failedMarkerFlushes.length = 0;
+        _failedMarkerFlushes.push(...stillFailed);
+        if (retried > 0) {
+            toast(`已重试保存 ${retried} 个旧标记`, 'success', 1800);
+        }
+    }
+
+    // 2) Push the new queue (if any) to setName.
     const queue = _pendingMarkers.slice();
     if (queue.length === 0) return;
+    const ok = await _postMarkers(setName, queue);
+    if (ok) {
+        _pendingMarkers.length = 0;
+        updateLiveMarkerBadge();
+        toast(`已保存 ${queue.length} 个标记`, 'success', 1800);
+    } else {
+        // Move to the failed-flush queue paired with THIS setName so
+        // we don't accidentally POST them to the next session's set.
+        _failedMarkerFlushes.push({ setName, markers: queue });
+        _pendingMarkers.length = 0;
+        updateLiveMarkerBadge();
+        toast(
+            `${queue.length} 个标记保存失败 — 已保留，下次停止录制时会自动重试`,
+            'warn', 3500,
+        );
+    }
+}
+
+/** Fallback flush for BLE-button-A-triggered stops where the
+ *  dashboard btn-stop handler never ran. We don't have a fast
+ *  set_dir from a stop response here, so we ask the server which
+ *  set is the latest and flush against that. (Phase 8.5 + Codex
+ *  review P2 fallout — without this, BLE-stopped sessions would
+ *  silently lose any in-session bindings or markers.) */
+async function autoFlushPendingOnBleStop() {
+    if (_pendingLiveBindings.size === 0
+            && _pendingMarkers.length === 0
+            && _failedMarkerFlushes.length === 0) {
+        return;
+    }
+    let setName = null;
+    try {
+        const r = await fetch('/api/sets');
+        const sets = await r.json();
+        if (Array.isArray(sets) && sets.length > 0 && sets[0].name) {
+            setName = sets[0].name;
+        }
+    } catch {
+        // Treat as an unrecoverable lookup error — keep both queues so a
+        // future stop can retry. Don't toast loudly because the coach
+        // didn't actively trigger this code path.
+        return;
+    }
+    if (!setName) return;
+    if (_pendingLiveBindings.size > 0) await flushLiveBindings(setName);
+    // Always call: handles new + previously-failed retries together.
+    await flushLiveMarkers(setName);
+}
+
+/** Low-level POST helper. Returns true on 2xx, false on anything else
+ *  including network errors. Used by flushLiveMarkers + its retry path. */
+async function _postMarkers(setName, markers) {
     try {
         const r = await fetch(
             `/api/sets/${encodeURIComponent(setName)}/markers`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ markers: queue }),
+                body: JSON.stringify({ markers }),
             },
         );
-        if (r.ok) {
-            toast(`已保存 ${queue.length} 个标记`, 'success', 1800);
-        } else {
-            toast('标记保存失败 — 进分析页可手动加', 'warn');
-        }
+        return r.ok;
     } catch {
-        toast('标记保存失败', 'error');
+        return false;
     }
-    _pendingMarkers.length = 0;
-    updateLiveMarkerBadge();
 }
 
 function updateLiveMarkerBadge() {
@@ -997,15 +1114,22 @@ function updateLiveMarkerBadge() {
 }
 
 /** Push a marker at the current recording offset. Triggered by M
- *  key on the live page. The label prompt uses native `prompt()`
- *  for the same MVP-speed reason as the athlete-create flow in 8.1
- *  — replacement with an inline input is on the polish list. */
+ *  key on the live page. Uses the authoritative ``_liveRecState``
+ *  (populated by the metrics ws push) for both the gate and the
+ *  offset, so BLE-button-A-triggered recordings work the same way
+ *  as dashboard-button recordings (Codex review P2). The label
+ *  prompt is still native ``window.prompt()`` — same MVP speed
+ *  trade-off as the athlete-create flow in 8.1. */
 function captureLiveMarker() {
-    if (!_recordingStartedAt) {
+    if (!_liveRecState.recording) {
         toast('未在录制 — 标记仅在 REC 状态可用', 'warn', 1800);
         return;
     }
-    const tsOffset = (Date.now() - _recordingStartedAt) / 1000;
+    // Backend-authoritative offset: server sends the exact elapsed
+    // seconds in the metrics ws push and we mirror it into
+    // _liveRecState.elapsed. This stays correct regardless of who
+    // triggered the recording or whether the page was just refreshed.
+    const tsOffset = _liveRecState.elapsed;
     const label = window.prompt(
         `在 ${tsOffset.toFixed(1)}s 处标记 — 输入标签 (例如：翻身/出水/技术错误)`,
         '',
