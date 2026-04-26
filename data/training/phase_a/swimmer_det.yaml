@@ -1,0 +1,36 @@
+# SyncSwim detector-only dataset (Phase A — bbox fine-tune)
+#
+# Differs from data/training/syncswim.yaml:
+#   - NO kpt_shape / flip_idx (this is a detection task, not pose)
+#   - Single class "person" but trained on swimmer-only bboxes
+#   - imgsz 1280 default (the dogfood proved small water targets
+#     vanish at 640 — see DEVLOG #33)
+#
+# Layout (after tools/extract_frames.py + CVAT bbox annotation):
+#
+#   data/training/phase_a/
+#     frames/                       # all extracted frames (jpg)
+#     labels/                       # YOLO 1.1 bbox labels (one per frame)
+#     train.txt                     # paths of training frames
+#     val.txt                       # paths of held-out clip's frames
+#     swimmer_det.yaml              # this file
+#
+# Held-out split rule: pick ONE FULL CLIP (e.g. clip_portrait_2)
+# and put ALL its frames in val.txt. Putting random adjacent frames
+# from the same clip in both train and val inflates val mAP and
+# tells you nothing about generalization. See docs/phase-a-annotation.md
+# §"训练 / 验证集拆分".
+
+# ultralytics resolves `path` as `<yaml_parent>/<path>`. Since this
+# YAML already lives in data/training/phase_a/, the dataset root IS
+# the YAML's parent directory — use "." (NOT "../../data/training/
+# phase_a", which Codex review caught: that resolves to data/data/
+# training/phase_a and breaks train/val.txt lookups).
+path: .
+train: train.txt
+val: val.txt
+
+# Single-class detection — every box is "person (swimmer)"
+nc: 1
+names:
+  0: person

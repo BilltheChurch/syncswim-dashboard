@@ -371,17 +371,30 @@ class CameraManager:
         # Reliable multi-person detection (MediaPipe 0.10 num_poses>1 is
         # flaky on non-square frames — see DEVLOG).
         if backend == "yolo":
-            from fastapi_app.yolo_pose import YoloPoseDetector
+            from fastapi_app.yolo_pose import create_pose_detector
             yolo_model = cfg_hw.get(
                 "yolo_model", os.path.join(_PROJECT_ROOT, "yolov8n-pose.pt")
             )
             yolo_conf = float(cfg_hw.get("yolo_conf", 0.35))
             yolo_device = str(cfg_hw.get("yolo_device", "mps"))
-            self._yolo = YoloPoseDetector(
-                model_path=yolo_model,
+            yolo_imgsz = int(cfg_hw.get("yolo_imgsz", 640))
+            # Phase A: optional custom-trained detector. When set, the
+            # factory returns a HybridSwimmerDetector (custom bbox +
+            # COCO keypoints). Path is resolved relative to project root.
+            sd_raw = cfg_hw.get("swimmer_detector")
+            sd_path: str | None = None
+            if sd_raw:
+                sd_path = (
+                    sd_raw if os.path.isabs(sd_raw)
+                    else os.path.join(_PROJECT_ROOT, sd_raw)
+                )
+            self._yolo = create_pose_detector(
+                swimmer_detector_path=sd_path,
+                pose_model_path=yolo_model,
                 conf=yolo_conf,
                 max_persons=num_poses,
                 device=yolo_device,
+                imgsz=yolo_imgsz,
             )
             self._landmarker = None
             print(
