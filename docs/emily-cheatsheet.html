@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>花泳标注速查 — Emily</title>
+<style>
+  /* 一页 A4 纵向打印优化 + 桌面 / iPad 阅读友好 */
+  @page { size: A4 portrait; margin: 1cm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #222;
+    background: #fafafa;
+    margin: 0;
+    padding: 16px;
+    line-height: 1.45;
+    font-size: 13px;
+  }
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    background: white;
+    padding: 24px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    color: #0a4870;
+    border-bottom: 3px solid #0a4870;
+    padding-bottom: 6px;
+  }
+  .subtitle { color: #666; font-size: 12px; margin-bottom: 18px; }
+  h2 {
+    margin: 14px 0 6px;
+    font-size: 14px;
+    background: #0a4870;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card {
+    border: 1px solid #d4d4d4;
+    border-radius: 4px;
+    padding: 8px 12px;
+    background: #fcfcfc;
+  }
+  .card h3 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: #0a4870;
+  }
+  ul { margin: 4px 0 4px 18px; padding: 0; }
+  li { margin: 2px 0; }
+  .ok    { color: #1a7c2c; font-weight: 600; }
+  .bad   { color: #c43d23; font-weight: 600; }
+  .warn  { color: #c97300; font-weight: 600; }
+  kbd {
+    display: inline-block;
+    background: #eee;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: -apple-system, monospace;
+    font-size: 11px;
+    margin: 0 1px;
+    box-shadow: 0 1px 0 #999;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 12px; }
+  th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #eee; }
+  th { background: #f0f4f8; }
+  .emergency {
+    background: #fff8e8;
+    border-left: 4px solid #c97300;
+    padding: 6px 12px;
+    margin-top: 14px;
+    font-size: 12px;
+  }
+  .footer { text-align: center; color: #888; font-size: 11px; margin-top: 16px; }
+  @media print {
+    body { background: white; padding: 0; font-size: 11px; }
+    .page { box-shadow: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>花泳标注速查</h1>
+<div class="subtitle">Emily 专用 · 单页可打印 · 遇问题立刻微信总统大人</div>
+
+<h2>① 怎么开始</h2>
+<table>
+  <tr><th>步骤</th><th>动作</th></tr>
+  <tr><td>1. 启动</td><td>双击桌面 <strong>start-cvat.command</strong> → 等 30 秒</td></tr>
+  <tr><td>2. 浏览器</td><td>会自动打开 CVAT；如果没开 → 手动访问 <code>http://localhost:8080</code></td></tr>
+  <tr><td>3. 登录</td><td>用户名 <code>emily</code> + 你的密码（浏览器记住了）</td></tr>
+  <tr><td>4. 进任务</td><td>Project <code>syncswim-detector-phase-a</code> → Task → <strong>Job #1</strong></td></tr>
+</table>
+
+<h2>② 画 bbox 的核心规则（必读）</h2>
+<div class="grid">
+  <div class="card">
+    <h3>✅ 标什么</h3>
+    <ul>
+      <li>水里的运动员（哪怕只露脚 / 头）</li>
+      <li>bbox <strong>包到水下能看到的身影</strong>，不是水面</li>
+      <li>多个运动员 = 每人一个独立框</li>
+      <li>同帧、同距离的运动员 bbox 风格统一</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>❌ 不要标</h3>
+    <ul>
+      <li>教练 / 观众 / 路人</li>
+      <li>水面倒影、影子</li>
+      <li>完全被挡看不到的人（连水花都没）</li>
+      <li>不要 "猜位置" — 看不见的不要框</li>
+    </ul>
+  </div>
+</div>
+
+<h2>③ CVAT 操作要点</h2>
+<table>
+  <tr><th>操作</th><th>怎么做</th></tr>
+  <tr><td>新建 bbox</td><td>左侧工具栏点中 <strong>矩形 ▢</strong> 图标 → 按 <kbd>N</kbd> → 弹窗选 <strong>Shape</strong> + <strong>By 2 Points</strong> → 拖矩形</td></tr>
+  <tr><td>下一帧</td><td><kbd>F</kbd></td></tr>
+  <tr><td>上一帧</td><td><kbd>D</kbd></td></tr>
+  <tr><td>删除选中 bbox</td><td><kbd>Delete</kbd></td></tr>
+  <tr><td>保存</td><td>自动每 30 秒保存；强制保存 <kbd>Ctrl</kbd>+<kbd>S</kbd></td></tr>
+  <tr><td>撤销</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td></tr>
+</table>
+<p style="margin: 4px 0; font-size: 12px;">
+  <span class="bad">绝对不要</span>选 <strong>Track</strong>（带帧导航箭头的）— 我们要的是 <strong>Shape</strong>。
+</p>
+
+<h2>④ 边界 case 速查</h2>
+<table>
+  <tr><th>场景</th><th>怎么标</th></tr>
+  <tr><td>运动员只露腿，水下能看到身影</td><td>bbox 从脚尖一直拉到水下身影末端</td></tr>
+  <tr><td>两人重叠 60% 以上</td><td><span class="ok">照标</span>，bbox 重叠 OK</td></tr>
+  <tr><td>完全被挡看不到</td><td><span class="bad">跳过</span>，不要猜位置</td></tr>
+  <tr><td>只露一只手 / 一个脚趾</td><td>框那一小部分（哪怕 20×30 px）</td></tr>
+  <tr><td>水面只有水花，看不出是谁</td><td>跳过</td></tr>
+  <tr><td>远近运动员大小差很大</td><td>正常 — 距离造成的，不算不一致</td></tr>
+</table>
+
+<h2>⑤ 标完了怎么交</h2>
+<ol>
+  <li>右上 <strong>Menu → Export task dataset</strong></li>
+  <li>Format 选 <strong>YOLO 1.1</strong></li>
+  <li>❌ <strong>不要</strong>勾 <strong>Save images</strong>（节省体积）</li>
+  <li>下载 zip → 重命名 <code>phase_a_labels_emily_YYYYMMDD.zip</code></li>
+  <li><strong>微信发给总统大人</strong></li>
+</ol>
+
+<div class="emergency">
+  <strong>⚠ 出问题怎么办</strong>：
+  截屏 + 描述发微信给总统大人。<strong>绝对不要自己装 / 删任何东西</strong>。
+  你的工作就是标注，技术问题不归你管。
+</div>
+
+<div class="footer">
+  花泳骨架检测 Phase A · 2026 · 标注规则随项目演进 — 收到新版本及时替换本页
+</div>
+
+</div>
+</body>
+</html>
