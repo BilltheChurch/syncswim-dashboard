@@ -200,21 +200,37 @@ if [ -d "$REPO_DIR/.venv" ]; then
     cd "$REPO_DIR"
     .venv/bin/pip install --upgrade pip --quiet 2>&1 | tail -3 || true
 
+    # Try requirements.txt first; if it conflicts, fall back to inline
+    # minimum set. This makes setup robust to "未来版" pins or ABI
+    # mismatches (e.g. numpy 2.x vs mediapipe 0.10.x).
+    install_minimum() {
+        .venv/bin/pip install \
+            "fastapi" "uvicorn[standard]" "aiofiles" "websockets" \
+            "pydantic>=2.0" "bleak" \
+            "numpy>=1.23,<2" "opencv-python>=4.8.0" \
+            "opencv-contrib-python>=4.8.0" "pillow>=10.0" \
+            "mediapipe>=0.10.5,<0.11" "ultralytics>=8.3.0" \
+            "matplotlib>=3.7" "scipy>=1.10" \
+            "pytest>=7.0" "httpx>=0.25"
+    }
+
     if [ -f requirements.txt ]; then
         echo "    使用 requirements.txt..."
         if .venv/bin/pip install -r requirements.txt; then
             echo "    ✓ 依赖装好"
         else
-            FAILED+=("pip install -r requirements.txt")
-            echo "    ⚠ pip 装失败 — 网络问题或包版本不兼容"
-            echo "    建议重跑本脚本，或 Emily 终端手动跑："
-            echo "        cd ~/syncswim-dashboard && git pull && .venv/bin/pip install -r requirements.txt"
+            echo "    ⚠ requirements.txt 解析失败，回退到 minimum set..."
+            if install_minimum; then
+                echo "    ✓ minimum set 装好（项目所有 import 都满足）"
+            else
+                FAILED+=("pip install (both requirements.txt + fallback)")
+                echo "    ❌ 两路都失败 — 检查网络 / 重跑本脚本"
+            fi
         fi
     else
-        echo "    ⚠ requirements.txt 不存在，装最小依赖集"
-        if .venv/bin/pip install fastapi uvicorn opencv-python ultralytics \
-            mediapipe bleak numpy matplotlib pillow tomli httpx pytest; then
-            echo "    ✓ 最小依赖装好"
+        echo "    requirements.txt 不存在，装 minimum set..."
+        if install_minimum; then
+            echo "    ✓ minimum set 装好"
         else
             FAILED+=("pip install minimum set")
         fi
