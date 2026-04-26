@@ -369,7 +369,9 @@ python tools/eval_detector.py
 
 ---
 
-## 第 9 步：上线到 dashboard
+## 第 9 步：上线 + 量化验证（Phase 9.1.3）
+
+### 9a. config.toml 接入
 
 编辑 `config.toml`：
 ```toml
@@ -377,15 +379,50 @@ python tools/eval_detector.py
 swimmer_detector = "runs/detect/swimmer_det_v1/weights/best.pt"
 ```
 
-重启 dashboard：
+### 9b. 重 import 3 段 dogfood 视频，看 ID 通胀降到多少
+
+这一步是判断 Phase A 真正成败的"现场实测"。`tools/import_video.py` 加了 `--expected-swimmers` 选项，结束会自动打印 ID 通胀比：
+
 ```bash
-# 在你的终端里（不是 claude 沙箱）
+# 重 import clip_horizontal（你知道里面有 5 个运动员）
+python tools/import_video.py data/raw_videos/clip_horizontal.mp4 \
+  --expected-swimmers 5
+
+# 输出会有这一段：
+#   [id-stats]
+#     frames analyzed         : 961
+#     frames with ≥1 detection: 850 (88.5%)  ← recall proxy
+#     unique track IDs total  : 12
+#     max simultaneous IDs    : 5
+#     expected swimmers       : 5
+#     ID inflation ratio      : 2.4× (baseline DEVLOG #33: 19.8×)
+#     verdict                 : ✅ acceptable (≤3×) — Phase A target hit
+```
+
+**判定标准**：
+
+| ratio | 判定 | 行动 |
+|---|---|---|
+| ≤ 3× | ✅ Phase A 成功 | 决定要不要做 Phase B（关键点） |
+| 3-10× | ⚠ 改善了但不够 | 标 50-100 帧加训，**或**做 Phase 9.3 数据扩充 |
+| > 10× | ❌ 几乎没改善 | 检查 mAP@50、标注一致性 — 标注质量肯定有问题 |
+
+3 个 dogfood 视频都跑一遍，3 个 ratio 都 ≤ 3 才算稳定通过。
+
+### 9c. dashboard 实时观感
+
+```bash
+# 在你的终端（不是 claude 沙箱）
 python -m fastapi_app
 ```
 
-`fastapi_app/yolo_pose.py` 会自动检测到新参数，加载混合模式：
+`fastapi_app/yolo_pose.py` 自动检测到 `swimmer_detector` 参数，加载混合模式：
 - **bbox 检测**：用你刚训的 `best.pt`（高召回）
 - **关键点**：还是用 `yolov8s-pose.pt`（COCO 通用，等 Phase B 替换）
+
+浏览器看新 import 的 set 的分析页：
+- ✅ ID 颜色不闪烁、运动员名称不跳变 → Phase A 真正落地
+- ⚠ ID 还是变（但比之前好） → 9.1.3 verdict 要记录下来，决定是 Phase B 还是 9.3 数据扩充
 
 ---
 

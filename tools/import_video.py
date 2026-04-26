@@ -176,6 +176,17 @@ def main():
              "uses HybridSwimmerDetector: custom bbox detector + "
              "COCO pose keypoints. See docs/phase-a-annotation.md.",
     )
+    parser.add_argument(
+        "--expected-swimmers", type=int, default=None,
+        help="Number of swimmers actually in the video (if known). "
+             "Enables ID-inflation stats at the end of the import: "
+             "ratio = len(unique track IDs) / expected_swimmers. "
+             "Phase 9.1.3 success criterion: ratio ≤ 3×. "
+             "Baseline before fine-tune (DEVLOG #33): 19.8×. "
+             "Use this flag when re-importing dogfood videos to "
+             "measure whether the new detector actually solved the "
+             "ID-instability problem.",
+    )
     args = parser.parse_args()
 
     src = args.video
@@ -247,6 +258,16 @@ def main():
     base_ts = 0.0   # synthetic; analysis duration falls back to vision.csv
     ts_step = 1.0 / max(1.0, src_fps)
 
+    # ID-inflation tracking — DEVLOG #33 / Phase 9.1.3 success metric.
+    # A swimmer whose track ID stays stable across the whole clip
+    # contributes 1 entry to seen_ids. A swimmer whose ID gets reassigned
+    # (because the detector lost + regained them across frames) shows up
+    # as multiple entries — that ratio over expected-swimmers is "ID
+    # inflation". 19.8× was the dogfood baseline; Phase A target is ≤3×.
+    seen_ids: set[int] = set()
+    max_simultaneous = 0
+    frames_with_detection = 0
+
     try:
         while True:
             ok, frame = cap.read()
@@ -267,6 +288,15 @@ def main():
             video_writer.write(frame)
 
             persons, track_ids = det.detect(frame, w, h)
+            # ID-inflation accumulators — see init block above.
+            # track_ids may contain None for brand-new detections BYTETracker
+            # hasn't matched yet (rare on this kind of long-clip import).
+            assigned_ids = [tid for tid in track_ids if tid is not None]
+            if assigned_ids:
+                frames_with_detection += 1
+                seen_ids.update(assigned_ids)
+                if len(assigned_ids) > max_simultaneous:
+                    max_simultaneous = len(assigned_ids)
             local_ts = base_ts + frame_idx * ts_step
             frame_no = frame_idx + 1   # 1-based for parity with live recorder
 
@@ -342,7 +372,33 @@ def main():
 
     print(f"\n[done] imported {frame_idx} frames into {set_dir.name}")
     print(f"       persons across all frames: {persons_total}")
-    print(f"       open dashboard → 历史 / 分析 / 对比 to inspect")
+
+    # ──────── ID inflation report (Phase 9.1.3 metric) ────────
+    pct_with_det = 100.0 * frames_with_detection / max(1, frame_idx)
+    print("\n[id-stats]")
+    print(f"  frames analyzed         : {frame_idx}")
+    print(f"  frames with ≥1 detection: {frames_with_detection} "
+          f"({pct_with_det:.1f}%)  ← recall proxy")
+    print(f"  unique track IDs total  : {len(seen_ids)}")
+    print(f"  max simultaneous IDs    : {max_simultaneous}")
+    if args.expected_swimmers and args.expected_swimmers > 0:
+        ratio = len(seen_ids) / args.expected_swimmers
+        print(f"  expected swimmers       : {args.expected_swimmers}")
+        print(f"  ID inflation ratio      : {ratio:.1f}× "
+              f"(baseline DEVLOG #33: 19.8×)")
+        if ratio <= 3.0:
+            verdict = "✅ acceptable (≤3×) — Phase A target hit"
+        elif ratio <= 10.0:
+            verdict = ("⚠  high (3-10×) — improved but Phase A could "
+                       "use more annotated frames")
+        else:
+            verdict = ("❌ severe (>10×) — fine-tune barely helped, "
+                       "check mAP@50 and annotation consistency")
+        print(f"  verdict                 : {verdict}")
+    else:
+        print(f"  (pass --expected-swimmers N for inflation ratio)")
+
+    print(f"\n       open dashboard → 历史 / 分析 / 对比 to inspect")
 
 
 if __name__ == "__main__":
