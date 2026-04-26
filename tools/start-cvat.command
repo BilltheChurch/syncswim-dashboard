@@ -6,9 +6,9 @@
 #   2. 双击 → 黑窗口闪一下 → 浏览器自动开 CVAT
 #   3. 用账号密码登录开始标注
 #
-# 如果出错，**直接微信总统大人**，不要自己折腾。
+# 如果出错，**直接微信 Tim 老师**，不要自己折腾。
 #
-# 设计目标（总统大人参考）：
+# 设计目标（Tim 老师参考）：
 #   - 零交互：不让 Emily 输任何命令
 #   - 自愈：Docker 没跑会自动开
 #   - 友好：错误信息说人话 + 留时间让她看清楚
@@ -38,7 +38,7 @@ if ! command -v docker &>/dev/null; then
 
 ❌ 没找到 Docker
 
-请微信总统大人，他需要先帮你装 Docker。
+请微信 Tim 老师，他需要先帮你装 Docker。
 ERR
     exit 1
 fi
@@ -64,7 +64,7 @@ if ! docker info &>/dev/null; then
 ❌ Docker 启动超时
 
 请检查屏幕右上是否有 Docker 🐳 或 OrbStack 图标，
-然后微信总统大人。
+然后微信 Tim 老师。
 ERR
             exit 1
         fi
@@ -81,7 +81,7 @@ if [ ! -d "$CVAT_DIR" ] || [ ! -f "$CVAT_DIR/docker-compose.yml" ]; then
 
 ❌ CVAT 没装好
 
-请微信总统大人，他需要现场帮你装一次。
+请微信 Tim 老师，他需要现场帮你装一次。
 ERR
     exit 1
 fi
@@ -96,7 +96,7 @@ if ! docker compose up -d 2>&1 | tail -3; then
 
 ❌ CVAT 容器启动失败
 
-请截图终端窗口的红色错误，微信发给总统大人。
+请截图终端窗口的红色错误，微信发给 Tim 老师。
 ERR
     exit 1
 fi
@@ -140,6 +140,6 @@ cat <<'DONE'
   用你的账号密码登录就可以开始标注。
 
   标注规则速查：双击桌面的 cheatsheet.html
-  标完导出 zip 后微信发给总统大人。
+  标完导出 zip 后微信发给 Tim 老师。
 
 DONE
