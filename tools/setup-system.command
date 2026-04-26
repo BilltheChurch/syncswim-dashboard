@@ -1,14 +1,12 @@
 #!/bin/bash
-# setup-system.command — Tim 老师在 Emily 电脑现场跑一次的完整装机
+# setup-system.command — Tim 老师在 Emily 电脑现场跑的完整装机
 #
-# 这一个脚本搞定：
-#   - 装 Homebrew / Python 3.11 / git / OrbStack（轻量 Docker 替代）
-#   - clone syncswim-dashboard 仓库 + 永久存 GitHub 凭证
-#   - 创建 Python venv + pip install
-#   - 拷模型权重（yolov8s-pose.pt + pose_landmarker_lite.task）
-#   - 解压 raw_videos
-#   - clone CVAT + 拉镜像（不启动）
-#   - 桌面布置 4 个图标
+# 核心特性（v2 修订版）：
+#   - **idempotent**：每步都检查"已完成？"，重跑安全，不会破坏已有进度
+#   - **容错**：pip install / docker pull 失败不会终止整个脚本，会记录后继续
+#   - **重排序**：先做不依赖网络的"文件操作"（拷模型、解压视频、桌面图标），
+#                后做依赖网络的"包装"（pip install / docker pull）
+#   - **失败可恢复**：如果中途崩了，重跑这个脚本会跳过已完成的步骤
 #
 # 用法（Tim 老师现场操作）：
 #   1. 把 emily_kit 解压到 Emily 桌面
@@ -16,14 +14,12 @@
 #   3. 按提示输入 GitHub PAT（read 权限即可，不会回显）
 #   4. 等 ~25 分钟（视网速）
 #   5. 之后所有交互都通过桌面 3 个图标完成
-#
-# 安全说明：
-#   - 不删任何已有文件
-#   - 缺工具会停下来报错，不会自动 brew install 大件（除非你确认）
-#   - PAT 直接写进 macOS Keychain，重启不丢失，git pull 不再问密码
 
-set -e
+# 注意：刻意 NOT 用 set -e — 我们要让单步失败时其他步骤还能继续
 trap 'echo ""; echo "============================================"; echo "  按任意键关闭窗口..."; echo "============================================"; read -n 1 -s' EXIT
+
+# 收集失败的步骤，最后一并报告
+FAILED=()
 
 # ────────── 横幅 ──────────
 clear
@@ -34,9 +30,9 @@ cat <<'BANNER'
 BANNER
 echo ""
 echo "预计 ~25 分钟（首次拉 CVAT 镜像 ~5GB 是大头）"
+echo "中途 pip / docker 失败可以重跑本脚本，已做的步骤会跳过"
 echo ""
 
-# ────────── 路径推断 ──────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 KIT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_DIR="$HOME/syncswim-dashboard"
@@ -48,145 +44,221 @@ echo "目标仓库: $REPO_DIR"
 echo "CVAT 目录: $CVAT_DIR"
 echo ""
 
-# ────────── 1/8: Homebrew ──────────
-echo "[1/8] 检查 Homebrew..."
+# ────────── 1/10: Homebrew ──────────
+echo "[1/10] 检查 Homebrew..."
 if ! command -v brew &>/dev/null; then
     cat <<'ERR'
 
 ❌ 没找到 Homebrew
 
-请先在 Emily 电脑装 Homebrew（一行命令）：
+请先在 Emily 电脑装 Homebrew：
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-装完后重新跑本脚本。
+装完后重新跑本脚本（已完成的步骤会跳过）。
 ERR
     exit 1
 fi
 echo "    ✓ Homebrew: $(brew --prefix)"
 
-# ────────── 2/8: 装 python@3.11 + git + orbstack ──────────
-echo "[2/8] 检查 / 安装系统依赖..."
+# ────────── 2/10: brew 依赖 ──────────
+echo ""
+echo "[2/10] 检查 / 安装系统依赖..."
 for pkg in python@3.11 git; do
-    if ! brew list "$pkg" &>/dev/null; then
+    if brew list "$pkg" &>/dev/null; then
+        echo "    ✓ $pkg 已装"
+    else
         echo "    安装 $pkg..."
-        brew install "$pkg"
+        if ! brew install "$pkg"; then
+            FAILED+=("brew install $pkg")
+            echo "    ⚠ $pkg 安装失败，跳过（可手动 brew install $pkg 后重跑本脚本）"
+        fi
     fi
 done
 
-# OrbStack 比 Docker Desktop 轻 50%，更适合 Emily 笔记本
 if ! command -v docker &>/dev/null; then
     if ! brew list --cask orbstack &>/dev/null; then
-        echo "    安装 OrbStack（轻量 Docker 替代）..."
-        brew install --cask orbstack
-        echo ""
-        echo "    ⚠ 请在 Launchpad 找到 OrbStack 双击启动一次（首次需要授权）"
-        echo "    然后回来按任意键继续..."
-        read -n 1 -s
+        echo "    安装 OrbStack..."
+        if brew install --cask orbstack; then
+            echo ""
+            echo "    ⚠ 请在 Launchpad 找到 OrbStack 双击启动一次（首次需要授权）"
+            echo "    然后回来按任意键继续..."
+            read -n 1 -s
+        else
+            FAILED+=("brew install --cask orbstack")
+        fi
     fi
 fi
-echo "    ✓ Python 3.11 / git / Docker (OrbStack)"
+echo "    ✓ 依赖检查完毕"
 
-# ────────── 3/8: GitHub PAT + Keychain ──────────
+# ────────── 3/10: GitHub PAT + Keychain ──────────
 echo ""
-echo "[3/8] 配置 GitHub 凭证..."
-echo "    （之后 Emily git pull 永远不用输密码）"
-echo ""
-read -p "      GitHub 用户名: " GH_USER
-echo "      GitHub PAT (粘贴时不会回显，按回车确认):"
-read -s GH_PAT
-echo ""
-if [ -z "$GH_PAT" ]; then
-    echo "    ❌ PAT 为空，退出"
-    exit 1
+echo "[3/10] GitHub Keychain 凭证..."
+# 看 Keychain 里有没有现成 github token
+if security find-internet-password -s github.com &>/dev/null; then
+    echo "    ✓ Keychain 已有 github.com 凭证（跳过；如需更新请手动 git credential-osxkeychain erase）"
+else
+    echo "    （之后 Emily git pull 永远不用输密码）"
+    echo ""
+    read -p "      GitHub 用户名: " GH_USER
+    echo "      GitHub PAT (粘贴时不会回显，按回车确认):"
+    read -s GH_PAT
+    echo ""
+    if [ -z "$GH_PAT" ]; then
+        echo "    ⚠ PAT 为空，跳过 Keychain 配置（之后 git pull 会问密码）"
+        FAILED+=("git PAT empty")
+    else
+        git config --global credential.helper osxkeychain
+        printf "protocol=https\nhost=github.com\nusername=%s\npassword=%s\n\n" \
+            "$GH_USER" "$GH_PAT" | git credential-osxkeychain store
+        echo "    ✓ Keychain 已存"
+    fi
 fi
 
-# 写到 macOS Keychain — 之后所有 https github.com 操作免密
-git config --global credential.helper osxkeychain
-printf "protocol=https\nhost=github.com\nusername=%s\npassword=%s\n\n" \
-    "$GH_USER" "$GH_PAT" | git credential-osxkeychain store
-echo "    ✓ Keychain 已存（可以删掉这个终端记录了）"
-
-# ────────── 4/8: clone 仓库 ──────────
+# ────────── 4/10: clone 仓库 ──────────
 echo ""
-echo "[4/8] clone syncswim-dashboard..."
+echo "[4/10] 仓库 clone..."
 if [ -d "$REPO_DIR/.git" ]; then
-    echo "    仓库已存在，跳过 clone（之后用 1-update.command 拉新）"
+    echo "    ✓ 仓库已存在（跳过 clone；用 1-update.command 拉新）"
 else
-    git clone "https://github.com/BilltheChurch/syncswim-dashboard.git" "$REPO_DIR"
+    if git clone "https://github.com/BilltheChurch/syncswim-dashboard.git" "$REPO_DIR"; then
+        echo "    ✓ clone 成功"
+    else
+        FAILED+=("git clone")
+        echo "    ❌ clone 失败 — 检查 PAT 和网络后重跑本脚本"
+    fi
 fi
-echo "    ✓ 仓库就绪: $REPO_DIR"
 
-# ────────── 5/8: Python venv + 依赖 ──────────
+# ────────── 5/10: 拷模型（idempotent，无网络）──────────
 echo ""
-echo "[5/8] Python venv + 依赖..."
-PY311="$(brew --prefix python@3.11)/bin/python3.11"
-if [ ! -x "$PY311" ]; then
-    echo "    ❌ python3.11 找不到：$PY311"
-    exit 1
-fi
-cd "$REPO_DIR"
-if [ ! -d ".venv" ]; then
-    "$PY311" -m venv .venv
-fi
-.venv/bin/pip install --upgrade pip --quiet
-if [ -f requirements.txt ]; then
-    .venv/bin/pip install -r requirements.txt
+echo "[5/10] 拷模型..."
+if [ -d "$KIT_DIR/models" ] && [ -d "$REPO_DIR" ]; then
+    cp -n "$KIT_DIR/models/"*.pt   "$REPO_DIR/" 2>/dev/null || true
+    cp -n "$KIT_DIR/models/"*.task "$REPO_DIR/" 2>/dev/null || true
+    pt_count=$(ls "$REPO_DIR"/*.pt 2>/dev/null | wc -l | xargs)
+    task_count=$(ls "$REPO_DIR"/*.task 2>/dev/null | wc -l | xargs)
+    echo "    ✓ 仓库根 .pt × $pt_count, .task × $task_count"
 else
-    echo "    ⚠ requirements.txt 不存在，装最小依赖集"
-    .venv/bin/pip install \
-        "fastapi[standard]" uvicorn opencv-python ultralytics \
-        mediapipe bleak numpy matplotlib pillow tomli httpx pytest
+    echo "    ⚠ 跳过（kit 缺 models/ 或仓库还没 clone）"
 fi
-echo "    ✓ venv 就绪"
 
-# ────────── 6/8: 拷模型 + 视频 ──────────
+# ────────── 6/10: 解压视频（idempotent，无网络）──────────
 echo ""
-echo "[6/8] 拷模型 + 解压视频..."
-if [ -d "$KIT_DIR/models" ]; then
-    cp "$KIT_DIR/models/"*.pt "$REPO_DIR/" 2>/dev/null || true
-    cp "$KIT_DIR/models/"*.task "$REPO_DIR/" 2>/dev/null || true
-    echo "    ✓ 模型已拷入仓库根"
-else
-    echo "    ⚠ kit 没带 models/ 目录，跳过"
-fi
-
-if [ -f "$KIT_DIR/videos/raw_videos.zip" ]; then
-    mkdir -p "$REPO_DIR/data/raw_videos"
+echo "[6/10] 解压 raw_videos..."
+if [ -f "$KIT_DIR/videos/raw_videos.zip" ] && [ -d "$REPO_DIR" ]; then
+    mkdir -p "$REPO_DIR/data"
     unzip -oq "$KIT_DIR/videos/raw_videos.zip" -d "$REPO_DIR/data/"
-    echo "    ✓ raw_videos 已解压: $(ls "$REPO_DIR/data/raw_videos" 2>/dev/null | wc -l | xargs) 段"
+    vid_count=$(ls "$REPO_DIR/data/raw_videos" 2>/dev/null | wc -l | xargs)
+    echo "    ✓ raw_videos: $vid_count 段"
 else
-    echo "    ⚠ kit 没带 videos/raw_videos.zip，跳过"
+    echo "    ⚠ 跳过（kit 缺 videos/ 或仓库还没 clone）"
 fi
 
-# ────────── 7/8: CVAT ──────────
+# ────────── 7/10: 桌面图标（idempotent，无网络）──────────
 echo ""
-echo "[7/8] 准备 CVAT（不启动，留给桌面图标）..."
-if [ ! -d "$CVAT_DIR/.git" ]; then
-    git clone --depth 1 https://github.com/cvat-ai/cvat "$CVAT_DIR"
-fi
-cd "$CVAT_DIR"
-export CVAT_HOST=localhost
-echo "    拉 CVAT 镜像（~5GB，5-10 分钟）..."
-docker compose pull 2>&1 | tail -3 || true
-echo "    ✓ CVAT 就绪（双击 2-start-cvat.command 才启动）"
-
-# ────────── 8/8: 桌面图标 ──────────
-echo ""
-echo "[8/8] 布置桌面图标..."
+echo "[7/10] 布置桌面图标..."
 if [ -d "$KIT_DIR/desktop" ]; then
-    cp "$KIT_DIR/desktop/"*.command "$DESK/"
+    cp "$KIT_DIR/desktop/"*.command "$DESK/" 2>/dev/null || true
     cp "$KIT_DIR/desktop/cheatsheet.html" "$DESK/" 2>/dev/null || true
-    chmod +x "$DESK/"*.command
+    chmod +x "$DESK/"*.command 2>/dev/null || true
     echo "    ✓ 桌面 3 图标 + cheatsheet"
 else
-    echo "    ⚠ kit 没带 desktop/ 目录，跳过桌面布置"
+    echo "    ⚠ 跳过（kit 缺 desktop/）"
 fi
 
-# ────────── 完成 ──────────
-cat <<DONE
+# ────────── 8/10: Python venv（idempotent）──────────
+echo ""
+echo "[8/10] Python venv..."
+if [ ! -d "$REPO_DIR" ]; then
+    echo "    ⚠ 跳过（仓库还没 clone）"
+else
+    PY311=""
+    if command -v python3.11 &>/dev/null; then
+        PY311="$(command -v python3.11)"
+    elif [ -x "$(brew --prefix)/opt/python@3.11/bin/python3.11" ]; then
+        PY311="$(brew --prefix)/opt/python@3.11/bin/python3.11"
+    fi
 
-============================================
-   ✅ 系统装机完成
+    if [ -z "$PY311" ]; then
+        FAILED+=("python3.11 not found")
+        echo "    ❌ 找不到 python3.11，先 brew install python@3.11"
+    elif [ -d "$REPO_DIR/.venv" ]; then
+        echo "    ✓ venv 已存在"
+    else
+        cd "$REPO_DIR"
+        if "$PY311" -m venv .venv; then
+            echo "    ✓ venv 创建成功（$PY311）"
+        else
+            FAILED+=("venv create")
+        fi
+    fi
+fi
+
+# ────────── 9/10: pip install（容错 — 失败不退出）──────────
+echo ""
+echo "[9/10] pip install 依赖..."
+if [ -d "$REPO_DIR/.venv" ]; then
+    cd "$REPO_DIR"
+    .venv/bin/pip install --upgrade pip --quiet 2>&1 | tail -3 || true
+
+    if [ -f requirements.txt ]; then
+        echo "    使用 requirements.txt..."
+        if .venv/bin/pip install -r requirements.txt; then
+            echo "    ✓ 依赖装好"
+        else
+            FAILED+=("pip install -r requirements.txt")
+            echo "    ⚠ pip 装失败 — 网络问题或包版本不兼容"
+            echo "    建议重跑本脚本，或 Emily 终端手动跑："
+            echo "        cd ~/syncswim-dashboard && git pull && .venv/bin/pip install -r requirements.txt"
+        fi
+    else
+        echo "    ⚠ requirements.txt 不存在，装最小依赖集"
+        if .venv/bin/pip install fastapi uvicorn opencv-python ultralytics \
+            mediapipe bleak numpy matplotlib pillow tomli httpx pytest; then
+            echo "    ✓ 最小依赖装好"
+        else
+            FAILED+=("pip install minimum set")
+        fi
+    fi
+else
+    echo "    ⚠ 跳过（venv 还没创建）"
+fi
+
+# ────────── 10/10: CVAT（容错）──────────
+echo ""
+echo "[10/10] 准备 CVAT..."
+if command -v docker &>/dev/null; then
+    if [ ! -d "$CVAT_DIR/.git" ]; then
+        if git clone --depth 1 https://github.com/cvat-ai/cvat "$CVAT_DIR"; then
+            echo "    ✓ CVAT clone 成功"
+        else
+            FAILED+=("git clone cvat")
+        fi
+    else
+        echo "    ✓ CVAT 仓库已存在"
+    fi
+
+    if [ -d "$CVAT_DIR/.git" ]; then
+        cd "$CVAT_DIR"
+        export CVAT_HOST=localhost
+        echo "    拉 CVAT 镜像（~5GB，5-10 分钟，慢可重跑）..."
+        if docker compose pull 2>&1 | tail -5; then
+            echo "    ✓ CVAT 镜像就绪"
+        else
+            FAILED+=("docker compose pull")
+            echo "    ⚠ docker pull 部分失败 — 重跑本脚本会续传"
+        fi
+    fi
+else
+    echo "    ⚠ docker 不可用，跳过 CVAT（先确保 OrbStack 启动）"
+    FAILED+=("docker not available")
+fi
+
+# ────────── 总结 ──────────
+echo ""
+echo "============================================"
+if [ ${#FAILED[@]} -eq 0 ]; then
+    cat <<'DONE'
+   ✅ 装机全部完成
 ============================================
 
 Emily 桌面应该有：
@@ -196,16 +268,26 @@ Emily 桌面应该有：
    cheatsheet.html            ← 标注速查表
 
 剩余 Tim 老师手动做（~10 分钟）：
-   1. 编辑 $REPO_DIR/config.toml：
+   1. 编辑 ~/syncswim-dashboard/config.toml：
       - camera_url = "http://<Emily 手机 IP>:4747/video"
       - ble_device_name + imu_nodes 改成她两块 M5 的名字
-   2. CVAT 浏览器配置（参考 README.md §3）：
-      - 双击 2-start-cvat.command 启动
-      - 浏览器开 http://localhost:8080
-      - 创建 emily 账号（写到 密码模板.txt）
-      - 建 project syncswim-detector-phase-a
-      - 建 task phase-a-150-frames + 上传 phase_a_frames_150.zip 解压的帧
+   2. CVAT 浏览器配置（如还没做）：参考 README.md §4
    3. 测试：双击 3-start-dashboard.command 看 dashboard 起来
-   4. 陪 Emily 标 5 帧示范
-
 DONE
+else
+    cat <<DONE
+   ⚠ 装机部分完成（${#FAILED[@]} 步失败）
+============================================
+
+失败的步骤：
+$(printf "  - %s\n" "${FAILED[@]}")
+
+✅ 已完成的步骤无需重做（脚本是 idempotent 的）。
+
+建议：
+  1. 检查上面失败的步骤的错误信息
+  2. 修好原因（通常是网络）
+  3. **重跑本脚本** — 已完成的会跳过，只重做失败的
+DONE
+fi
+echo ""
