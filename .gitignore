@@ -35,3 +35,15 @@ data/training/phase_*/labels_raw/
 data/training/phase_*/train.txt
 data/training/phase_*/val.txt
 runs/
+
+# macOS Finder metadata
+.DS_Store
+
+# Claude Code worktree registry (per-machine, never share)
+.claude/
+
+# Office temp lock files (~$foo.pptx when PowerPoint is open)
+~$*
+
+# Local lesson materials / course PPT — out-of-scope for this repo
+docs/lessons/
