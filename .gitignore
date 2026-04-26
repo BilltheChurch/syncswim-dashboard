@@ -47,3 +47,10 @@ runs/
 
 # Local lesson materials / course PPT — out-of-scope for this repo
 docs/lessons/
+
+# Dashboard runtime — auto-generated when first athlete is bound
+data/athletes.json
+
+# Emily kit packaging output (large, regenerated each build)
+emily_kit_*/
+emily_kit_*.zip
