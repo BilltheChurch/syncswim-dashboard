@@ -21,9 +21,12 @@
 # tells you nothing about generalization. See docs/phase-a-annotation.md
 # §"训练 / 验证集拆分".
 
-# Path resolved relative to the yaml file (ultralytics convention,
-# 2 levels up from the yaml file → repo root → data/training/phase_a).
-path: ../../data/training/phase_a
+# ultralytics resolves `path` as `<yaml_parent>/<path>`. Since this
+# YAML already lives in data/training/phase_a/, the dataset root IS
+# the YAML's parent directory — use "." (NOT "../../data/training/
+# phase_a", which Codex review caught: that resolves to data/data/
+# training/phase_a and breaks train/val.txt lookups).
+path: .
 train: train.txt
 val: val.txt
 

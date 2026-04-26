@@ -128,9 +128,15 @@ def main():
         print(f"        drop .mp4/.mov files there first")
         sys.exit(1)
 
-    videos: list[Path] = []
-    for ext in (".mp4", ".mov", ".avi", ".mkv"):
-        videos.extend(args.raw.glob(f"*{ext}"))
+    # Case-insensitive suffix match — iPhone exports .MOV (uppercase),
+    # GoPro mixes cases per firmware. Codex P2 caught this: lowercase-
+    # only glob silently skipped IMG_1234.MOV files on case-sensitive
+    # filesystems (Linux / case-sensitive APFS volumes).
+    extensions = {".mp4", ".mov", ".avi", ".mkv"}
+    videos: list[Path] = sorted(
+        p for p in args.raw.iterdir()
+        if p.is_file() and p.suffix.lower() in extensions
+    )
     if not videos:
         print(f"[error] no videos found in {args.raw}")
         sys.exit(1)
