@@ -1,0 +1,347 @@
+# Phase A — 检测器（bbox）微调标注指南
+
+> 阶段 9.1 产出。先把 ~150 帧花泳运动员的 bbox 标好 → 训练专用 detector → 解决 dogfood 暴露的 19.8× ID 暴增问题。
+>
+> Phase B（关键点头微调）放到 `docs/fine-tuning.md`，本指南只管 bbox。
+
+## 为什么先做 Phase A
+
+DEVLOG #33 量化了 dogfood 结果：5 个运动员的 90 秒视频被 YOLO COCO 检测出 99 个不同的 track ID（19.8× 暴增）。根本原因不是 tracker 烂，而是**检测器召回率太低**：
+
+- COCO YOLO 没见过水中花泳，水花、半身入水、泳帽几乎全 miss
+- 检测器一会儿检到、一会儿丢，BYTETracker 拿不到连续观测就会"开新 ID"
+- 哪怕用 `imgsz 1280 + conf 0.15` 的 trick 也只能从 ~7% 召回拉到 ~30%
+
+Phase A 用 ~150 帧自定义标注，把单类 detector 训到 mAP@50 ≥ 0.70，预期：
+
+- 召回 70%+ → 同一个运动员能被连续检测到
+- BYTETracker 拿到稳定观测 → ID 几乎不漂
+- 关键点暂时还是 COCO 通用的 — 还有问题，但比 ID 乱跳容易容忍很多
+- Phase B（之后另起 PR）再训关键点头
+
+**预期工作量**：
+| 步骤 | 自动 / 人工 | 时长 |
+|---|---|---|
+| 抽帧 | 自动 | ~10 秒 |
+| CVAT 上传 + 项目搭建 | 人工 | ~10 分钟（首次）/ ~3 分钟（之后） |
+| **bbox 标注 ~150 帧** | **人工（最关键）** | **1-2 小时** |
+| 拆分训练 / 验证集 | 自动（一行 ls） | ~10 秒 |
+| 训练 | 自动 | M2 16GB 上 ~30 分钟 |
+| 验证 + 上线 | 半自动 | ~5 分钟 |
+
+合计：**人工占 1-2 小时**，机器跑 30 分钟。一个晚上能做完。
+
+---
+
+## 第 0 步：准备帧
+
+```bash
+# 把训练视频放到 data/raw_videos/（已经有 3 个 clip 了）
+ls data/raw_videos/
+# clip_horizontal.mp4
+# clip_portrait_1.mp4
+# clip_portrait_2.mp4
+
+# 抽帧（每个视频抽 50 帧，3 × 50 = 150）
+python tools/extract_frames.py --per-video 50
+
+# 输出在 data/training/phase_a/frames/
+# 文件名：clip_horizontal_f000123.jpg
+ls data/training/phase_a/frames/ | head
+```
+
+参数：
+- `--per-video 50`：每个视频均匀抽 50 帧（不是每 N 帧抽 1 帧 — 均匀分布跨整个 clip 多样性更好）
+- `--edge-skip-pct 0.03`：丢掉首尾 3%（fade-in/out + 还没下水的镜头）
+
+**为什么不预标注？** 我们已经知道 COCO YOLO 在花泳上召回 ~7%，预标注会漏掉 93%，标注员还得手画 — 等于双倍工作量。Phase A 直接从空白画 bbox 反而快。
+
+---
+
+## 第 1 步：选 CVAT 部署方式
+
+| 方式 | 优点 | 缺点 | 推荐 |
+|---|---|---|---|
+| **本地 Docker**（推荐） | 数据不离开本机，无肖像权风险 | 首次装 ~15 分钟 | ⭐ 默认选这个 |
+| 云端 cvat.ai 免费版 | 5 分钟开干 | 视频会上传到云 — 必须确认所有出现的运动员都签过授权 | 仅在测试时用 |
+| Label Studio | 同样能干 | 关键点支持差，bbox 还行 | 有总统大人偏好可选 |
+
+### 本地 CVAT（首次安装）
+
+```bash
+git clone https://github.com/cvat-ai/cvat
+cd cvat
+export CVAT_HOST=localhost
+docker compose up -d
+
+# 创建超级用户
+docker exec -it cvat_server bash -ic 'python3 ~/manage.py createsuperuser'
+# 用户名: admin，邮箱随便，密码自己定
+
+# 浏览器打开
+open http://localhost:8080
+```
+
+之后每次开机：
+```bash
+cd ~/cvat && docker compose up -d   # ~30 秒启动
+open http://localhost:8080
+```
+
+---
+
+## 第 2 步：建 CVAT 项目
+
+1. 登录后右上角 **+** → **Create new project**
+2. Project name: `syncswim-detector-phase-a`
+3. Labels:
+   - 点 **Add label**
+   - Label name: `person`
+   - Type: **Rectangle**（bbox，不是 polygon、不是 skeleton）
+   - 颜色：随便，建议红色
+4. **Submit & Open**
+
+---
+
+## 第 3 步：上传帧
+
+1. 项目页 → 右下 **+** → **Create new task**
+2. Task name: `syncswim-150-frames`
+3. **Select files** → **My computer** → 把 `data/training/phase_a/frames/` 目录里**所有 jpg** 一起拖进去（Cmd+A 全选）
+   - 不要打 zip — CVAT 直接吃文件夹
+   - 150 张 jpg ~30MB，1 秒上传
+4. Advanced configuration（保持默认就行）：
+   - Image quality: `70` ✓
+   - Chunk size: `36` ✓
+   - Sorting: `lexicographical` ✓（按文件名排，相邻帧相邻）
+5. **Submit**
+6. 等 ~30 秒处理完，点 task → **Job #1** 进入标注界面
+
+---
+
+## 第 4 步：标注规则（**最关键，认真读**）
+
+### 标 / 不标
+
+✅ **要标**：
+- 任何**正在练习的花泳运动员**，哪怕只露出脚 / 手 / 头
+- 半身入水的运动员（按可见部分标，不要猜不可见的）
+- 水下若隐若现的运动员（边缘估计 ± 10px 可接受）
+- 多人重叠 — **每人一个独立 bbox**，IoU 高没关系（YOLO 训练时会处理）
+
+❌ **不要标**：
+- 教练（站在岸边）
+- 观众
+- 路过的工作人员
+- 岸边的器材、椅子
+- 队友的影子或反射
+
+### bbox 怎么画
+
+- **紧贴可见身体**：上下左右各留 ~3px buffer，不要过松（YOLO 学到的是 box 中心 + 尺寸，松散 box 等于偷换数据分布）
+- 露出多少标多少 — 模型需要学会"只露脚也是一个人"
+- 半透明水下：估边界，肉眼看不清的部位不要硬补出框
+
+### CVAT 快捷键（背下来能快 3×）
+
+| 键 | 动作 |
+|---|---|
+| **N** | 新建 bbox（按下后拖出矩形） |
+| **D** | 复制当前帧选中 bbox 到下一帧（同一运动员位置变化小时神器） |
+| **F** | 下一帧 |
+| **D**（in propagate mode） | 自动延伸到 N 帧后 |
+| **Tab** | 在 bbox 之间切换 |
+| **Delete** | 删除选中 bbox |
+| **Ctrl+S** | 保存（CVAT 也每 30s 自动保存） |
+| **Esc** | 取消当前操作 |
+
+### 节奏建议
+
+- 一帧一帧画太慢。**一次画 4-5 个 bbox（同帧所有运动员）→ F 跳下一帧 → 修正大致位置**
+- 如果运动员位置基本没动（很多花泳定姿持续 1-2 秒）：选中 bbox → **D** 复制到下一帧 → 微调
+- 累了就停，CVAT 自动保存，下次接着干
+
+预期速度：**前 30 帧 ~1 分钟/帧（适应期），之后 ~20 秒/帧**。150 帧总计 1-2 小时。
+
+---
+
+## 第 5 步：导出标注
+
+1. 项目页 → **Actions** → **Export task dataset**
+2. Export format: **YOLO 1.1**
+3. ✗ **Save images**（不要勾，节省 30MB 而且我们已经有原图了）
+4. 点击下载，得到 `task_syncswim-150-frames.zip`
+
+解压：
+```bash
+unzip ~/Downloads/task_syncswim-150-frames.zip \
+      -d data/training/phase_a/labels_raw/
+# CVAT 的 YOLO 1.1 zip 里 labels 在 obj_train_data/ 子目录
+mv data/training/phase_a/labels_raw/obj_train_data/*.txt \
+   data/training/phase_a/labels/
+rm -rf data/training/phase_a/labels_raw/
+```
+
+验证：
+```bash
+ls data/training/phase_a/labels/ | wc -l    # 应该约等于 150
+head -1 data/training/phase_a/labels/clip_horizontal_f000123.txt
+# 0 0.512345 0.678901 0.123456 0.234567
+# (class cx cy w h，全部归一化到 [0,1])
+```
+
+如果看到 `0 0.5 0.5 0.1 0.1` 这种整齐数字，说明 bbox 没正确标注（可能选了"导出空标"）—  回 CVAT 检查。
+
+---
+
+## 第 6 步：拆分 train / val
+
+**死规矩：val 必须是训练集没见过的视频**。如果把 `clip_portrait_1` 的相邻帧分到两边，val mAP 会虚高 30%，毫无参考价值。
+
+我们 3 个 clip：
+- `clip_horizontal.mp4` → **val**（横屏 + 不同视角，最适合做 hold-out）
+- `clip_portrait_1.mp4` → train
+- `clip_portrait_2.mp4` → train
+
+```bash
+cd data/training/phase_a
+
+# val.txt：clip_horizontal 的全部帧
+ls frames/clip_horizontal_*.jpg | sed 's|^|./|' > val.txt
+
+# train.txt：除此之外的全部帧
+ls frames/clip_portrait_1_*.jpg frames/clip_portrait_2_*.jpg \
+   | sed 's|^|./|' > train.txt
+
+# 检查
+wc -l train.txt val.txt
+# 100 train.txt
+#  50 val.txt
+```
+
+> **注意**：`./` 前缀让 ultralytics 从 `swimmer_det.yaml` 的 `path:` 字段（`../../data/training/phase_a`）开始解析。
+
+---
+
+## 第 7 步：训练
+
+```bash
+python tools/train_detector.py
+```
+
+默认参数（已针对水中场景优化）：
+- `epochs=80` — 150 帧 × 80 epoch ≈ 12000 step，小数据集合适
+- `imgsz=1280` — DEVLOG #33 实证：水中小目标在 640 下消失，1280 下能稳检
+- `batch=8` — M2 16GB 上限（1280 imgsz 比 640 多用 4× 显存）
+- `device=mps` — Apple Metal；NVIDIA 加 `--device cuda`
+
+M2 16GB 训练时间：~30 分钟。期间可以去喝咖啡。
+
+训练完输出：
+```
+runs/detect/swimmer_det_v1/
+├── weights/
+│   ├── best.pt    ← 这是要用的
+│   └── last.pt
+├── results.png   ← loss / mAP 曲线
+├── PR_curve.png  ← 精度-召回曲线
+└── val_batch0_pred.jpg  ← 验证集第一批的预测可视化（**先看这个**）
+```
+
+第一时间打开 `val_batch0_pred.jpg` —— 如果框基本贴脸，训练成功；如果框乱飞，回去检查标注。
+
+---
+
+## 第 8 步：验证
+
+```bash
+python tools/eval_detector.py
+```
+
+输出：
+```
+[trained]
+  mAP@50      : 0.7842
+  mAP@50-95   : 0.5311
+  recall      : 0.8124
+
+[baseline yolov8s.pt at imgsz 1280]
+  mAP@50      : 0.0834   ← 在花泳上几乎瞎
+  recall      : 0.0721
+
+[delta]
+  mAP@50      : +0.7008
+  recall      : +0.7403   ← 这就是我们要的
+
+[verdict]
+  ✅ mAP@50 = 0.7842 ≥ 0.70 — Phase A target hit.
+```
+
+判定：
+- **mAP@50 ≥ 0.70** → 上线，开 PR
+- **0.50 ≤ mAP@50 < 0.70** → 能用但 ID 还是会稍漂，**再标 50-100 帧**重训
+- **mAP@50 < 0.50** → 标注质量有问题，重看 §第 4 步规则
+
+---
+
+## 第 9 步：上线到 dashboard
+
+编辑 `config.toml`：
+```toml
+[hardware]
+swimmer_detector = "runs/detect/swimmer_det_v1/weights/best.pt"
+```
+
+重启 dashboard：
+```bash
+# 在你的终端里（不是 claude 沙箱）
+python -m fastapi_app
+```
+
+`fastapi_app/yolo_pose.py` 会自动检测到新参数，加载混合模式：
+- **bbox 检测**：用你刚训的 `best.pt`（高召回）
+- **关键点**：还是用 `yolov8s-pose.pt`（COCO 通用，等 Phase B 替换）
+
+---
+
+## 数据隐私
+
+- `data/raw_videos/`、`data/training/phase_a/frames/`、`data/training/phase_a/labels/`、`runs/` 都已在 `.gitignore` — 视频和帧不会被提交
+- **本地 CVAT 强烈推荐** — 云端 cvat.ai 免费版会把视频上传到第三方
+- 如果一定要用云端：先在出现的所有运动员身上获得书面授权
+- 训练好的 `best.pt` 是模型权重，**不含原图**，理论上可分享 — 但花泳社群是熟人圈，建议保密
+
+---
+
+## 常见坑
+
+| 现象 | 原因 | 修复 |
+|---|---|---|
+| `train.txt` 里有 jpg 文件名但 `.txt` 标注找不到 | CVAT 跳过了无标注的帧 | 删掉 `train.txt` 里对应行（或用 `find` 自动配对） |
+| 训练 loss 一直高，mAP 不动 | 标注质量太差（框很松、框错对象） | 抽 10% 帧人工 review，统一标注规范 |
+| `val_batch0_pred.jpg` 全是虚警 | val 集和 train 集分布差太远 | 改用同一池子但不同时段的视频做 val |
+| `mps` 报错 OOM | imgsz 1280 + batch 8 超 16GB | 降到 `--batch 4 --imgsz 960` |
+| CVAT 上传 jpg 后看不到图 | 文件名包含中文或特殊字符 | 重命名（extract_frames.py 输出本身是纯 ASCII，应该没事） |
+
+---
+
+## 相关文件
+
+- `tools/extract_frames.py` — 抽帧脚本（本指南第 0 步）
+- `tools/train_detector.py` — 训练脚本（本指南第 7 步）
+- `tools/eval_detector.py` — 验证脚本（本指南第 8 步）
+- `data/training/phase_a/swimmer_det.yaml` — 数据集配置
+- `fastapi_app/yolo_pose.py` — 生产推理路径（本指南第 9 步上线点）
+- `docs/fine-tuning.md` — Phase B（关键点头微调），等 Phase A 落地后再做
+- DEVLOG #33 — 为什么必须 fine-tune 的实证
+- DEVLOG #34 — Phase A 工具链落地（本 PR）
+
+## 时间表
+
+- [x] 9.1.0 工具链 + 文档（本 PR）
+- [ ] 9.1.1 总统大人本周内完成 ~150 帧标注（**1-2 小时人工**）
+- [ ] 9.1.2 跑训练（~30 分钟自动）
+- [ ] 9.1.3 验证 mAP ≥ 0.70（~5 分钟）
+- [ ] 9.1.4 上线 + dashboard 实测（开新 PR）
+- [ ] 9.2 Phase B 关键点头微调（之后另开 PR）
+- [ ] 9.3 数据扩充（5-10 个新池子的视频，跨 venue 验证）

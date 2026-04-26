@@ -18,8 +18,8 @@ yolov8n-pose.pt
 *.pt
 *.task
 
-# YOLO fine-tuning data (phase 7.4) — videos / extracted frames /
-# training runs are huge, user-supplied, and often subject to
+# YOLO fine-tuning data (phase 7.4 + phase 9 A/B) — videos / extracted
+# frames / training runs are huge, user-supplied, and often subject to
 # athlete-likeness rights. Keep configs (.yaml) in-repo, everything
 # else stays local.
 data/raw_videos/
@@ -27,4 +27,11 @@ data/training/images/
 data/training/labels/
 data/training/train.txt
 data/training/val.txt
+# Phase 9.x — phase_a/, phase_b/ subdirs follow the same shape; only
+# the swimmer_det.yaml / pose.yaml configs go in repo.
+data/training/phase_*/frames/
+data/training/phase_*/labels/
+data/training/phase_*/labels_raw/
+data/training/phase_*/train.txt
+data/training/phase_*/val.txt
 runs/

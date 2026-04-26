@@ -69,6 +69,13 @@ pose_backend = "yolo"
 yolo_model = "yolov8n-pose.pt"    # "yolov8n-pose.pt" (6MB, fast) or "yolov8s-pose.pt" (22MB, more accurate)
 yolo_conf = 0.35                   # detection confidence threshold
 yolo_device = "mps"                # "mps" (Apple Metal), "cuda", or "cpu"
+yolo_imgsz = 640                   # inference resolution. 640 = realtime; 1280 = better small-target recall (~4× cost)
+# Phase A optional: path to a custom-trained YOLOv8s DETECTOR (bbox-only,
+# trained on swim frames per docs/phase-a-annotation.md). When set, the
+# pipeline switches to hybrid mode — custom detector for bboxes (high
+# recall on water) + the yolo_model above for keypoints. Leave commented
+# out until you've trained one with `python tools/train_detector.py`.
+# swimmer_detector = "runs/detect/swimmer_det_v1/weights/best.pt"
 # MediaPipe pose model size: "heavy" (30 MB, highest accuracy),
 # "full" (10 MB, balanced), or "lite" (6 MB, fastest). Only used when
 # pose_backend = "mediapipe".

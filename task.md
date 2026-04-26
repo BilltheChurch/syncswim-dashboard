@@ -285,13 +285,32 @@ data/
 
 ### 9.1 Phase A — bbox detector fine-tune
 **目标**：召回率 36% → >70%。
-- [ ] 抽 ~150 帧（3 视频 × 每 15 帧 1 抽）
-- [ ] 在 CVAT 只标 bbox（"水里露出的人形"），不标 keypoints
-- [ ] train YOLOv8s **detect**（不是 pose），50-100 epochs，imgsz=1280
-- [ ] holdout 1 视频做 val（避免同视频相邻帧分两边导致 mAP 虚高 — DEVLOG #28）
-- [ ] 对比 mAP@50：fine-tuned vs `yolov8s-pose.pt` baseline
-- [ ] 落地：用新 detector 替换 yolo_pose 的 detect 部分（保留 yolov8s-pose 的 keypoint head）
-- [ ] 重 import 3 视频，看 ID 通胀降到多少
+
+#### 9.1.0 工具链 + 标注文档 — PR #8 ✅
+- [x] `tools/extract_frames.py`：均匀抽帧（每视频 N 帧，跳首尾 3% fade，无 inference）
+- [x] `tools/train_detector.py`：YOLOv8s detect-only 微调封装（默认 imgsz=1280, batch=8, epochs=80, 池子调优 augmentation）
+- [x] `tools/eval_detector.py`：与 baseline `yolov8s.pt` 同 val 对比，mAP@50 / 召回 / mAP@50-95，自动判定 ≥0.70 ✅
+- [x] `data/training/phase_a/swimmer_det.yaml`：单类 detection（无 kpt_shape），路径相对约定
+- [x] `fastapi_app/yolo_pose.py` 加 `HybridSwimmerDetector`（自训 detector + COCO keypoints）+ `create_pose_detector(...)` factory
+- [x] `camera_manager.py` + `tools/import_video.py` 切换为 factory；`config.toml` 新增 `swimmer_detector` 注释项 + `yolo_imgsz`
+- [x] `docs/phase-a-annotation.md`：CVAT 本地 Docker 部署、bbox 标注规则、快捷键、train/val 拆分约定、上线步骤、常见坑
+
+#### 9.1.1 标注（**人工 1-2 小时**）— 总统大人本周
+- [ ] `python tools/extract_frames.py --per-video 50` → `data/training/phase_a/frames/` ~150 jpg
+- [ ] 本地 CVAT Docker 拉起来 + 建项目 `syncswim-detector-phase-a` + 上传帧
+- [ ] 标 ~150 帧 bbox（每个运动员 1 框，露出多少标多少；不标观众/教练）
+- [ ] Export YOLO 1.1 → 解压到 `data/training/phase_a/labels/`
+- [ ] 一行 `ls` 生成 train.txt + val.txt（hold-out 整个 `clip_horizontal`）
+
+#### 9.1.2 训练 + 验证（自动 ~30 min）
+- [ ] `python tools/train_detector.py` → `runs/detect/swimmer_det_v1/weights/best.pt`
+- [ ] `python tools/eval_detector.py` → 看 mAP@50 是否 ≥ 0.70
+- [ ] 不达标：再标 50-100 帧重训；< 0.50：检查标注规范
+
+#### 9.1.3 上线 + 实测（开新 PR）
+- [ ] `config.toml` 取消注释 `swimmer_detector = "runs/detect/.../best.pt"`
+- [ ] 重新 import 3 dogfood 视频，看 ID 通胀从 19.8× 降到多少（期望 ≤ 3×）
+- [ ] 浏览器分析页对比 set_002 (PR #7) vs set_新 (PR #8 后)，截图入 DEVLOG
 
 ### 9.2 Phase B — keypoint head fine-tune
 **目标**：让 keypoint 落到水里运动员**真实位置**（不是 COCO 模型猜的水下幻象）。

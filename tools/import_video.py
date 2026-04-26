@@ -169,6 +169,13 @@ def main():
         "--rotate", type=int, choices=[0, 90, 180, 270], default=0,
         help="Rotate frames clockwise (use 90 for portrait phone footage)",
     )
+    parser.add_argument(
+        "--swimmer-detector", type=str, default=None,
+        help="Path to a custom-trained YOLOv8 detector (e.g. "
+             "runs/detect/swimmer_det_v1/weights/best.pt). When set, "
+             "uses HybridSwimmerDetector: custom bbox detector + "
+             "COCO pose keypoints. See docs/phase-a-annotation.md.",
+    )
     args = parser.parse_args()
 
     src = args.video
@@ -192,11 +199,16 @@ def main():
     print(f"[+] set dir: {set_dir}")
     print(f"    source: {src.name} ({src_frame_count} frames @ {src_fps:.1f} fps)")
 
-    # Lazy-import the detector so `--help` works without ultralytics
-    from fastapi_app.yolo_pose import YoloPoseDetector
-    det = YoloPoseDetector(
-        model_path=args.model, conf=args.conf,
-        max_persons=args.max_persons, device=args.device,
+    # Lazy-import the detector so `--help` works without ultralytics.
+    # create_pose_detector picks HybridSwimmerDetector if --swimmer-detector
+    # is set, else falls back to single-model YoloPoseDetector.
+    from fastapi_app.yolo_pose import create_pose_detector
+    det = create_pose_detector(
+        swimmer_detector_path=args.swimmer_detector,
+        pose_model_path=args.model,
+        conf=args.conf,
+        max_persons=args.max_persons,
+        device=args.device,
         imgsz=args.imgsz,
     )
     # Reset BYTETracker state — same reason live recording does it

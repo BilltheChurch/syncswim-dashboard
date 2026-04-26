@@ -2760,4 +2760,98 @@ zero-cost trick 的天花板是**详尽利用 COCO 模型现有能力**。要把
 
 ---
 
+## 问题 #34：Phase A 工具链 — "把 1-2 小时的人工活做成可执行剧本"
+
+### 背景
+DEVLOG #33 把"必须 fine-tune"从直觉变成数字（19.8× ID 通胀）。决策做完，下一个问题是：**总统大人坐下来标注那一刻，他能不能立刻开干？**
+
+如果工具链没准备好：
+
+1. 没有抽帧脚本 → 总统得手写一个
+2. 没有 train/val 拆分约定 → 同视频相邻帧分两边，val mAP 虚高 30%（DEVLOG #28 的旧账，每个新人都会踩）
+3. 没有 detector 训练脚本 → 总统得现学 ultralytics CLI 参数，调出 1280 imgsz / batch 8 这些 dogfood 验证过的甜蜜点
+4. 没有上线 hook → 训出 best.pt 后还得自己改 yolo_pose.py 让它生效
+
+任何一步缺失，**1-2 小时的标注活会膨胀成 3-4 小时的"标注 + 摸索"**。本 PR (#8) 把所有"非标注"步骤都做成 `python tools/xxx.py` 一行命令，让总统大人的时间 100% 花在唯一不能自动的环节：**画框**。
+
+### 关键设计决策
+
+#### 1. 抽帧脚本不做预标注
+现成的 `tools/preannotate.py`（Phase 7.4 产物）会用 COCO YOLO 跑预标 → 人工修正。看似省事，但 #33 已经量化：COCO 在水中花泳召回 ~7%。预标 = 漏掉 93% 的运动员。**总统看着空白预标的图反而要花更多时间确认"是真没人还是模型瞎"**。
+
+新的 `tools/extract_frames.py` **只抽帧不推理**：
+- 每视频均匀采样 N 帧（默认 50），跨整个 clip 而不是每 N 帧 1 抽 — 多样性最大化
+- 跳首尾 3%（fade-in/out + 还没下水的镜头）
+- 输出 ~10 秒，比 preannotate 快 10×（无模型 load）
+
+教训：**当 baseline 在你的目标域下烂到一定程度，"半监督"反而是负担，不如让人从空白干净地画**。
+
+#### 2. detection-only YAML 必须和 pose YAML 物理隔开
+存在的诱惑：复用 `data/training/syncswim.yaml`，加个 flag 让训练脚本忽略 keypoint 部分。
+
+否决理由：
+
+- ultralytics 的 detection / pose 走两套不同的 metric pipeline，混合配置容易触发隐藏 bug
+- Phase A / Phase B 的标签格式不同（A 只有 `class cx cy w h`，B 有 17 个 kp），硬塞一个文件会让两边训练时都要做 label rewrite
+- **配置文件的"复用"几乎总是错配 — 物理隔开 1 KB 的 yaml 比每次 debug 标签格式不一致省 30 分钟**
+
+新建 `data/training/phase_a/swimmer_det.yaml`，单一职责：detection。Phase B 之后会建 `phase_b/` 平行目录。
+
+#### 3. HybridSwimmerDetector 用 crop-then-pose 而不是 keypoint head 替换
+最直觉的方案：**训完 detector，把它的检测头权重塞进 yolov8s-pose.pt 替换原 detect head**。一个模型，一次推理，性能最优。
+
+否决理由（试过 Phase 7.4 期间，吃过亏）：
+
+- ultralytics 的 detect head 和 pose head 共享 backbone 输出，但 head 自身的 channel 数 / anchor 配置可能不一致 → 直接覆盖权重容易触发尺寸不匹配，要手写 layer-by-layer surgery
+- 即使 surgery 成功，运行时一旦 ultralytics 升版本，权重组装方式变了，整个 hack 直接挂 — 没法长期维护
+
+最终方案：**两个独立模型，串行调用**：
+
+1. 自训 detector `.track(persist=True)` → bboxes + BYTETracker IDs（高召回 → 稳定 ID，**这就是 Phase A 的全部价值**）
+2. 对每个 bbox 裁剪 frame → 在裁剪图上 `pose_model.predict(max_det=1)` → 17 keypoints
+3. 把裁剪坐标系的 kp 还原到全帧坐标系
+
+代价：每帧从 1 次推理变成 N+1 次。5 个运动员 = 6× wall-time。
+
+为什么可接受：
+
+- Phase A 的目标用户是 **离线 import**（dogfood 调参 + 教练复盘），不是实时录制
+- 实时录制走 `YoloPoseDetector`（单模型），不受影响 — config.toml 的 `swimmer_detector` 默认注释掉
+- crop-then-pose 还有个隐性收益：**pose 模型在裁剪图上比在全帧上工作得更好**，因为运动员占据更多像素，ankle / wrist 这种小特征召回率提升
+
+#### 4. factory 模式而不是子类
+最初草稿是让 `HybridSwimmerDetector` 继承 `YoloPoseDetector`。
+
+否决：两个类的 `__init__` 签名差异大（一个吃 1 个 model_path，一个吃 2 个）。子类化让接口又复杂又脆弱。
+
+最终：**`create_pose_detector(...)` factory** 在 `swimmer_detector_path` 存在时返回 Hybrid，否则返回 single。两个调用点（`camera_manager.py` + `tools/import_video.py`）只关心"我要一个能 `.detect()` + `.reset_tracking()` 的对象"，duck typing 足够。
+
+教训：**继承用来表达"is-a"，但 Hybrid 不是 single 的特化，是另一种设备**。factory 比继承贴合语义。
+
+#### 5. 标注文档先写"判定标准"再写"操作步骤"
+最初草稿是按 CVAT 操作流程线性写：装 Docker → 建项目 → 上传 → 标注 → 导出。
+
+改稿原因：**总统大人标到第 30 帧时一定会停下来问"这种半身入水的我标不标？"** 如果答案藏在文档第 7 步里，他要么不标（数据漏），要么瞎标（数据脏）。
+
+最终结构：
+- 第 4 步标注规则（**最重要**）放在 CVAT 操作之前的位置，并明确放出 ✅ / ❌ 列表
+- 每个边缘 case 都有具体例子（半身入水 / 水下肢体 / 教练 / 反射）
+- bbox 紧贴/松散的判定 + buffer 像素值
+- CVAT 快捷键单独成表（节奏建议：D 键复制上一帧的 bbox 是花泳定姿场景的神器）
+
+教训：**任何"人在循环"的工具，文档的难点不是怎么用，而是用的时候怎么判断**。前者是搜索就能解决的，后者是文档存在的核心理由。
+
+### 一行总结
+**让人工活的入口尽量窄、尽量明确**。如果总统大人 1-2 小时能搞定 150 帧标注 → 训练 → 看到 mAP ≥ 0.70 的绿色 ✅，整个 Phase A 闭环走完，那本 PR 就成功了。
+
+### 路线图
+- [x] 9.1.0 工具链 + 文档（本 PR #8）
+- [ ] 9.1.1 总统大人完成 ~150 帧标注
+- [ ] 9.1.2 train + eval，看 mAP
+- [ ] 9.1.3 上线 dashboard，重 import 3 视频对比 ID 通胀（开新 PR）
+- [ ] 9.2 Phase B keypoint head 微调
+- [ ] 9.3 数据扩充（5-10 段新池子视频）
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。
