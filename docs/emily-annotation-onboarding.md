@@ -104,9 +104,15 @@ docker compose up -d   # ~30 秒
 
 **节奏建议**：
 - 前 30 帧最慢（适应期，每帧 ~1 分钟）
-- 之后用 **D 键复制上一帧 bbox**（花泳定姿场景神器），能跑到 ~20 秒/帧
+- 之后熟练了能跑到 ~20 秒/帧
 - 累了就停，CVAT 自动保存
 - 每标 30 帧休息 5 分钟（眼睛会累）
+
+**关键操作提醒**（详见 `docs/phase-a-annotation.md` 实测快捷键表）：
+- 画 bbox 前**必须先在左侧工具栏点中矩形 ▢ 图标**，否则按 N 会开 Intelligent Scissors（多边形剪刀，不是 bbox）
+- 弹窗里 Drawing method 选 **By 2 Points**（不是 4 Points）
+- 模式选 **Shape**（不是 Track）— Track 会跨帧自动插值，但我们的帧是 5 秒间隔抽的，插值出来全错
+- F = 下一帧，D = 上一帧（CVAT 2.x 改了语义，**D 不再是"复制 bbox"**）
 
 ---
 
