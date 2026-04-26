@@ -170,8 +170,8 @@ data/
 **前提共识**：阶段六的 UI 全部基于离线想象 + 论文先验设计，没有真实泳池数据校验。所以本阶段的隐藏前置是 **7.0 真实数据采集**，第一场实训只囤素材不分析。
 
 ### 7.0 真实训练数据采集（推后到 7.2/7.3/7.4 准备工作完成后）
-> 总统大人决定：先把 7.2/7.3/7.4 完整跑通，再上传一些已有的真实训练视频做实地验证 + YOLO 微调。
-- [ ] 总统上传若干已录制的真实训练视频到 `data/raw_videos/`
+> Tim 老师决定：先把 7.2/7.3/7.4 完整跑通，再上传一些已有的真实训练视频做实地验证 + YOLO 微调。
+- [ ] Tim 老师上传若干已录制的真实训练视频到 `data/raw_videos/`
 - [ ] 整理 fine-tuning 流程文档（半监督预标注 → CVAT 修正 → ultralytics 训练 → OKS 评估）—— 由 7.4 一起产出
 
 ### 7.1 多人独立追踪（ByteTrack） — PR #2 ✅
@@ -295,7 +295,7 @@ data/
 - [x] `camera_manager.py` + `tools/import_video.py` 切换为 factory；`config.toml` 新增 `swimmer_detector` 注释项 + `yolo_imgsz`
 - [x] `docs/phase-a-annotation.md`：CVAT 本地 Docker 部署、bbox 标注规则、快捷键、train/val 拆分约定、上线步骤、常见坑
 
-#### 9.1.1 标注（**人工 1-2 小时**）— 总统大人本周
+#### 9.1.1 标注（**人工 1-2 小时**）— Tim 老师本周
 - [ ] `python tools/extract_frames.py --per-video 50` → `data/training/phase_a/frames/` ~150 jpg
 - [ ] 本地 CVAT Docker 拉起来 + 建项目 `syncswim-detector-phase-a` + 上传帧
 - [ ] 标 ~150 帧 bbox（每个运动员 1 框，露出多少标多少；不标观众/教练）
@@ -319,8 +319,8 @@ data/
 - [ ] freeze backbone + detect head，只训 pose head
 - [ ] 验证：`leg_deviation` / `knee_extension` 这些指标在 dogfood 视频上是否给出合理数值（不再是 NaN/0）
 
-### 9.3 数据扩充（依赖总统大人现场补素材）
-- [ ] 总统下次去泳池录 5-10 段，覆盖：不同时段、不同泳池、不同动作（ballet leg / barracuda / 转体 / 出水）
+### 9.3 数据扩充（依赖 Tim 老师现场补素材）
+- [ ] Tim 老师下次去泳池录 5-10 段，覆盖：不同时段、不同泳池、不同动作（ballet leg / barracuda / 转体 / 出水）
 - [ ] 重新跑 9.1 + 9.2 → 期望 mAP 大幅提升 + 真正可用的 generalize
 
 ## 硬件配置

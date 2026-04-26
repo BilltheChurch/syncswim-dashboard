@@ -2,9 +2,9 @@
 
 > 本指南给**Emily**（或任何加入花泳数据集标注的伙伴）。
 > 主指南是 `docs/phase-a-annotation.md`（标注规则 / 操作）— 本指南补
-> "在自己的电脑上从零搭起来 + 把标注结果交回总统大人"。
+> "在自己的电脑上从零搭起来 + 把标注结果交回 Tim 老师"。
 >
-> 总指挥（总统大人）的 onboarding 见主指南；Emily 直接看本文即可。
+> 总指挥（Tim 老师）的 onboarding 见主指南；Emily 直接看本文即可。
 
 ---
 
@@ -26,7 +26,7 @@
 
 ## 2. 拿到代码 + 视频 + 帧（~5 分钟）
 
-总统大人会把以下三样发给你（推荐用网盘 / AirDrop / 微信文件传输）：
+Tim 老师会把以下三样发给你（推荐用网盘 / AirDrop / 微信文件传输）：
 
 1. **`syncswim-dashboard` 代码仓库的访问权限**
    ```bash
@@ -36,10 +36,10 @@
    ```
 
 2. **`phase_a_frames.zip`（~30 MB，~150 张 jpg）**
-   总统大人在他自己机器上跑 `python tools/extract_frames.py --per-video 50`
+   Tim 老师在他自己机器上跑 `python tools/extract_frames.py --per-video 50`
    会得到 `data/training/phase_a/frames/` 目录，~150 张图。**他打 zip 发给你**：
    ```bash
-   # （总统大人的命令，不是你的）
+   # （Tim 老师的命令，不是你的）
    cd data/training/phase_a
    zip -r phase_a_frames.zip frames/
    ```
@@ -122,7 +122,7 @@ docker compose up -d   # ~30 秒
 
 ---
 
-## 5. 标完了导出 + 发给总统大人
+## 5. 标完了导出 + 发给 Tim 老师
 
 CVAT 标注界面右上：
 1. **Menu → Export task dataset**
@@ -130,13 +130,13 @@ CVAT 标注界面右上：
 3. **Save images**: ❌ 不勾（节省体积）
 4. 点击下载，得到 `task_xxx.zip`
 
-发给总统大人：
+发给 Tim 老师：
 - 文件名最好改成 `phase_a_labels_emily_YYYYMMDD.zip`（带你的名字 + 日期方便归档）
 - 微信 / AirDrop 都行（zip 包很小，~1 MB）
 
-总统大人收到后会做（你不需要管这步）：
+Tim 老师收到后会做（你不需要管这步）：
 ```bash
-# （总统大人的命令）
+# （Tim 老师的命令）
 unzip phase_a_labels_emily_20260427.zip -d /tmp/emily_labels
 mv /tmp/emily_labels/obj_train_data/*.txt data/training/phase_a/labels/
 # 然后 python tools/train_detector.py
@@ -146,18 +146,18 @@ mv /tmp/emily_labels/obj_train_data/*.txt data/training/phase_a/labels/
 
 ## 6. 协作注意事项
 
-### 跟总统大人怎么对齐
+### 跟 Tim 老师怎么对齐
 
-如果你和总统大人**都在标同一批 150 帧**：
+如果你和 Tim 老师**都在标同一批 150 帧**：
 
 - **不推荐**：两人标同一帧，因为风格不一致会引入噪声
-- **推荐**：分工 — 总统标 0-74 帧，你标 75-149 帧（按文件名字母序）
+- **推荐**：分工 — Tim 老师标 0-74 帧，你标 75-149 帧（按文件名字母序）
   - 你只在 CVAT 里上传**你那一半**的帧，避免重复劳动
-  - 最后两人各自导出 labels，总统大人合并
+  - 最后两人各自导出 labels，Tim 老师合并
 
 如果**你独立标完一整套 150 帧**作为"Emily 版本"：
 
-- 跟总统标的"v1 版本"形成 cross-check
+- 跟 Tim 老师标的"v1 版本"形成 cross-check
 - 哪些帧两人画法差异大？用来定义标注规范的边界 case
 - 这套额外标注虽然花时间，但对模型质量提升很大
 
@@ -166,10 +166,10 @@ mv /tmp/emily_labels/obj_train_data/*.txt data/training/phase_a/labels/
 标注过程中遇到拿不准的 case（比如"这个半身入水的运动员到底标不标"），**最有效的方式**：
 
 1. CVAT 里截屏（包含运动员位置）
-2. 发给总统大人 + 写一句"这种情况标 / 不标？"
-3. 总统拍板后，**回到这条 case，给类似 case 标统一**
+2. 发给 Tim 老师 + 写一句"这种情况标 / 不标？"
+3. Tim 老师拍板后，**回到这条 case，给类似 case 标统一**
 
-文档第 4 步的 ✅/❌ 表会随这些 case 持续更新（总统大人维护）。
+文档第 4 步的 ✅/❌ 表会随这些 case 持续更新（Tim 老师维护）。
 
 ---
 
@@ -195,7 +195,7 @@ mv /tmp/emily_labels/obj_train_data/*.txt data/training/phase_a/labels/
 | 拿到代码 + 帧 | 5 分钟 | 一次性 |
 | 启动 CVAT + 建账号 | 10 分钟 | 一次性 |
 | **标注 ~150 帧** | **1-2 小时** | 主要时间 |
-| 导出 + 发给总统 | 5 分钟 | 每次 |
+| 导出 + 发给 Tim 老师 | 5 分钟 | 每次 |
 
 **总计：第一次 ~3 小时，第二次起 ~2 小时**（一切已就绪，只剩纯标注）。
 

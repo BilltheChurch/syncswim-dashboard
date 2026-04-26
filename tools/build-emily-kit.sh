@@ -2,16 +2,16 @@
 # build-emily-kit.sh — 一行命令打包给 Emily 的工作包
 #
 # 跑一次会输出 ./emily_kit_YYYYMMDD.zip，包含：
-#   ├── README.md                  ← 给总统大人的现场装机清单
+#   ├── README.md                  ← 给 Tim 老师的现场装机清单
 #   ├── phase_a_frames_150.zip     ← 待标的 ~150 张帧
 #   ├── start-cvat.command         ← 双击启动 CVAT 的脚本
 #   ├── cheatsheet.html            ← Emily 的标注速查表（一页 A4 可打印）
-#   └── 密码模板.txt                ← 留给总统填 Emily 的 CVAT 密码
+#   └── 密码模板.txt                ← 留给 Tim 老师填 Emily 的 CVAT 密码
 #
 # 用法：
 #   bash tools/build-emily-kit.sh
 #   # 然后 AirDrop / 微信文件 把 emily_kit_*.zip 传到 Emily 电脑
-#   # 总统按 README.md 现场装机
+#   # Tim 老师按 README.md 现场装机
 
 set -e
 
@@ -74,14 +74,14 @@ URL:      http://localhost:8080
 密码:     ____________________
 邮箱:     ____________________
 
-（总统大人在 Emily 电脑现场装机时填这张表，
+（Tim 老师在 Emily 电脑现场装机时填这张表，
   填好后让 Emily 第一次登录后让浏览器记住密码，
   此文件之后可删 / 留作备份）
 EOF
 
-# 2e. 给总统的现场装机 README
+# 2e. 给 Tim 老师的现场装机 README
 cat > "$KIT_DIR/README.md" <<'EOF'
-# 给总统大人 — Emily 电脑装机清单
+# 给 Tim 老师 — Emily 电脑装机清单
 
 ## 你需要带的
 - 这个 `emily_kit_*` 文件夹（已经在 Emily 电脑上）
@@ -174,7 +174,7 @@ cat <<EOF
   - phase_a_frames_150.zip  ($FRAME_COUNT 帧)
   - start-cvat.command      (Emily 双击启动)
   - cheatsheet.html         (一页 A4 速查表)
-  - 密码模板.txt             (总统现场填)
+  - 密码模板.txt             (Tim 老师现场填)
   - README.md               (你的装机清单)
 
 下一步：
