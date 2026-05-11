@@ -1,24 +1,26 @@
 #!/bin/bash
 # setup-system.command — Tim 老师在 Emily 电脑现场跑的完整装机
 #
-# 核心特性（v2 修订版）：
-#   - **idempotent**：每步都检查"已完成？"，重跑安全，不会破坏已有进度
-#   - **容错**：pip install / docker pull 失败不会终止整个脚本，会记录后继续
-#   - **重排序**：先做不依赖网络的"文件操作"（拷模型、解压视频、桌面图标），
-#                后做依赖网络的"包装"（pip install / docker pull）
-#   - **失败可恢复**：如果中途崩了，重跑这个脚本会跳过已完成的步骤
+# v3 革命性改动（PR #15）：
+#   - **彻底去除 git / GitHub PAT / Keychain** — Emily 不需要 GitHub 账号
+#   - 代码从 kit 里的 code.zip 解压（自包含），不再 git clone
+#   - 之后 Tim 微信发新 emily_kit_YYYYMMDD.zip → 双击桌面 1-update.command 自动覆盖
+#
+# 保留 v2 的核心特性：
+#   - **idempotent**：每步检查"已完成？"，重跑安全
+#   - **容错**：单步失败不终止整脚本，最后汇总 FAILED[]
+#   - **重排序**：无网络步骤先做（解压代码 / 模型 / 视频 / 桌面），网络步骤后做（pip / docker pull）
 #
 # 用法（Tim 老师现场操作）：
-#   1. 把 emily_kit 解压到 Emily 桌面
-#   2. 双击 setup/setup-system.command
-#   3. 按提示输入 GitHub PAT（read 权限即可，不会回显）
-#   4. 等 ~25 分钟（视网速）
-#   5. 之后所有交互都通过桌面 3 个图标完成
+#   1. 把 emily_kit_*.zip 解压到 Emily 桌面
+#   2. 进 emily_kit_YYYYMMDD/setup/，双击 setup-system.command
+#   3. 等 ~25 分钟（首次拉 CVAT 镜像 ~5GB）
+#   4. 之后 Emily 全程只用桌面 3 个图标，不碰任何命令行
+#
+# 注意：刻意 NOT 用 set -e — 单步失败要让其他步骤继续
 
-# 注意：刻意 NOT 用 set -e — 我们要让单步失败时其他步骤还能继续
 trap 'echo ""; echo "============================================"; echo "  按任意键关闭窗口..."; echo "============================================"; read -n 1 -s' EXIT
 
-# 收集失败的步骤，最后一并报告
 FAILED=()
 
 # ────────── 横幅 ──────────
@@ -44,8 +46,8 @@ echo "目标仓库: $REPO_DIR"
 echo "CVAT 目录: $CVAT_DIR"
 echo ""
 
-# ────────── 1/10: Homebrew ──────────
-echo "[1/10] 检查 Homebrew..."
+# ────────── 1/9: Homebrew ──────────
+echo "[1/9] 检查 Homebrew..."
 if ! command -v brew &>/dev/null; then
     cat <<'ERR'
 
@@ -60,10 +62,11 @@ ERR
 fi
 echo "    ✓ Homebrew: $(brew --prefix)"
 
-# ────────── 2/10: brew 依赖 ──────────
+# ────────── 2/9: brew 依赖 ──────────
 echo ""
-echo "[2/10] 检查 / 安装系统依赖..."
-for pkg in python@3.11 git; do
+echo "[2/9] 检查 / 安装系统依赖..."
+# 注意：不再依赖 git（更新走 zip），但 OrbStack 可能用 git 装 cvat 镜像
+for pkg in python@3.11; do
     if brew list "$pkg" &>/dev/null; then
         echo "    ✓ $pkg 已装"
     else
@@ -90,47 +93,26 @@ if ! command -v docker &>/dev/null; then
 fi
 echo "    ✓ 依赖检查完毕"
 
-# ────────── 3/10: GitHub PAT + Keychain ──────────
+# ────────── 3/9: 解压代码（无网络）──────────
 echo ""
-echo "[3/10] GitHub Keychain 凭证..."
-# 看 Keychain 里有没有现成 github token
-if security find-internet-password -s github.com &>/dev/null; then
-    echo "    ✓ Keychain 已有 github.com 凭证（跳过；如需更新请手动 git credential-osxkeychain erase）"
+echo "[3/9] 解压代码到 $REPO_DIR..."
+if [ ! -f "$KIT_DIR/code.zip" ]; then
+    FAILED+=("kit/code.zip 不存在")
+    echo "    ❌ kit 缺 code.zip — 重新下载完整 kit"
 else
-    echo "    （之后 Emily git pull 永远不用输密码）"
-    echo ""
-    read -p "      GitHub 用户名: " GH_USER
-    echo "      GitHub PAT (粘贴时不会回显，按回车确认):"
-    read -s GH_PAT
-    echo ""
-    if [ -z "$GH_PAT" ]; then
-        echo "    ⚠ PAT 为空，跳过 Keychain 配置（之后 git pull 会问密码）"
-        FAILED+=("git PAT empty")
+    mkdir -p "$REPO_DIR"
+    if unzip -oq "$KIT_DIR/code.zip" -d "$REPO_DIR/"; then
+        # 标记仓库版本（kit 打包日期）
+        date "+%Y-%m-%d %H:%M:%S" > "$REPO_DIR/.kit-version"
+        echo "    ✓ 代码解压成功（$(ls "$REPO_DIR" | wc -l | xargs) 项）"
     else
-        git config --global credential.helper osxkeychain
-        printf "protocol=https\nhost=github.com\nusername=%s\npassword=%s\n\n" \
-            "$GH_USER" "$GH_PAT" | git credential-osxkeychain store
-        echo "    ✓ Keychain 已存"
+        FAILED+=("unzip code.zip")
     fi
 fi
 
-# ────────── 4/10: clone 仓库 ──────────
+# ────────── 4/9: 拷模型（idempotent，无网络）──────────
 echo ""
-echo "[4/10] 仓库 clone..."
-if [ -d "$REPO_DIR/.git" ]; then
-    echo "    ✓ 仓库已存在（跳过 clone；用 1-update.command 拉新）"
-else
-    if git clone "https://github.com/BilltheChurch/syncswim-dashboard.git" "$REPO_DIR"; then
-        echo "    ✓ clone 成功"
-    else
-        FAILED+=("git clone")
-        echo "    ❌ clone 失败 — 检查 PAT 和网络后重跑本脚本"
-    fi
-fi
-
-# ────────── 5/10: 拷模型（idempotent，无网络）──────────
-echo ""
-echo "[5/10] 拷模型..."
+echo "[4/9] 拷模型..."
 if [ -d "$KIT_DIR/models" ] && [ -d "$REPO_DIR" ]; then
     cp -n "$KIT_DIR/models/"*.pt   "$REPO_DIR/" 2>/dev/null || true
     cp -n "$KIT_DIR/models/"*.task "$REPO_DIR/" 2>/dev/null || true
@@ -138,24 +120,24 @@ if [ -d "$KIT_DIR/models" ] && [ -d "$REPO_DIR" ]; then
     task_count=$(ls "$REPO_DIR"/*.task 2>/dev/null | wc -l | xargs)
     echo "    ✓ 仓库根 .pt × $pt_count, .task × $task_count"
 else
-    echo "    ⚠ 跳过（kit 缺 models/ 或仓库还没 clone）"
+    echo "    ⚠ 跳过（kit 缺 models/ 或 repo 还没解压）"
 fi
 
-# ────────── 6/10: 解压视频（idempotent，无网络）──────────
+# ────────── 5/9: 解压视频（idempotent，无网络）──────────
 echo ""
-echo "[6/10] 解压 raw_videos..."
+echo "[5/9] 解压 raw_videos..."
 if [ -f "$KIT_DIR/videos/raw_videos.zip" ] && [ -d "$REPO_DIR" ]; then
     mkdir -p "$REPO_DIR/data"
     unzip -oq "$KIT_DIR/videos/raw_videos.zip" -d "$REPO_DIR/data/"
     vid_count=$(ls "$REPO_DIR/data/raw_videos" 2>/dev/null | wc -l | xargs)
     echo "    ✓ raw_videos: $vid_count 段"
 else
-    echo "    ⚠ 跳过（kit 缺 videos/ 或仓库还没 clone）"
+    echo "    ⚠ 跳过（kit 缺 videos/ 或 repo 还没解压）"
 fi
 
-# ────────── 7/10: 桌面图标（idempotent，无网络）──────────
+# ────────── 6/9: 桌面图标（idempotent，无网络）──────────
 echo ""
-echo "[7/10] 布置桌面图标..."
+echo "[6/9] 布置桌面图标..."
 if [ -d "$KIT_DIR/desktop" ]; then
     cp "$KIT_DIR/desktop/"*.command "$DESK/" 2>/dev/null || true
     cp "$KIT_DIR/desktop/cheatsheet.html" "$DESK/" 2>/dev/null || true
@@ -165,11 +147,11 @@ else
     echo "    ⚠ 跳过（kit 缺 desktop/）"
 fi
 
-# ────────── 8/10: Python venv（idempotent）──────────
+# ────────── 7/9: Python venv（idempotent）──────────
 echo ""
-echo "[8/10] Python venv..."
+echo "[7/9] Python venv..."
 if [ ! -d "$REPO_DIR" ]; then
-    echo "    ⚠ 跳过（仓库还没 clone）"
+    echo "    ⚠ 跳过（仓库还没解压）"
 else
     PY311=""
     if command -v python3.11 &>/dev/null; then
@@ -193,9 +175,9 @@ else
     fi
 fi
 
-# ────────── 9/10: pip install（容错 — 失败不退出）──────────
+# ────────── 8/9: pip install（容错 — 失败不退出）──────────
 echo ""
-echo "[9/10] pip install 依赖..."
+echo "[8/9] pip install 依赖..."
 if [ -d "$REPO_DIR/.venv" ]; then
     cd "$REPO_DIR"
     .venv/bin/pip install --upgrade pip --quiet 2>&1 | tail -3 || true
@@ -239,15 +221,21 @@ else
     echo "    ⚠ 跳过（venv 还没创建）"
 fi
 
-# ────────── 10/10: CVAT（容错）──────────
+# ────────── 9/9: CVAT（容错）──────────
 echo ""
-echo "[10/10] 准备 CVAT..."
+echo "[9/9] 准备 CVAT..."
 if command -v docker &>/dev/null; then
     if [ ! -d "$CVAT_DIR/.git" ]; then
-        if git clone --depth 1 https://github.com/cvat-ai/cvat "$CVAT_DIR"; then
-            echo "    ✓ CVAT clone 成功"
+        # CVAT 仍然用 git clone（这是从 cvat-ai/cvat 拉，不是我们的 PAT），公开仓库无密码
+        if command -v git &>/dev/null; then
+            if git clone --depth 1 https://github.com/cvat-ai/cvat "$CVAT_DIR"; then
+                echo "    ✓ CVAT clone 成功"
+            else
+                FAILED+=("git clone cvat")
+            fi
         else
-            FAILED+=("git clone cvat")
+            echo "    ⚠ 没有 git，跳过 CVAT clone（手动 brew install git 后重跑本脚本）"
+            FAILED+=("git not installed for cvat")
         fi
     else
         echo "    ✓ CVAT 仓库已存在"
@@ -278,17 +266,23 @@ if [ ${#FAILED[@]} -eq 0 ]; then
 ============================================
 
 Emily 桌面应该有：
-   1-update.command           ← 拉最新规则 / 代码
+   1-update.command           ← 拿到 Tim 老师新发的 zip 后双击更新
    2-start-cvat.command       ← 标注用
-   3-start-dashboard.command  ← 训练现场用
+   3-start-dashboard.command  ← 训练 / 现场录制
    cheatsheet.html            ← 标注速查表
 
 剩余 Tim 老师手动做（~10 分钟）：
    1. 编辑 ~/syncswim-dashboard/config.toml：
       - camera_url = "http://<Emily 手机 IP>:4747/video"
-      - ble_device_name + imu_nodes 改成她两块 M5 的名字
+      - imu_nodes = ["NODE_A1", "NODE_A2"] 改成她两块 M5 的名字
    2. CVAT 浏览器配置（如还没做）：参考 README.md §4
    3. 测试：双击 3-start-dashboard.command 看 dashboard 起来
+
+以后 Tim 老师每次更新代码：
+   1. 跑 `bash tools/build-emily-kit.sh` 出新 emily_kit_YYYYMMDD.zip
+   2. 微信 / AirDrop 给 Emily
+   3. Emily 把 zip 放桌面，双击 1-update.command（30 秒搞定）
+   4. 不需要 git / GitHub / 命令行
 DONE
 else
     cat <<DONE

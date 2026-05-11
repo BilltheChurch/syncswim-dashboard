@@ -1,13 +1,19 @@
 #!/bin/bash
 # build-emily-kit.sh — 一行命令打包给 Emily 的完整工作包
 #
-# 跑一次会输出 ./emily_kit_YYYYMMDD.zip，包含：
+# v3 革命性改动（PR #15）：
+#   - kit 自包含 code.zip（git archive HEAD），Emily 解压即用，**不再 git clone**
+#   - 不需要 GitHub PAT — Emily 完全脱离 git / GitHub
+#   - 更新流程：Tim 跑 build → 微信发新 zip → Emily 放桌面 → 双击 1-update.command
+#
+# 跑一次输出 ./emily_kit_YYYYMMDD.zip：
 #   ├── README.md                       ← 给 Tim 老师的现场装机清单
-#   ├── 密码模板.txt                     ← 留给 Tim 老师填 Emily 的 CVAT 密码
+#   ├── 密码模板.txt                     ← 留 Tim 老师填 Emily 的 CVAT 密码（已删 GitHub PAT 部分）
+#   ├── code.zip                        ← 仓库 HEAD 的所有 tracked 文件（替代 git clone）
 #   ├── setup/
 #   │   └── setup-system.command       ← Tim 老师双击：一次性装全套
 #   ├── desktop/
-#   │   ├── 1-update.command           ← Emily 桌面：拉最新
+#   │   ├── 1-update.command           ← Emily 桌面：双击从桌面 zip 自动更新
 #   │   ├── 2-start-cvat.command       ← Emily 桌面：启 CVAT 标注
 #   │   ├── 3-start-dashboard.command  ← Emily 桌面：启 dashboard 训练
 #   │   └── cheatsheet.html            ← Emily 桌面：标注速查表
@@ -99,30 +105,38 @@ KIT_DIR="emily_kit_$TS"
 rm -rf "$KIT_DIR"
 mkdir -p "$KIT_DIR"/{setup,desktop,models,videos,frames}
 
-# 2a. 帧 zip
+# 2a. 仓库代码 zip（用 git archive，自动排除 untracked / gitignored）
+# 注意：git archive 出 HEAD 状态，包含 tools/, fastapi_app/, docs/, requirements.txt 等
+# 自动排除 .venv/, runs/, data/raw_videos/, *.pt 等（在 .gitignore 里）
+echo "[+] 打包代码（git archive HEAD）..."
+git archive --format=zip HEAD -o "$REPO_ROOT/$KIT_DIR/code.zip"
+CODE_SIZE=$(du -h "$KIT_DIR/code.zip" | cut -f1)
+echo "    ✓ code.zip ($CODE_SIZE)"
+
+# 2b. 帧 zip
 echo "[+] 打包 $FRAME_COUNT 张帧..."
 (cd "$FRAMES_DIR/.." && zip -qr "$REPO_ROOT/$KIT_DIR/frames/phase_a_frames_150.zip" frames/)
 
-# 2b. setup 脚本（一次性现场装机）
+# 2c. setup 脚本（一次性现场装机）
 cp tools/setup-system.command "$KIT_DIR/setup/setup-system.command"
 chmod +x "$KIT_DIR/setup/setup-system.command"
 
-# 2c. 桌面 3 个图标 + cheatsheet
+# 2d. 桌面 3 个图标 + cheatsheet
 cp tools/update.command          "$KIT_DIR/desktop/1-update.command"
 cp tools/start-cvat.command      "$KIT_DIR/desktop/2-start-cvat.command"
 cp tools/start-dashboard.command "$KIT_DIR/desktop/3-start-dashboard.command"
 cp docs/emily-cheatsheet.html    "$KIT_DIR/desktop/cheatsheet.html"
 chmod +x "$KIT_DIR/desktop/"*.command
 
-# 2d. 模型文件
+# 2e. 模型文件
 cp yolov8s-pose.pt           "$KIT_DIR/models/"
 cp pose_landmarker_lite.task "$KIT_DIR/models/"
 
-# 2e. 训练视频
+# 2f. 训练视频
 echo "[+] 打包 raw_videos..."
 (cd data && zip -qr "$REPO_ROOT/$KIT_DIR/videos/raw_videos.zip" raw_videos/)
 
-# 2f. 密码模板
+# 2g. 密码模板（v3：已删 GitHub PAT 部分）
 cat > "$KIT_DIR/密码模板.txt" <<'EOF'
 Emily 的 CVAT 账号
 ==================
@@ -136,25 +150,20 @@ URL:      http://localhost:8080
   填好后让 Emily 第一次登录后让浏览器记住密码，
   此文件之后可删 / 留作备份）
 
-GitHub PAT（用于 git pull 不用密码）
-=====================================
-
-PAT:      ghp_____________________
-
-（在 setup-system.command 里输入一次后会存进 macOS Keychain，
-  之后所有 git pull 都自动用这个，Emily 不用知道是什么）
+注：v3 起 Emily 不需要 GitHub 账号 / PAT — 代码同步走 zip 不走 git。
 EOF
 
-# 2g. README — 给 Tim 老师的现场装机清单
+# 2h. README — 给 Tim 老师的现场装机清单（v3：已删 PAT 章节）
 cat > "$KIT_DIR/README.md" <<'EOF'
-# 给 Tim 老师 — Emily 完整环境装机清单
+# 给 Tim 老师 — Emily 完整环境装机清单（v3 — 不用 git）
 
-Emily 装完之后，桌面有 3 个图标她每天用，你不在场也能正常工作。
+Emily 装完之后，桌面有 3 个图标她每天用。**她完全不需要 GitHub / git / 命令行**。
+你以后每次更新代码：跑 `bash tools/build-emily-kit.sh` 出新 zip → 微信发她
+→ 她放桌面 → 双击 `1-update.command` → 30 秒完成。
 
 ## 你需要带的
-- 这个 `emily_kit_*` 文件夹（已经在 Emily 桌面）
-- 一个 GitHub PAT（read 权限即可，建议 90 天有效期）
-- ~1 小时时间（含网速等待）
+- 这个 `emily_kit_*` 文件夹（已经在 Emily 桌面，已解压）
+- ~1 小时时间（含网速等待，主要是 CVAT 5GB 镜像下载）
 
 ---
 
@@ -171,12 +180,11 @@ Emily 装完之后，桌面有 3 个图标她每天用，你不在场也能正�
 Finder 进 `emily_kit_*/setup/` → 双击 `setup-system.command`。
 
 会自动做：
-- 装 python@3.11 / git / OrbStack（轻量 Docker）
-- 配 GitHub Keychain（中途让你输 PAT 一次，不回显）
-- clone syncswim-dashboard
+- 装 python@3.11 / OrbStack（轻量 Docker）
+- **解压 code.zip 到 ~/syncswim-dashboard/**（替代 git clone，不用 PAT）
 - 创建 venv + pip install
 - 拷模型 + 解压 raw_videos
-- clone CVAT + 拉镜像
+- clone CVAT 公开仓库 + 拉 5GB 镜像
 - 桌面布置 3 个图标
 
 中途如果 OrbStack 提示需要授权，去 Launchpad 双击启动一次，回来按任意键。
@@ -191,7 +199,7 @@ open -a TextEdit ~/syncswim-dashboard/config.toml
 - `camera_url = "http://<Emily 手机的 IP>:4747/video"`（DroidCam）
 - `imu_nodes = ["NODE_A1", "NODE_A2"]` 改成她那两块 M5 实际广播的名字
 
-## 第 4 步：CVAT 配置（10 分钟）
+## 第 4 步：CVAT 配置（如果是首装；已配则跳过）
 
 1. 双击桌面 `2-start-cvat.command`，等 ~30 秒
 2. 浏览器自动开 http://localhost:8080
@@ -211,7 +219,7 @@ open -a TextEdit ~/syncswim-dashboard/config.toml
 2. 浏览器自动开 http://localhost:8000
 3. 看实时画面 + BLE 是否连上
 
-## 第 6 步：陪标 5 帧示范（10 分钟）
+## 第 6 步：陪标 5 帧示范（10 分钟，仅首装）
 
 跟 `cheatsheet.html` 一起做：
 - 进 task → Job #1
@@ -220,16 +228,48 @@ open -a TextEdit ~/syncswim-dashboard/config.toml
 - 第 5 帧 → Menu → Export task dataset → YOLO 1.1 → 不勾 Save images
 - 微信发给自己 → 验证格式
 
+---
+
 ## 你回家之后，Emily 每天的操作
 
 | 想干啥 | 双击 |
 |---|---|
-| 拉最新规则 / 修补 | `1-update.command` |
+| 拿到 Tim 老师新发的 zip 后更新 | 把 zip 放桌面 → 双击 `1-update.command` |
 | 标注 | `2-start-cvat.command` |
 | 训练 / 现场录制 | `3-start-dashboard.command` |
 | 看标注规则 | `cheatsheet.html`（浏览器自动开） |
 
 她标完 → 微信发 zip 给你。
+
+---
+
+## v3 更新流程（这是核心改进）
+
+每次你改了代码 / 文档：
+```bash
+# 在你的主仓库
+cd /Users/billthechurch/Downloads/test_rec
+git pull origin main
+bash tools/build-emily-kit.sh
+# → 输出 emily_kit_YYYYMMDD.zip （~56MB）
+
+# 微信 / AirDrop 发她
+```
+
+Emily：
+1. 收到 zip 后**直接放桌面**（不解压）
+2. 双击 `1-update.command`
+3. 30 秒后弹"✅ 更新完成"
+
+`1-update.command` 自动：
+- 找桌面最新的 `emily_kit_*.zip`
+- 解压临时目录
+- 用 `code.zip` 覆盖 `~/syncswim-dashboard/` 代码
+- 刷新桌面 3 个图标 + cheatsheet
+- pip install -q -r requirements.txt 同步依赖
+- 不动她的 CVAT 标注 / 录制数据 / docker 镜像
+
+---
 
 ## 现场常见问题
 
@@ -240,18 +280,19 @@ open -a TextEdit ~/syncswim-dashboard/config.toml
 | `createsuperuser` 报 Postgres 没起 | 等 30 秒重试 |
 | Dashboard 黑屏 | 检查 DroidCam 手机 IP / 防火墙 / 同 WiFi |
 | BLE 不连 | M5 重启一下；config.toml 节点名核对 |
-| `git pull` 问密码 | Keychain 没存好；重跑 setup-system.command 第 3 步 |
+| 1-update 报"桌面没找到 emily_kit_*.zip" | 让 Tim 老师重发 zip，**放桌面别解压** |
+| 1-update 报"zip 损坏" | 微信传输偶尔失败，让 Tim 老师 AirDrop 或网盘重发 |
 
 ## 这套系统的边界
 
 - **训练 / 评估在 Tim 老师机器跑**（M2 GPU，Emily 笔记本不够）
 - Emily 这边只做：标注 + dogfood 测试（dashboard 实时看模型效果）
-- 训完的 `best.pt` 通过 git pull 自动同步给 Emily（在 .gitignore 里？需要 Tim 老师另外发）
+- 训完的 `best.pt` 体积 ~50MB — 通过新 emily_kit zip 的 models/ 自动同步给 Emily
 
 ## 完整文档
 
 `docs/phase-a-annotation.md` + `docs/emily-annotation-onboarding.md`
-（仓库 git pull 后在 `~/syncswim-dashboard/docs/` 下）
+（在解压后的 `~/syncswim-dashboard/docs/` 下）
 EOF
 
 # ────────── 3. 整体打 zip ──────────
@@ -265,10 +306,11 @@ cat <<EOF
 [done] 输出 $ZIP_OUT  ($SIZE)
 
 包含：
+  code.zip                      (仓库代码 HEAD, $CODE_SIZE)
   setup/
     setup-system.command        (Tim 老师双击一次性装全套)
   desktop/
-    1-update.command            (拉最新)
+    1-update.command            (Emily 双击：从桌面 zip 自动覆盖)
     2-start-cvat.command        (Emily 标注)
     3-start-dashboard.command   (Emily 训练 / 录制)
     cheatsheet.html             (一页 A4 速查表)
@@ -280,11 +322,12 @@ cat <<EOF
   frames/
     phase_a_frames_150.zip      ($FRAME_COUNT 帧, ~20MB)
   README.md                     (你的现场装机清单)
-  密码模板.txt                   (现场填)
+  密码模板.txt                   (现场填，已无 GitHub PAT 字段)
 
 下一步：
   1. AirDrop / 微信发 $ZIP_OUT 到 Emily 电脑
-  2. 在她电脑上解压到桌面
-  3. 双击 setup/setup-system.command 装机
-  4. 按 README.md 第 3-6 步手动配置
+  2. Emily 在桌面解压（或者首装时让她解压；之后更新只需把新 zip 放桌面）
+  3. 首装：双击 setup/setup-system.command
+     之后更新：双击桌面 1-update.command
+  4. 按 README.md 第 3-6 步手动配置（仅首装）
 EOF
