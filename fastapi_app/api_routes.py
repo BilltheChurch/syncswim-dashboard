@@ -45,6 +45,7 @@ from dashboard.core.vision_angles import (
     calc_shoulder_knee_angle,
     calc_trunk_vertical,
 )
+from dashboard.core.choreography import compute_choreography, rank_sets
 
 from .athlete_store import AthleteStore
 
@@ -440,6 +441,36 @@ async def set_report(name: str):
         "has_video": os.path.exists(video_path),
         "has_landmarks": os.path.exists(os.path.join(set_dir, "landmarks.csv")),
     }
+
+
+@router.get("/sets/{name}/choreography")
+async def set_choreography(name: str):
+    """Choreography Intelligence report — automated Yue 2023 HF variables.
+
+    Returns per-variable measured value + honest status/confidence/coverage/
+    caveat. Deliberately does NOT return an absolute predicted Yue score; use
+    /api/choreography/rank for the relative cross-clip composite. See
+    dashboard/core/choreography.py + docs/research-roadmap.md (Direction A).
+    """
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "Set not found"}, status_code=404)
+    rep = compute_choreography(set_dir)
+    if rep is None:
+        return JSONResponse(
+            {"error": "No landmarks_multi.jsonl (no multi-person pose for this set)"},
+            status_code=404,
+        )
+    return rep
+
+
+@router.get("/choreography/rank")
+async def choreography_rank():
+    """Relative cross-clip composite ranking over all sets (beta-signed z-scores
+    of the surviving HF variables). Relative ordering of our own clips only —
+    NOT a Yue-scale absolute score.
+    """
+    return rank_sets(_DATA_DIR)
 
 
 @router.delete("/sets/{name}")

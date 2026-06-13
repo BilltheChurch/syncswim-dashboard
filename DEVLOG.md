@@ -2854,4 +2854,59 @@ DEVLOG #33 把"必须 fine-tune"从直觉变成数字（19.8× ID 通胀）。�
 
 ---
 
+## 问题 #35：Choreography Intelligence — 当对抗验证把"自动化一篇 Nature 论文"变成"诚实的负结果"
+
+### 背景
+水下 IMU 方案因防水外壳难做被放弃，项目转向纯视觉。读了三篇地基论文后定了 5 个研究方向
+（见 `docs/research-roadmap.md`），方向 A 是自动化 Yue et al. 2023 (*Nature Sci. Rep.*) 的
+5 个 hybrid-figure 变量 —— 他们手工 Kinovea 每队花 1–2 周，我们想做成 30 分钟自动报告。
+
+### 决策：用 ultracode workflow 并行设计 + 对抗验证，而不是直接写
+5 个变量（leg_height_index / movement_frequency / leg_angle_deviation / mean_pattern_duration
+/ rotation_frequency）每个都是非平凡的算法问题。我跑了一个 16-agent workflow：5 个设计 agent
+出算法 → 5 个**对抗验证 agent 把候选算法实际跑在真实 dogfood 数据上证伪** → 5 个文档 agent
+起草方向文档 → 1 个完整性 critic。
+
+### 对抗验证抓出的致命错误（若直接写就会进生产）
+1. **leg_height_index 反相关**：天真的"用髋当水线"代理在数学上是**解剖学常数**
+   （thigh/(thigh+shank)），验证 agent 在 set_003/005/006 上实测它与真实抬腿高度
+   **r = −0.376（反相关！）** —— 会把队伍排名排反。论文的水线相对量在无水线标定下
+   **根本不可恢复**。→ 排除。
+2. **movement_frequency 的"完美"是 bug 假象**：早期版本"4 个 set 全落在论文 1.82±0.17
+   区间"被证明是 refractory 在压缩数组上计算（而非 frame-time）的 bug。修复后真实值
+   散布 1.2–2.5 Hz。"看起来对"和"真的对"是两回事。
+3. **rotation_frequency 用错了中心统计量**：原设计取每步角速度中位数 → 运动员保持图形时
+   塌成 0（丢掉论文要数的旋转事件）。改成论文定义的**总度数/总时长**后，**无需任何拟合
+   常数**就落入论文区间 41.77±10.01。验证 agent 直接说"那个 4× CALIB 是症状不是修复"。
+4. **leg_angle_deviation 的长宽比 bug**：归一化 x/y 各向异性，4:3 vs 3:4 视频偏差 1–4°，
+   符号还随朝向翻转 —— 对一个 5.34° 的基准是巨大误差。加 `dx*=W/H` 修正。
+5. **mean_pattern_duration 测错了东西**：80%+ person-slot 零可见关键点，它测的是"可见质心
+   churn"非 8 人队形，被 min_hold floor + 拍摄朝向污染。→ 仅探索。
+
+### 数据现实：9.1% 关键点可用率
+我自己探测发现：只有 **9.1%** 的检测同时有髋+踝可见 —— COCO pose 在倒立半身泳者上大量
+失败。这驱动了两个设计原则：(1) 每个变量必须带 `coverage`（样本数/追踪秒数）+ 置信度；
+(2) 稀疏 set（如竖屏 set_010）诚实返回 `None` 而非编造数字（实测：movement n_tracks=0、
+leg_angle n_legs=4<8 → None）。
+
+### 跨切结论：不导出绝对预测分
+critic 指出：betas 在标定 Kinovea 输入上拟合，我们的代理是不同 scale，且 leg_height
+（反相关）恰好带最大正 β（+0.393）—— 5 个有偏项加固定权重会复合成无标定高方差噪声。
+所以**只导出相对跨片 z-score 综合**（`rank_sets`），仅用存活的 3 个变量，明确标"我们自己
+片段的相对排序"非 Yue 绝对分。
+
+### 落地
+- `dashboard/core/choreography.py`：5 个验证过的算法 + 诚实 status/confidence/coverage/caveat
+  + `compute_choreography` + `rank_sets`（19 个 set 跨片排名实测可用）
+- `GET /api/sets/{name}/choreography` + `GET /api/choreography/rank`
+- `tests/test_choreography.py`：13 个合成几何单元测试全过（已知角度→已知偏差、振荡腿→正
+  频率、静止→0、稀疏→None、JSON 可序列化、rank 方向正确）
+
+### 一行总结
+**对抗验证（让 agent 跑代码证伪）把一个会 over-claim 的工具，变成了一个诚实标注"哪些
+生物力学标记能从单目无标定视频自动化、哪些不能"的科学工具。负结果（r=−0.376 那个）和
+正结果同等有价值 —— 这正是申请里最站得住的叙事。**
+
+---
+
 > 本文档随项目进展持续更新。每次遇到有价值的技术问题都会追加记录。

@@ -1486,6 +1486,68 @@ async function loadReport(name) {
         .then(r => r.json())
         .then(ts => renderTimeseries(ts))
         .catch(() => {});
+
+    // Choreography Intelligence (Yue 2023 HF variables) — parallel, additive.
+    // Failure is silent: not all sets have multi-person landmarks.
+    fetch(`/api/sets/${encodeURIComponent(name)}/choreography`)
+        .then(r => r.ok ? r.json() : null)
+        .then(ch => { if (ch && !ch.error) renderChoreography(ch); })
+        .catch(() => {});
+}
+
+// Choreography report card — appended to the analysis view. Honest by design:
+// every variable shows status (validated/caveat/exploratory/excluded),
+// coverage, and a caveat. NO absolute "predicted score" is shown.
+function renderChoreography(ch) {
+    const content = $('#analysis-content');
+    if (!content) return;
+
+    const STATUS = {
+        validated:   { label: '已验证', color: 'var(--clean-text, #1a7c2c)' },
+        caveat:      { label: '相对索引', color: 'var(--minor-text, #c97300)' },
+        exploratory: { label: '探索', color: 'var(--text-muted, #888)' },
+        excluded:    { label: '已排除', color: 'var(--major-text, #c43d23)' },
+    };
+
+    const rows = (ch.variables || []).map(v => {
+        const st = STATUS[v.status] || STATUS.exploratory;
+        const val = (v.value === null || v.value === undefined) ? '—'
+            : `${v.value} ${v.unit}`;
+        const cov = Object.entries(v.coverage || {})
+            .map(([k, x]) => `${k}=${x}`).join(', ');
+        return `
+            <tr>
+              <td style="font-weight:600">${v.key}</td>
+              <td style="text-align:right">${val}</td>
+              <td style="color:${st.color};font-weight:600">${st.label}</td>
+              <td style="color:var(--text-muted,#888);font-size:11px">
+                  Yue β=${v.paper_beta} · 国际 ${v.benchmark_intl}/top5 ${v.benchmark_top5}</td>
+              <td style="color:var(--text-muted,#888);font-size:11px">${cov}</td>
+            </tr>
+            <tr><td colspan="5" style="color:var(--text-muted,#888);font-size:11px;
+                padding-bottom:8px;border-bottom:1px solid var(--border,#eee)">
+                ⚠ ${v.caveat}</td></tr>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'analysis-card';
+    card.style.cssText = 'margin-top:16px;padding:16px;background:var(--surface,#fff);' +
+        'border-radius:8px;border:1px solid var(--border,#e4e4e4)';
+    card.innerHTML = `
+        <h3 style="margin:0 0 4px">编排智能 · Choreography Intelligence</h3>
+        <p style="color:var(--text-muted,#888);font-size:12px;margin:0 0 12px">
+           自动化 Yue 2023 (Nature Sci.Rep.) 的 5 个 hybrid-figure 变量 ·
+           ${ch.n_frames} 帧 @ ${ch.fps}fps · ${ch.resolution?.w}×${ch.resolution?.h}</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="color:var(--text-muted,#888);font-size:11px;text-align:left">
+            <th>变量</th><th style="text-align:right">测量值</th><th>状态</th>
+            <th>论文基准</th><th>覆盖</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p style="color:var(--text-muted,#888);font-size:11px;margin:10px 0 0;
+           padding:8px;background:var(--bg,#fafafa);border-radius:4px">
+           ℹ️ ${ch.composite_note}</p>`;
+    content.appendChild(card);
 }
 
 function renderAnalysisSkeleton() {
