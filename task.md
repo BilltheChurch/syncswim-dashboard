@@ -323,6 +323,31 @@ data/
 - [ ] Tim 老师下次去泳池录 5-10 段，覆盖：不同时段、不同泳池、不同动作（ballet leg / barracuda / 转体 / 出水）
 - [ ] 重新跑 9.1 + 9.2 → 期望 mAP 大幅提升 + 真正可用的 generalize
 
+## 阶段十：研究方向（IMU→纯视觉转向后）🚧 进行中
+> 完整路线图见 `docs/research-roadmap.md`。地基论文：Yue 2023 (*Nature Sci.Rep.*)、
+> Edriss 2024 (*IJCSS*)、Cao&Sun 2024、Rodriguez-Zamora apnea 系列。
+
+### 10.A Choreography Intelligence — 自动化 Yue 2023 的 5 个 HF 变量 ✅ 引擎完成
+- [x] `dashboard/core/choreography.py`：5 算法（对抗验证过）+ coverage/status/caveat + `rank_sets`
+- [x] `GET /api/sets/{name}/choreography` + `GET /api/choreography/rank`
+- [x] `tests/test_choreography.py`（13 测试全过）
+- [x] **诚实结论**：movement_freq ✅validated / rotation+leg_angle ⚠caveat（相对索引）/
+      pattern_duration 🔬exploratory / leg_height ❌excluded（反相关 r=−0.376）；不导出绝对预测分
+- [ ] 前端 Choreography Report 卡片（变量表 vs 基准 + coverage 徽章 + 相对排名）
+- [ ] 手工 Kinovea 金标准验证（ICC / Bland–Altman）
+
+### 10.B 多人自动裁判 — 闭合 Edriss 2024 "cannot recognize multiple participants"
+- [ ] 复现单人 leg-angle（ICC vs Kinovea）→ 扩展 8 人同时 FINA 扣分（队伍中位参考轴）
+
+### 10.C 实时 shoulder-knee 生物反馈 — Edriss r=−0.444 离线 → 实时闭环
+- [ ] 实时角 + BLE 振动（复用 M5）+ motor-learning 实验
+
+### 10.D 非侵入 apnea/生理推断 — 最强生医角度
+- [ ] 头部关键点可见性→淹没时序；apnea 时长/通气/努力；vs 腕式 HR/SpO₂ 验证
+
+### 10.E 裁判偏差量化 — 把因变量变成被测对象
+- [ ] N≥5 裁判评分 + Bland–Altman/ICC + 一致性校正分
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）
