@@ -3627,3 +3627,23 @@ kbd {
 @media (min-width: 1024px) and (max-width: 1400px) and (pointer: coarse) {
     html { font-size: 15.5px; }
 }
+
+/* ── 现场实时控制台:触屏横屏下录制/停止按钮主导、超大易点(湿手/隔水雾) ── */
+@media (pointer: coarse) and (orientation: landscape) {
+    .controls-bar { flex-wrap: wrap; gap: 10px; }
+    /* 录制/停止 = 主操作,撑大占主行 */
+    .ctrl-btn-rec, .ctrl-btn-stop {
+        flex: 1 1 180px;
+        min-height: 60px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        justify-content: center;
+    }
+    .ctrl-btn-rec .ctrl-icon-rec { width: 14px; height: 14px; }
+    /* 次级按钮(快照/旋转/标注/队员/标记/重连)不抢主导,自然大小换行排下方 */
+    .ctrl-btn-secondary, .ctrl-btn-ghost { flex: 0 0 auto; }
+    /* 现场数据栏略宽,远观清晰 */
+    .side-panel { width: 380px; }
+    /* 分隔符在换行布局里隐藏,避免突兀 */
+    .ctrl-divider { display: none; }
+}
