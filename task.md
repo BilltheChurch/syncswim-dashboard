@@ -348,6 +348,48 @@ data/
 ### 10.E 裁判偏差量化 — 把因变量变成被测对象
 - [ ] N≥5 裁判评分 + Bland–Altman/ICC + 一致性校正分
 
+## 阶段十一：在线部署（Vercel 前端 + Mac 黑盒后端）+ UI 重做 🚧 进行中
+
+目标：Emily 只带 M5 + iPad + 手机去现场，连 WiFi 就能用 workstation —— 不带开发电脑、不碰命令行。
+主场景 = 岸上、教练 + Emily 训练后**赛后复盘**（赛后页 + choreography/scoring 算法是核心价值）。
+
+### 11.0 架构决策 ✅
+- [x] Vercel 托不了实时 AI 推理（无 GPU、serverless 超时）+ 蓝牙（需本机硬件）→ 前端上 Vercel、后端留 Emily Mac
+- [x] iPad/iOS 所有浏览器（含 App Store 版 Chrome，被强制套 WebKit）都不支持 Web Bluetooth → 蓝牙在 Mac 上用 bleak，iPad 当瘦客户端
+- [x] 树莓派 CPU 跑不动实时 YOLO（1-3FPS）→ 直接用现有 Mac 黑盒化
+
+### 11.1 前端拆分部署 ✅
+- [x] [app.js](fastapi_app/static/app.js)：`BACKEND_BASE` 机制 + fetch 拦截器（34 处 fetch 零改动）+ `apiUrl()`/`wsUrl()` helper（video/pdf/keyframes/WS）
+- [x] [index.html](fastapi_app/static/index.html)：注入 `window.BACKEND_BASE`/`TOKEN`；URL 参数 `?backend&token` 一键配置 → localStorage（Emily 点一次链接即可）
+- [x] [main.py](fastapi_app/main.py)：`CORSMiddleware`（expose Content-Range 供 video Range 跨域）+ data 目录绝对化（自启黑盒 cwd 无关）
+- [x] token 鉴权（HTTP 中间件 + WS query；OPTIONS 预检放行；本地未设 env 全放行）
+- [x] `SYNCSWIM_NO_HARDWARE` 开关：跳过 BLE/摄像头，用于纯赛后复盘 + 避免无蓝牙权限后台进程 SIGABRT
+- [x] [fastapi_app/static/vercel.json](fastapi_app/static/vercel.json)：纯静态 + `/static/*` rewrite
+- [x] **部署上线：https://syncswim.vercel.app**（项目 `tims-projects-8885c065/syncswim`）
+
+### 11.2 黑盒自启 + 隧道 — 脚本就绪，待 Emily Mac 实跑
+- [x] [tools/setup-online.command](tools/setup-online.command)：LaunchAgent 开机自启 + caffeinate 防休眠 + Tailscale Funnel + 生成 token + 打印 Emily 配置链接
+- [x] [docs/deploy-online.md](docs/deploy-online.md)：完整部署手册（含安全说明、合盖防睡、故障排查）
+- [ ] 在 Emily 现场 Mac 实跑（真实上线 + tailnet Funnel 权限）
+
+### 11.3 全链路联调 ✅
+- [x] cloudflared 临时隧道 + Mac 后端 + Vercel 前端端到端验证（health/sets/config/data 全 200，零 CORS/401）
+- [x] 联调发现并修复：CORS 预检 `OPTIONS` 被 token 中间件拦成 401 →（放行 OPTIONS）—— 本地同源 TestClient 测不出，真跨域才暴露
+- [x] 浏览器实测前端真连后端（network 全 200、localStorage 自动配置、URL 参数清除）
+
+### 11.4 UI 重做（深色 Frontier 品牌，重心赛后复盘）✅ 核心完成
+- [x] [style.css](fastapi_app/static/style.css) `:root` 换肤：皇家蓝+橙 → 深海蓝 #1B3A5C + 品牌金 #C4A55A；补 3 个失效变量（--text-hi/--danger/--card-bg）
+- [x] canvas 图表主题化：雷达/时序/趋势/骨架 #3B82F6→#4A90D9、#F59E0B→#C4A55A（换肤改不到 canvas，单独处理）
+- [x] `renderChoreography` 重做成深色金卡（修 `var(--surface)` 未定义导致的白底 bug + 状态徽章 已验证/有保留/探索性/已排除）
+- [x] 触屏适配 `@media (pointer: coarse)`：按钮/输入点击区 ≥44px + 字号放大（精准命中触屏，桌面不受影响）
+- [x] Vercel 重新部署换肤版 + 浏览器/curl 真实验证（深海蓝/金/金卡/雷达蓝全部生效）
+- [ ] 实时页 iPad 横屏现场控制台（超大录制按钮专门布局，现场采集入口）
+- [ ] emoji 图标 → SVG（设置页相机指南）
+
+### 11.5 待办
+- [ ] Emily 现场 onboarding + 全流程现场验证（iPad→隧道→Mac→M5/摄像头→实时→录制→赛后）
+- [ ] 实时页现场控制台专门布局 + emoji→SVG
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）

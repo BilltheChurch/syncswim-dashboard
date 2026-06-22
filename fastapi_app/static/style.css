@@ -6,24 +6,30 @@
 
 /* ── CSS Variables ─────────────────────────────────── */
 :root {
-    --bg:          #0a0a1a;
-    --bg-card:     #0f0f22;
-    --bg-card2:    #141428;
-    --bg-input:    #0d0d1f;
-    --border:      #1e1e3a;
-    --border-hi:   #2a2a50;
+    /* ── Frontier 深色品牌(深海蓝 #1B3A5C / 品牌金 #C4A55A),海蓝黑底去紫 ── */
+    --bg:          #0A1420;
+    --bg-card:     #0E1F30;
+    --bg-card2:    #14293C;
+    --bg-input:    #0A1828;
+    --border:      #20384F;
+    --border-hi:   #2C567E;
 
-    --primary:     #1E40AF;
-    --primary-hi:  #2563EB;
-    --secondary:   #3B82F6;
-    --cta:         #F59E0B;
-    --cta-hi:      #FBBF24;
+    --primary:     #1B3A5C;   /* 深海蓝 = 品牌主色 */
+    --primary-hi:  #2A567E;
+    --secondary:   #4A90D9;   /* 数据蓝:全站最高频强调(bar/focus/brand) */
+    --cta:         #C4A55A;   /* 品牌金 = 评分环/CTA/分数 */
+    --cta-hi:      #D6BB78;
 
-    --text:        #e0e0e0;
-    --text-dim:    #888aaa;
-    --text-muted:  #4a4a6a;
-    --text-mono:   #a0d4ff;
+    --text:        #E6EDF3;
+    --text-dim:    #8A9BB0;
+    --text-muted:  #4E6076;
+    --text-mono:   #9FD0E6;   /* 浅蓝等宽数据值(IMU/角度/tilt) */
 
+    --text-hi:     #F4F8FC;   /* 补:强调文本/标题(原被引用却未定义,曾失效) */
+    --danger:      #E5544B;   /* 补:危险操作(原仅靠 fallback) */
+    --card-bg:     #0E1F30;   /* 补:= bg-card(原仅靠 fallback) */
+
+    /* FINA 评分功能色(绿/黄/红)= 可读性语义,品牌化时不动 */
     --clean-bg:    #065f46;
     --clean-text:  #4ade80;
     --minor-bg:    #78350f;
@@ -31,7 +37,7 @@
     --major-bg:    #7f1d1d;
     --major-text:  #f87171;
 
-    --rec-color:   #ef4444;
+    --rec-color:   #E5544B;
 
     --radius-sm:   4px;
     --radius:      8px;
@@ -3556,4 +3562,68 @@ kbd {
     margin-right: auto;
     font-size: 0.74rem;
     color: var(--text-muted);
+}
+
+/* ── Choreography Intelligence 卡(赛后复盘科研核心 · 文书卖点) ── */
+.choreography-card {
+    margin-top: 16px;
+    padding: 16px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cta);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+.ch-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.ch-title { font-size: 15px; font-weight: 600; color: var(--text-hi); }
+.ch-tag {
+    font-size: 11px; color: var(--cta);
+    background: rgba(196, 165, 90, 0.12);
+    padding: 2px 9px; border-radius: 10px;
+}
+.ch-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; }
+.ch-rows { display: flex; flex-direction: column; }
+.ch-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.ch-row:last-child { border-bottom: none; }
+.ch-row-main { display: flex; align-items: center; gap: 10px; }
+.ch-name { flex: 1; font-size: 13px; color: var(--text); }
+.ch-val { font-size: 14px; color: var(--text-hi); min-width: 64px; text-align: right; }
+.ch-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 10px;
+    min-width: 58px; text-align: center; font-weight: 600;
+}
+.ch-st-ok       { background: rgba(39, 192, 138, 0.15);  color: #27C08A; }
+.ch-st-caveat   { background: rgba(224, 165, 59, 0.15);  color: #E0A53B; }
+.ch-st-explore  { background: rgba(74, 144, 217, 0.15);  color: #4A90D9; }
+.ch-st-excluded { background: rgba(133, 151, 168, 0.15); color: #8597A8; }
+.ch-bench { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.ch-caveat { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.ch-note {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 12px; padding: 9px 11px;
+    background: var(--bg-input);
+    border-radius: var(--radius);
+    border-left: 2px solid var(--cta);
+}
+
+/* ── 触屏适配:粗指针设备(iPad/平板)放大点击区到 ≥44px + 字号 ──
+   用 pointer: coarse 精准命中触屏,桌面鼠标布局完全不受影响。 */
+@media (pointer: coarse) {
+    html { font-size: 15px; }
+    .ctrl-btn, .save-btn, .btn-outline, .btn-secondary, .modal-btn,
+    .btn-rot, .kf-count-btn, .vp-athletes-btn, .vp-pdf-btn,
+    .tab, .hc-action, .ath-unbind {
+        min-height: 44px;
+    }
+    .icon-btn { min-height: 44px; min-width: 44px; }
+    .field-input, #set-selector, #history-sort, .history-search,
+    .di-value-input, .fina-input, .set-note-text {
+        min-height: 44px;
+    }
+    .ctrl-btn { padding: 12px 16px; }
+    /* 触屏没有 hover,把键盘快捷键角标弱化(现场用不到) */
+    .tab-kbd, kbd { opacity: 0.5; }
+}
+/* iPad 横屏复盘:远观阅读字号更宽松 */
+@media (min-width: 1024px) and (max-width: 1400px) and (pointer: coarse) {
+    html { font-size: 15.5px; }
 }

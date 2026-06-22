@@ -5,6 +5,50 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════
+//   BACKEND BASE — 拆分部署支持(Vercel 前端 + Mac 黑盒后端)
+// ═══════════════════════════════════════════════════════
+// 本地同源运行时这两个值为空 → 所有请求走相对路径(同源),与改造前行为完全一致。
+// 部署到 Vercel 后,设置页把 Mac 的 Tailscale 隧道域名 / token 写进 localStorage,
+// index.html 读出注入到 window.BACKEND_BASE / window.BACKEND_TOKEN。
+const BACKEND_BASE = (window.BACKEND_BASE || '').replace(/\/+$/, '');
+const API_TOKEN = window.BACKEND_TOKEN || '';
+
+// /api/* 的 fetch 自动加后端前缀(+ 鉴权头) —— 全站 34 处 fetch 一行都不用改。
+if (BACKEND_BASE || API_TOKEN) {
+    const _fetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+        if (typeof input === 'string' && input.startsWith('/api/')) {
+            input = BACKEND_BASE + input;
+            if (API_TOKEN) {
+                init = init || {};
+                init.headers = { ...(init.headers || {}), 'X-SyncSwim-Token': API_TOKEN };
+            }
+        }
+        return _fetch(input, init);
+    };
+}
+
+// 非 fetch 资源(<video src> / <a href> / <img src>)与 WebSocket 用这两个 helper。
+function apiUrl(path) {
+    let u = BACKEND_BASE + path;
+    if (API_TOKEN && path.startsWith('/api/')) {
+        u += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(API_TOKEN);
+    }
+    return u;
+}
+function wsUrl(path) {
+    let u;
+    if (BACKEND_BASE) {
+        u = BACKEND_BASE.replace(/^http/, 'ws') + path;
+    } else {
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        u = `${protocol}//${location.host}${path}`;
+    }
+    if (API_TOKEN) u += (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(API_TOKEN);
+    return u;
+}
+
+// ═══════════════════════════════════════════════════════
 //   CONSTANTS
 // ═══════════════════════════════════════════════════════
 const CONNECTIONS = [
@@ -71,9 +115,9 @@ const GROUP_NAMES = { posture: '姿态', extension: '伸展', symmetry: '对称'
 const GROUP_ICONS = { posture: 'P', extension: 'E', symmetry: 'S', motion: 'M', power: 'W' };
 
 const SERIES_COLORS = {
-    tilt_NODE_A1:            '#3B82F6',
+    tilt_NODE_A1:            '#4A90D9',
     tilt_NODE_A2:            '#A855F7',
-    elbow:                   '#F59E0B',
+    elbow:                   '#C4A55A',
     leg_deviation:           '#EF4444',
     knee_extension:          '#10B981',
     trunk_vertical:          '#06B6D4',
@@ -358,8 +402,7 @@ window.addEventListener('resize', () => {
 }, { passive: true });
 
 function connectVideoWs() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    videoWs = new WebSocket(`${protocol}//${location.host}/ws/video`);
+    videoWs = new WebSocket(wsUrl('/ws/video'));
 
     videoWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -491,9 +534,9 @@ function setAnnotationMode(mode) {
 // person keeps MPI blue via drawSkeletonOnCanvas; teammates cycle
 // through these distinctive hues.
 const TEAM_COLORS = [
-    '#3B82F6',  // 0 primary (not used here)
+    '#4A90D9',  // 0 primary (not used here)
     '#A855F7',  // 1 violet
-    '#F59E0B',  // 2 amber
+    '#C4A55A',  // 2 amber
     '#10B981',  // 3 green
     '#EC4899',  // 4 pink
     '#06B6D4',  // 5 cyan
@@ -622,7 +665,7 @@ function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
             const tag = `#${trackId}`;
             c.font = 'bold 13px "Fira Code", monospace';
             const tw = c.measureText(tag).width;
-            c.fillStyle = '#3B82F6';
+            c.fillStyle = '#4A90D9';
             c.beginPath();
             c.roundRect(lx - tw/2 - 6, ly - 12, tw + 12, 18, 4);
             c.fill();
@@ -658,7 +701,7 @@ function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
         const vis = lm[2];
         if (vis < 0.2) return;
         const r = detailed ? 3 + vis * 2 : 4;
-        c.fillStyle = vis > 0.6 ? '#3B82F6' : 'rgba(59,130,246,0.6)';
+        c.fillStyle = vis > 0.6 ? '#4A90D9' : 'rgba(74,144,217,0.6)';
         c.beginPath();
         c.arc(lm[0] * w, lm[1] * h, r, 0, Math.PI * 2);
         c.fill();
@@ -843,8 +886,7 @@ let metricsWs = null;
 let wasRecording = false;
 
 function connectMetricsWs() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    metricsWs = new WebSocket(`${protocol}//${location.host}/ws/metrics`);
+    metricsWs = new WebSocket(wsUrl('/ws/metrics'));
 
     metricsWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -1503,50 +1545,40 @@ function renderChoreography(ch) {
     if (!content) return;
 
     const STATUS = {
-        validated:   { label: '已验证', color: 'var(--clean-text, #1a7c2c)' },
-        caveat:      { label: '相对索引', color: 'var(--minor-text, #c97300)' },
-        exploratory: { label: '探索', color: 'var(--text-muted, #888)' },
-        excluded:    { label: '已排除', color: 'var(--major-text, #c43d23)' },
+        validated:   { label: '已验证', cls: 'ch-st-ok' },
+        caveat:      { label: '有保留', cls: 'ch-st-caveat' },
+        exploratory: { label: '探索性', cls: 'ch-st-explore' },
+        excluded:    { label: '已排除', cls: 'ch-st-excluded' },
     };
 
     const rows = (ch.variables || []).map(v => {
         const st = STATUS[v.status] || STATUS.exploratory;
         const val = (v.value === null || v.value === undefined) ? '—'
-            : `${v.value} ${v.unit}`;
-        const cov = Object.entries(v.coverage || {})
-            .map(([k, x]) => `${k}=${x}`).join(', ');
+            : `${v.value}${v.unit ? ' ' + v.unit : ''}`;
+        const bench = (v.paper_beta !== undefined)
+            ? `Yue β=${v.paper_beta} · 国际 ${v.benchmark_intl}/top5 ${v.benchmark_top5}` : '';
         return `
-            <tr>
-              <td style="font-weight:600">${v.key}</td>
-              <td style="text-align:right">${val}</td>
-              <td style="color:${st.color};font-weight:600">${st.label}</td>
-              <td style="color:var(--text-muted,#888);font-size:11px">
-                  Yue β=${v.paper_beta} · 国际 ${v.benchmark_intl}/top5 ${v.benchmark_top5}</td>
-              <td style="color:var(--text-muted,#888);font-size:11px">${cov}</td>
-            </tr>
-            <tr><td colspan="5" style="color:var(--text-muted,#888);font-size:11px;
-                padding-bottom:8px;border-bottom:1px solid var(--border,#eee)">
-                ⚠ ${v.caveat}</td></tr>`;
+            <div class="ch-row">
+              <div class="ch-row-main">
+                <span class="ch-name">${v.key}</span>
+                <span class="ch-val mono">${val}</span>
+                <span class="ch-badge ${st.cls}">${st.label}</span>
+              </div>
+              ${bench ? `<div class="ch-bench">${bench}</div>` : ''}
+              ${v.caveat ? `<div class="ch-caveat">${v.caveat}</div>` : ''}
+            </div>`;
     }).join('');
 
     const card = document.createElement('div');
-    card.className = 'analysis-card';
-    card.style.cssText = 'margin-top:16px;padding:16px;background:var(--surface,#fff);' +
-        'border-radius:8px;border:1px solid var(--border,#e4e4e4)';
+    card.className = 'choreography-card';
     card.innerHTML = `
-        <h3 style="margin:0 0 4px">编排智能 · Choreography Intelligence</h3>
-        <p style="color:var(--text-muted,#888);font-size:12px;margin:0 0 12px">
-           自动化 Yue 2023 (Nature Sci.Rep.) 的 5 个 hybrid-figure 变量 ·
-           ${ch.n_frames} 帧 @ ${ch.fps}fps · ${ch.resolution?.w}×${ch.resolution?.h}</p>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="color:var(--text-muted,#888);font-size:11px;text-align:left">
-            <th>变量</th><th style="text-align:right">测量值</th><th>状态</th>
-            <th>论文基准</th><th>覆盖</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p style="color:var(--text-muted,#888);font-size:11px;margin:10px 0 0;
-           padding:8px;background:var(--bg,#fafafa);border-radius:4px">
-           ℹ️ ${ch.composite_note}</p>`;
+        <div class="ch-head">
+          <span class="ch-title">Choreography Intelligence</span>
+          <span class="ch-tag">自动化 Yue 2023</span>
+        </div>
+        <div class="ch-sub">Nature Sci.Rep. 的 5 个编排变量 · ${ch.n_frames ?? '?'} 帧 @ ${ch.fps ?? '?'}fps${ch.resolution ? ` · ${ch.resolution.w}×${ch.resolution.h}` : ''}</div>
+        <div class="ch-rows">${rows}</div>
+        ${ch.composite_note ? `<div class="ch-note">${ch.composite_note}</div>` : ''}`;
     content.appendChild(card);
 }
 
@@ -1709,7 +1741,7 @@ function renderReport(name, report) {
                 <span class="vp-title">视频回放</span>
                 <button class="vp-athletes-btn" id="vp-athletes-btn" type="button" title="给检测到的运动员命名">队员</button>
                 <a class="vp-pdf-btn" id="vp-pdf-btn" target="_blank"
-                   href="/api/sets/${encodeURIComponent(name)}/report.pdf"
+                   href="${apiUrl('/api/sets/' + encodeURIComponent(name) + '/report.pdf')}"
                    title="导出 PDF 训练报告（含评分、雷达、关键帧、备注）">PDF</a>
                 <label class="vp-overlay-toggle active" id="vp-toggle">
                     <span>骨架叠加</span>
@@ -1717,7 +1749,7 @@ function renderReport(name, report) {
                 </label>
             </div>
             <div class="vp-wrapper">
-                <video id="vp-video" class="vp-video" controls src="/api/sets/${encodeURIComponent(name)}/video"></video>
+                <video id="vp-video" class="vp-video" controls src="${apiUrl('/api/sets/' + encodeURIComponent(name) + '/video')}"></video>
                 <canvas id="vp-skeleton" class="vp-skeleton-canvas"></canvas>
             </div>
             <div class="vp-marker-strip" id="vp-marker-strip" hidden></div>
@@ -2103,7 +2135,7 @@ function renderKeyframes(setName, count, phases) {
         : Array.from({ length: count }).map((_, i) => `F${i + 1}`);
 
     row.innerHTML = Array.from({ length: count }).map((_, i) => {
-        const src = `/api/sets/${encodeURIComponent(setName)}/keyframes/${i}?count=${count}`;
+        const src = apiUrl(`/api/sets/${encodeURIComponent(setName)}/keyframes/${i}?count=${count}`);
         const lbl = labels[i];
         return `
             <div class="keyframe-card">
@@ -2147,7 +2179,7 @@ function drawRadar(canvas, metrics) {
             if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
         }
         c.closePath();
-        c.strokeStyle = ri === rings.length - 1 ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)';
+        c.strokeStyle = ri === rings.length - 1 ? 'rgba(74,144,217,0.25)' : 'rgba(255,255,255,0.06)';
         c.lineWidth = ri === rings.length - 1 ? 1.5 : 1;
         c.stroke();
     });
@@ -2172,13 +2204,13 @@ function drawRadar(canvas, metrics) {
     c.closePath();
     c.fillStyle = 'rgba(30,64,175,0.35)';
     c.fill();
-    c.strokeStyle = '#3B82F6';
+    c.strokeStyle = '#4A90D9';
     c.lineWidth = 2;
     c.stroke();
 
     pts.forEach(([x, y]) => {
         c.beginPath(); c.arc(x, y, 4, 0, Math.PI * 2);
-        c.fillStyle = '#3B82F6'; c.fill();
+        c.fillStyle = '#4A90D9'; c.fill();
         c.beginPath(); c.arc(x, y, 2, 0, Math.PI * 2);
         c.fillStyle = '#fff'; c.fill();
     });
@@ -2471,7 +2503,7 @@ async function setupSkeletonOverlay(name) {
             if (ath && ath.color) return ath.color;
             return TEAM_COLORS[trackId % TEAM_COLORS.length];
         }
-        if (arrayIdx === 0) return '#3B82F6';
+        if (arrayIdx === 0) return '#4A90D9';
         return TEAM_COLORS[arrayIdx % TEAM_COLORS.length];
     }
     function labelFor(arrayIdx, trackId, athleteMap) {
@@ -2527,7 +2559,7 @@ async function setupSkeletonOverlay(name) {
 
         // Single-person fallback (older sets without landmarks_multi.jsonl)
         const pts = landmarks.frames[idx];
-        drawPersonAt(box, pts, '#3B82F6', '');
+        drawPersonAt(box, pts, '#4A90D9', '');
     }
 
     // rAF loop only while playing for smoothness
@@ -2564,7 +2596,7 @@ async function setupSkeletonOverlay(name) {
 //   visual cluster on screen.
 
 const COMPARE_PALETTE = [
-    '#3B82F6', '#A855F7', '#F59E0B', '#10B981',
+    '#4A90D9', '#A855F7', '#C4A55A', '#10B981',
     '#EC4899', '#06B6D4', '#F43F5E', '#84CC16',
     '#FB923C', '#8B5CF6',
 ];
@@ -3063,7 +3095,7 @@ function drawTrendLine(canvas, sortedReports, metricName) {
                                                   : (plotW * i) / (data.length - 1));
     const yFor = (v) => padT + plotH * (1 - (v - vmin) / (vmax - vmin));
 
-    c.strokeStyle = '#3B82F6';
+    c.strokeStyle = '#4A90D9';
     c.lineWidth = 2;
     c.beginPath();
     data.forEach((d, i) => {
@@ -3075,7 +3107,7 @@ function drawTrendLine(canvas, sortedReports, metricName) {
     data.forEach((d, i) => {
         const x = xFor(i), y = yFor(d.value);
         const ath = (d.athletes && d.athletes[0]) || null;
-        const colour = (ath && ath.color) || '#3B82F6';
+        const colour = (ath && ath.color) || '#4A90D9';
         c.beginPath(); c.arc(x, y, 5, 0, Math.PI * 2);
         c.fillStyle = colour; c.fill();
         c.beginPath(); c.arc(x, y, 2, 0, Math.PI * 2);
@@ -3356,7 +3388,7 @@ function renderHistory() {
         if (s.has_vision)    chips.push(`<span class="hc-chip on">视觉</span>`);
         if (s.has_video)     chips.push(`<span class="hc-chip on">视频</span>`);
         if (s.has_landmarks) chips.push(`<span class="hc-chip on">骨架</span>`);
-        const thumbSrc = s.has_video ? `/api/sets/${encodeURIComponent(s.name)}/keyframes/0?count=3` : '';
+        const thumbSrc = s.has_video ? apiUrl(`/api/sets/${encodeURIComponent(s.name)}/keyframes/0?count=3`) : '';
 
         return `
             <div class="history-card" data-name="${s.name}">

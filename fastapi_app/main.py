@@ -2,12 +2,14 @@
 
 Single-process server: BLE + camera + recording + WebSocket + REST API.
 """
+import os
 import threading
 import time
 
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 
 from fastapi_app.ble_manager import BleManager
@@ -19,8 +21,41 @@ from fastapi_app import api_routes
 
 app = FastAPI(title="SyncSwim Coach Station")
 
+# --- CORS: 让 Vercel 托管的前端跨域调用这台 Mac 黑盒后端 ---
+# 允许的来源从环境变量 SYNCSWIM_ALLOW_ORIGINS(逗号分隔)读,首跑默认 "*"。
+# expose_headers 让 <video> 的 Range 请求能跨域工作(否则 iPad 回放 seek 失败)。
+_allow_origins = [o.strip() for o in os.environ.get("SYNCSWIM_ALLOW_ORIGINS", "*").split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allow_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
+)
+
+# --- 轻量 token 鉴权:隧道公网暴露后防陌生人删库/改配置;本地(未设 env)全放行,向后兼容 ---
+SYNCSWIM_TOKEN = os.environ.get("SYNCSWIM_TOKEN", "")
+
+
+@app.middleware("http")
+async def _token_guard(request, call_next):
+    # OPTIONS 是 CORS 预检,浏览器不带自定义 header/token 发出,必须放行,
+    # 否则跨域请求在预检阶段就被拦,前端所有 fetch 失败(联调实测发现)。
+    if SYNCSWIM_TOKEN and request.method != "OPTIONS":
+        path = request.url.path
+        if path.startswith("/api/") and path != "/api/health":
+            tok = request.headers.get("X-SyncSwim-Token") or request.query_params.get("token")
+            if tok != SYNCSWIM_TOKEN:
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+    return await call_next(request)
+
+
 # --- Shared instances ---
-recorder = Recorder(data_dir="data")
+# data 目录用绝对路径(项目根/data),让开机自启黑盒不受工作目录影响;
+# 可用环境变量 SYNCSWIM_DATA_DIR 覆盖。
+_DATA_DIR = os.environ.get("SYNCSWIM_DATA_DIR") or str(Path(__file__).resolve().parent.parent / "data")
+recorder = Recorder(data_dir=_DATA_DIR)
 ble_manager = BleManager(
     on_imu_data=None,  # wired in startup
     on_state_change=None,
@@ -173,7 +208,14 @@ async def startup():
         _manual_recording = val
     api_routes.init(ble_manager, camera_manager, recorder, set_manual_recording=set_manual)
 
-    # Start services
+    # Start services — SYNCSWIM_NO_HARDWARE=1 跳过 BLE/摄像头/录制线程。
+    # 用于:① 联调 / 云端 ② Emily 在任意 Mac 纯看赛后复盘(无 M5)
+    # ③ 避免无蓝牙权限的后台进程触发 CoreBluetooth SIGABRT(exit 134)。
+    if os.environ.get("SYNCSWIM_NO_HARDWARE") == "1":
+        import logging
+        logging.warning("SYNCSWIM_NO_HARDWARE=1 — 跳过 BLE/摄像头/录制,仅 API + 赛后复盘可用")
+        return
+
     ble_manager.start()
     camera_manager.start()
 
@@ -205,13 +247,24 @@ app.include_router(api_routes.router)
 
 
 # --- WebSocket endpoints ---
+def _ws_authed(websocket: WebSocket) -> bool:
+    """WS 不走 HTTP 中间件,单独校验 query token(本地未设 env 时放行)。"""
+    return (not SYNCSWIM_TOKEN) or websocket.query_params.get("token") == SYNCSWIM_TOKEN
+
+
 @app.websocket("/ws/video")
 async def ws_video(websocket: WebSocket):
+    if not _ws_authed(websocket):
+        await websocket.close(code=1008)
+        return
     await video_ws(websocket, camera_manager)
 
 
 @app.websocket("/ws/metrics")
 async def ws_metrics(websocket: WebSocket):
+    if not _ws_authed(websocket):
+        await websocket.close(code=1008)
+        return
     await metrics_ws(websocket, ble_manager, recorder)
 
 

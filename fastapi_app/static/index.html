@@ -8,6 +8,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+      // 后端地址 + token:本地同源留空。部署到 Vercel 后,Emily 点一次配置链接
+      //   https://<vercel域名>/?backend=https://<mac隧道域名>&token=<token>
+      // 即自动存入 localStorage,之后用裸网址即可;也可在设置页手动改。
+      (function () {
+        var p = new URLSearchParams(location.search);
+        if (p.get('backend')) localStorage.setItem('syncswim_backend', p.get('backend').replace(/\/+$/, ''));
+        if (p.get('token')) localStorage.setItem('syncswim_token', p.get('token'));
+        if (p.get('backend') || p.get('token')) history.replaceState({}, '', location.pathname);
+        window.BACKEND_BASE = localStorage.getItem('syncswim_backend') || '';
+        window.BACKEND_TOKEN = localStorage.getItem('syncswim_token') || '';
+      })();
+    </script>
 </head>
 <body>
     <!-- ════════════════════ HEADER ════════════════════ -->

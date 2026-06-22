@@ -54,3 +54,7 @@ data/athletes.json
 # Emily kit packaging output (large, regenerated each build)
 emily_kit_*/
 emily_kit_*.zip
+
+# Vercel CLI link state
+.vercel
+.gstack/
