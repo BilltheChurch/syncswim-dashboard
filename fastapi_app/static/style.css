@@ -3647,3 +3647,26 @@ kbd {
     /* 分隔符在换行布局里隐藏,避免突兀 */
     .ctrl-divider { display: none; }
 }
+
+/* ── 手机竖屏(≤640px)适配:实时页流式高度、header 换行、卡片单列 ── */
+@media (max-width: 640px) {
+    /* 实时页:固定高度→自然流式,修评分环溢出叠控制条的 bug */
+    .live-layout { height: auto; overflow: visible; }
+    .side-panel {
+        width: 100%;
+        flex-direction: column;
+        overflow: visible;
+        padding-right: 0;
+    }
+    .panel-card { min-width: 0; flex: none; }
+    /* header 换行:品牌+状态第一行, tab 第二行可横向滑动 */
+    header { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+    .tab-nav { order: 3; width: 100%; overflow-x: auto; }
+    .header-status { margin-left: auto; gap: 10px; }
+    .header-clock { display: none; }  /* 手机省空间 */
+    /* choreography 变量行窄屏换行,不挤 */
+    .ch-row-main { flex-wrap: wrap; row-gap: 4px; }
+    .ch-name { flex: 1 1 60%; }
+    /* 控制条按钮在手机竖屏占满一行,易点 */
+    .controls-bar { flex-wrap: wrap; }
+}
