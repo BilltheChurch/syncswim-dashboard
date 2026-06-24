@@ -85,9 +85,14 @@ class _MjpegStreamReader:
         self._thread.start()
 
     def _reader(self):
+        # Some MJPEG sources (e.g. DroidCam) refuse the default urllib
+        # User-Agent — present as a browser so the stream is served.
+        req = urllib.request.Request(
+            self.url, headers={"User-Agent": "Mozilla/5.0"}
+        )
         while self.running:
             try:
-                stream = urllib.request.urlopen(self.url, timeout=5)
+                stream = urllib.request.urlopen(req, timeout=10)
                 self.connected = True
                 buf = b""
                 while self.running:
