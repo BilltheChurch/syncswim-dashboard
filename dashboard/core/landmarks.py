@@ -7,11 +7,12 @@ landmarks.csv data for skeleton overlay rendering.
 
 from pathlib import Path
 
+from functools import lru_cache
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import pandas as pd
-import streamlit as st
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import (
     PoseLandmarker,
@@ -45,7 +46,7 @@ def get_landmark_csv_header() -> list[str]:
     return header
 
 
-@st.cache_resource
+@lru_cache(maxsize=1)
 def get_landmarker() -> PoseLandmarker:
     """Create and cache a MediaPipe PoseLandmarker for IMAGE mode.
 

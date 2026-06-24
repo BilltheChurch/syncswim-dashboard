@@ -24,6 +24,8 @@ websockets
 # ──────────────── Config / data ────────────────
 pydantic>=2.0
 tomli; python_version < "3.11"
+tomli_w
+pandas>=1.5
 
 # ──────────────── BLE ────────────────
 bleak
