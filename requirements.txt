@@ -42,6 +42,9 @@ mediapipe>=0.10.5,<0.11
 
 # ──────────────── YOLO (auto-pulls torch + torchvision) ────────────────
 ultralytics>=8.3.0
+# lap = 多人追踪(ByteTrack)依赖。ultralytics 安装时不声明它,而是首次
+# 追踪那一刻才 AutoUpdate 下载 —— 离线/受限网络会卡住,所以显式列出。
+lap>=0.5.12
 
 # ──────────────── Reports / analysis ────────────────
 matplotlib>=3.7
