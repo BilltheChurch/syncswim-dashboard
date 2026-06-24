@@ -40,6 +40,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>1.0</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>NSBluetoothAlwaysUsageDescription</key><string>SyncSwim 需要蓝牙来连接 M5 运动传感器、读取 IMU 数据。</string>
+  <key>LSUIElement</key><true/>
+  <key>LSBackgroundOnly</key><false/>
 </dict>
 </plist>
 PLIST
