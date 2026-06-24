@@ -100,16 +100,25 @@ class _MjpegStreamReader:
                     if not chunk:
                         break
                     buf += chunk
+                    # 用相邻两个 SOI(0xFFD8)界定一帧,而不是找第一个 EOI(0xFFD9)。
+                    # 高分辨率 JPEG(如 iPhone DroidCam)压缩数据里会偶然出现 0xFFD9
+                    # 字节,find(EOI)会把帧截断 → imdecode 失败 → 永远 no frames。
+                    # (开发机当年低分辨率没触发,这就是"之前能、现在不能"的根因。)
                     start = buf.find(b"\xff\xd8")
-                    end = buf.find(b"\xff\xd9")
-                    if start != -1 and end != -1 and end > start:
-                        jpg = buf[start:end + 2]
-                        buf = buf[end + 2:]
-                        arr = np.frombuffer(jpg, dtype=np.uint8)
-                        frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-                        if frame is not None:
-                            with self.lock:
-                                self.frame = frame
+                    if start == -1:
+                        if len(buf) > 4_000_000:
+                            buf = b""  # 防异常流撑爆内存
+                        continue
+                    nxt = buf.find(b"\xff\xd8", start + 2)
+                    if nxt == -1:
+                        continue  # 下一帧还没到,继续累积
+                    jpg = buf[start:nxt]
+                    buf = buf[nxt:]
+                    arr = np.frombuffer(jpg, dtype=np.uint8)
+                    frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                    if frame is not None:
+                        with self.lock:
+                            self.frame = frame
             except Exception:
                 self.connected = False
                 if self.running:
