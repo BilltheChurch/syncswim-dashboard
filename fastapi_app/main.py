@@ -216,7 +216,13 @@ async def startup():
         logging.warning("SYNCSWIM_NO_HARDWARE=1 — 跳过 BLE/摄像头/录制,仅 API + 赛后复盘可用")
         return
 
-    ble_manager.start()
+    # SYNCSWIM_NO_BLE=1 只跳蓝牙、保留摄像头+录制(纯视觉模式)。
+    # 用于 macOS 蓝牙 TCC 权限搞不定时,先把视觉主线跑通。
+    if os.environ.get("SYNCSWIM_NO_BLE") == "1":
+        import logging
+        logging.warning("SYNCSWIM_NO_BLE=1 — 跳过蓝牙(纯视觉:摄像头/检测/录制/复盘仍可用)")
+    else:
+        ble_manager.start()
     camera_manager.start()
 
     # Start vision writer background thread
