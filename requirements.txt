@@ -37,6 +37,9 @@ bleak
 numpy>=1.23,<2
 opencv-python>=4.8.0
 opencv-contrib-python>=4.8.0
+# imageio-ffmpeg 自带 ffmpeg 二进制 — 录制后把 mp4v 转 H.264(浏览器可播),
+# 免去系统单独装 ffmpeg(Emily 全新装无 ffmpeg → 复盘视频回放黑屏,由此暴露)。
+imageio-ffmpeg>=0.4.9
 pillow>=10.0
 mediapipe>=0.10.5,<0.11
 

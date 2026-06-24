@@ -237,10 +237,18 @@ class Recorder:
         tmp = os.path.join(set_dir, "video.h264.tmp.mp4")
 
         def _worker():
+            # 优先用 pip 包 imageio-ffmpeg 自带的 ffmpeg 二进制(免系统安装、
+            # 符合黑盒化);系统若装了 ffmpeg 也行,作为兜底。
+            ffmpeg_bin = "ffmpeg"
+            try:
+                import imageio_ffmpeg
+                ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+            except Exception:
+                pass
             try:
                 result = subprocess.run(
                     [
-                        "ffmpeg", "-y",
+                        ffmpeg_bin, "-y",
                         "-i", src,
                         "-c:v", "libx264",
                         "-preset", "veryfast",
