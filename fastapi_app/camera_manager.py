@@ -90,14 +90,22 @@ class _MjpegStreamReader:
         req = urllib.request.Request(
             self.url, headers={"User-Agent": "Mozilla/5.0"}
         )
+        print(f"[reader] connecting to {self.url}", flush=True)
+        decoded = 0
         while self.running:
             try:
                 stream = urllib.request.urlopen(req, timeout=10)
                 self.connected = True
+                print(
+                    f"[reader] connected; Content-Type="
+                    f"{stream.headers.get('Content-Type')}",
+                    flush=True,
+                )
                 buf = b""
                 while self.running:
                     chunk = stream.read(4096)
                     if not chunk:
+                        print("[reader] stream ended (empty read)", flush=True)
                         break
                     buf += chunk
                     # 用相邻两个 SOI(0xFFD8)界定一帧,而不是找第一个 EOI(0xFFD9)。
@@ -117,10 +125,20 @@ class _MjpegStreamReader:
                     arr = np.frombuffer(jpg, dtype=np.uint8)
                     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
                     if frame is not None:
+                        decoded += 1
+                        if decoded == 1 or decoded % 100 == 0:
+                            print(
+                                f"[reader] decoded {decoded} frames "
+                                f"(shape={frame.shape})",
+                                flush=True,
+                            )
                         with self.lock:
                             self.frame = frame
-            except Exception:
+            except Exception as e:
                 self.connected = False
+                print(
+                    f"[reader] EXCEPTION {type(e).__name__}: {e}", flush=True
+                )
                 if self.running:
                     time.sleep(1)
 
