@@ -40,6 +40,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>1.0</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>NSBluetoothAlwaysUsageDescription</key><string>SyncSwim 需要蓝牙来连接 M5 运动传感器、读取 IMU 数据。</string>
+  <key>NSLocalNetworkUsageDescription</key><string>SyncSwim 需要访问本地网络,以连接同一 WiFi 下的手机摄像头(DroidCam MJPEG 视频流)。</string>
   <key>LSUIElement</key><true/>
   <key>LSBackgroundOnly</key><false/>
 </dict>
@@ -66,6 +67,8 @@ echo "  ✅ 桌面已生成 SyncSwim.app"
 echo "============================================"
 echo "  现在双击桌面的 SyncSwim.app:"
 echo "  · 首次会弹「SyncSwim 想使用蓝牙」→ 点【允许】"
+echo "  · 也会弹「SyncSwim 想访问本地网络」→ 点【允许】(连手机摄像头要它!)"
+echo "  · 若没弹本地网络窗:系统设置→隐私与安全性→本地网络→打开 SyncSwim 开关"
 echo "  · 之后后端就在后台跑了(日志在 /tmp/syncswim.log)"
 echo "  · 浏览器开 http://localhost:8000 验证"
 echo ""
