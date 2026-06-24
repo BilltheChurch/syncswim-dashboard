@@ -81,15 +81,18 @@ class YoloPoseDetector:
     ):
         from ultralytics import YOLO
 
-        if not os.path.exists(model_path):
+        # Official weights (yolov8n/s-pose.pt) auto-download on first use if
+        # absent — let ultralytics fetch them. Only a *custom* trained model
+        # (e.g. best.pt) can't be auto-fetched, so guard that case.
+        is_official = os.path.basename(model_path).startswith("yolov8")
+        if not os.path.exists(model_path) and not is_official:
             raise FileNotFoundError(
-                f"YOLO pose model not found at {model_path}. Download with:\n"
-                f"  curl -L -o {model_path} "
-                f"https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n-pose.pt"
+                f"Custom YOLO model not found at {model_path} (cannot auto-download)"
             )
 
         # mps = Apple Metal; cuda for NVIDIA; cpu fallback. Ultralytics
-        # auto-falls-back to cpu if the chosen device isn't available.
+        # auto-falls-back to cpu if the chosen device isn't available
+        # (handled in warm-up below), and auto-downloads official weights.
         self._model = YOLO(model_path)
         self._conf = float(conf)
         self._iou = float(iou)
