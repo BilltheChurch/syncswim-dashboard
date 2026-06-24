@@ -41,12 +41,23 @@ rm -f "$SRC"
 echo "=== 注入身份 + 权限声明(PlistBuddy) ==="
 PLIST="$APP/Contents/Info.plist"
 PB=/usr/libexec/PlistBuddy
+set +e   # PlistBuddy 对已存在/不存在的 key 行为不一,逐条容错,别让 set -e 中断
 # 全新 bundle id — 让 macOS 当作没见过的新 app,首次运行就弹本地网络窗
-"$PB" -c "Set :CFBundleIdentifier com.frontier.syncswim.studio" "$PLIST"
-"$PB" -c "Add :CFBundleName string SyncSwim" "$PLIST" 2>/dev/null || "$PB" -c "Set :CFBundleName SyncSwim" "$PLIST"
-"$PB" -c "Add :CFBundleDisplayName string SyncSwim" "$PLIST" 2>/dev/null || true
-"$PB" -c "Add :NSBluetoothAlwaysUsageDescription string SyncSwim 需要蓝牙来连接 M5 运动传感器、读取 IMU 数据。" "$PLIST" 2>/dev/null || true
-"$PB" -c "Add :NSLocalNetworkUsageDescription string SyncSwim 需要访问本地网络,以连接同一 WiFi 下的手机摄像头(DroidCam 视频流)。" "$PLIST" 2>/dev/null || true
+# (osacompile 在新版 macOS 不写 CFBundleIdentifier,所以先 Add、不存在才有意义)
+"$PB" -c "Add :CFBundleIdentifier string com.frontier.syncswim.studio" "$PLIST" 2>/dev/null \
+  || "$PB" -c "Set :CFBundleIdentifier com.frontier.syncswim.studio" "$PLIST"
+"$PB" -c "Add :CFBundleName string SyncSwim" "$PLIST" 2>/dev/null \
+  || "$PB" -c "Set :CFBundleName SyncSwim" "$PLIST"
+"$PB" -c "Add :CFBundleDisplayName string SyncSwim" "$PLIST" 2>/dev/null
+"$PB" -c "Add :NSBluetoothAlwaysUsageDescription string SyncSwim 需要蓝牙来连接 M5 运动传感器、读取 IMU 数据。" "$PLIST" 2>/dev/null
+"$PB" -c "Add :NSLocalNetworkUsageDescription string SyncSwim 需要访问本地网络,以连接同一 WiFi 下的手机摄像头(DroidCam 视频流)。" "$PLIST" 2>/dev/null
+set -e   # 恢复严格模式
+
+echo "=== 校验 Info.plist 关键键 ==="
+for k in CFBundleIdentifier NSBluetoothAlwaysUsageDescription NSLocalNetworkUsageDescription; do
+    v="$("$PB" -c "Print :$k" "$PLIST" 2>/dev/null)"
+    [ -n "$v" ] && echo "  ✓ $k = $v" || echo "  ❌ $k 缺失!"
+done
 
 echo "=== ad-hoc 签名 ==="
 codesign --force --deep --sign - "$APP" 2>/dev/null && echo "✓ 已 ad-hoc 签名" || echo "(codesign 跳过)"
