@@ -1664,6 +1664,47 @@ function renderReport(name, report) {
         </div>
     `;
 
+    // ── IMU 腿部动力学(视觉盲区补盲) ──
+    const legNodes = imuNodes.filter(n => {
+        const L = imuSummary[n].leg;
+        return L && L.main_axis && L.main_axis !== 'n/a';
+    });
+    let legDynHTML = '';
+    if (legNodes.length) {
+        const lower = vg.lower;
+        const blind = (lower !== undefined && lower !== null && lower < 50)
+            ? `<span class="leg-blind">视觉下身仅 ${lower.toFixed(0)}% 入镜 · 以下由 IMU 补全</span>`
+            : '';
+        legDynHTML = `
+            <div class="leg-dyn-card">
+                <div class="leg-dyn-head">
+                    <span class="leg-dyn-title">🦵 腿部动力学</span>
+                    <span class="leg-dyn-note">脚踝 IMU · 不受水下折射影响 · 倒立/水下仍连续</span>
+                    ${blind}
+                </div>
+                <div class="leg-dyn-grid">
+                    ${legNodes.map(n => {
+                        const L = imuSummary[n].leg;
+                        const cells = [
+                            [L.kick_freq_hz, '打腿频率', 'Hz'],
+                            [L.peak_rate_dps, '峰值摆速', '°/s'],
+                            [L.rms_rate_dps, '平均摆速', '°/s'],
+                            [L.intensity_g, '动作强度', 'g'],
+                        ];
+                        return `<div class="leg-dyn-node">
+                            <div class="leg-dyn-node-name">${n}<span class="leg-dyn-axis">主轴 ${L.main_axis}</span></div>
+                            <div class="leg-dyn-cells">
+                                ${cells.map(([v, lbl, u]) => `
+                                    <div class="ld-cell"><span class="ld-v mono">${v}</span><span class="ld-u">${u}</span><span class="ld-l">${lbl}</span></div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
     // ── Score row ──
     const scoreText = hasScore ? score.toFixed(1) : '—';
 
@@ -1825,6 +1866,7 @@ function renderReport(name, report) {
         ${noteHTML}
         ${scoreRowHTML}
         ${groupsHTML}
+        ${legDynHTML}
         <div class="video-analysis-row">
             ${videoHTML}
             ${tsHTML}

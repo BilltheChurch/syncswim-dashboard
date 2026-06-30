@@ -3670,3 +3670,23 @@ kbd {
     /* 控制条按钮在手机竖屏占满一行,易点 */
     .controls-bar { flex-wrap: wrap; }
 }
+
+/* ── IMU 腿部动力学卡片(复盘页 · 任务3 IMU 融合) ── */
+.leg-dyn-card { background: var(--card-bg); border: 1px solid rgba(196,165,90,0.25);
+  border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.leg-dyn-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.leg-dyn-title { font-weight: 600; color: var(--brand-gold, #C4A55A); font-size: 0.95rem; }
+.leg-dyn-note { font-size: 0.72rem; color: var(--text-muted); }
+.leg-blind { font-size: 0.72rem; color: #4A90D9; margin-left: auto;
+  background: rgba(74,144,217,0.12); padding: 2px 8px; border-radius: 6px; }
+.leg-dyn-grid { display: flex; flex-direction: column; gap: 10px; }
+.leg-dyn-node-name { font-size: 0.8rem; color: var(--text-hi); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px; }
+.leg-dyn-axis { font-size: 0.68rem; color: var(--text-muted); font-weight: 400; }
+.leg-dyn-cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ld-cell { display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 4px; }
+.ld-v { font-size: 1.1rem; font-weight: 600; color: var(--brand-gold, #C4A55A); }
+.ld-u { font-size: 0.62rem; color: var(--text-muted); }
+.ld-l { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+@media (max-width: 640px) { .leg-dyn-cells { grid-template-columns: repeat(2, 1fr); } }

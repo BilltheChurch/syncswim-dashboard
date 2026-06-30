@@ -35,6 +35,9 @@ from pydantic import BaseModel
 
 from dashboard.config import load_config, save_config
 from dashboard.core.analysis import calc_imu_tilt
+from dashboard.core.imu_fusion import (
+    calibrate_from_rest, apply_calibration, leg_dynamics,
+)
 from dashboard.core.data_loader import load_all_imus, load_or_rebuild_index, load_vision
 from dashboard.core.landmarks import load_landmarks_csv
 from dashboard.core.metrics import compute_all_metrics
@@ -177,6 +180,16 @@ def _imu_summary(set_dir: str) -> dict:
                 big = intervals[intervals > med * 3]
                 if len(big):
                     lost = int(np.sum(np.round(big / med) - 1))
+            # 腿部动力学(IMU 融合):校准到解剖系 + 打腿频率/峰值摆速/强度。
+            # 视觉丢腿(倒立/水下)时这些仍连续 —— IMU 不受水下折射影响。
+            try:
+                _cal = calibrate_from_rest()
+                _, _gyro_a, _lin = apply_calibration(
+                    df[["ax", "ay", "az"]].values,
+                    df[["gx", "gy", "gz"]].values, _cal)
+                leg = leg_dynamics(_gyro_a, _lin, rate)
+            except Exception:
+                leg = {}
             summary[node] = {
                 "packets": packets,
                 "rate": round(rate, 1),
@@ -185,6 +198,7 @@ def _imu_summary(set_dir: str) -> dict:
                 "tilt_std": round(tilt_std, 2),
                 "lost": lost,
                 "loss_pct": round(100.0 * lost / max(packets + lost, 1), 2),
+                "leg": leg,
             }
         except Exception:
             summary[node] = {
