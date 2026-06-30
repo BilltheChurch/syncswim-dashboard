@@ -409,9 +409,20 @@ data/
 - [x] HybridSwimmerDetector 支持 pose_backend="mediapipe"：v2 框 → MediaPipe 33 点(含脚尖)
 - [x] 脚尖可见度 0%(YOLO COCO17 架构无此点) → 12%(set_004 远景；近景/出水更高)
 - [x] config swimmer_pose_backend 切换（默认 yolo 实时，复盘可设 mediapipe）
-### 12.5 待办
+### 12.5 指标可解释性 ✅
+- [x] 复盘页 16 个指标每个加 ⓘ → 点击弹"是什么/怎么判断(完整 FINA 阈值)/什么用(学术依据)"
+- [x] 解决"一堆数字不知道什么意思" —— 教练可读(Edriss 2024 / Yue 2023 依据内嵌)
+
+### 12.6 Phase B 关键点脚手架（自训 pose,让脚尖真正准）✅ 脚手架就绪,待标注
+- [x] 19 点数据集(COCO17 + 左右脚尖) `data/training/phase_b/swimmer_pose.yaml`
+- [x] `tools/preannotate_pose.py` 飞轮预标注(v2 detector + MediaPipe → 19 点,验证 62 字段+脚尖)
+- [x] `docs/phase-b-annotation.md` 标注规范(脚尖/倒立/visibility/防泄漏拆分)
+- [x] train_pose.py 已支持 `--data`,直接吃 phase_b yaml
+- [ ] 待标注 ~150 帧关键点 → 训练 → 脚尖准 → 绷脚角度进评分
+
+### 12.7 待办
 - [ ] Emily 下周部署 v2 detector（发 syncswim_v2_deploy.zip）
-- [ ] 评分纳入 IMU 腿部指标 + 脚尖绷脚角度
+- [ ] Phase B 标注+训练(脚尖准了再把绷脚角度纳入 FINA 评分;当前 MediaPipe 通用脚尖仅 12%)
 - [ ] v3 数据扩充（更多场景/距离）；现场保证 IMU 采样率不断连（set_004 那次 9s gap 是硬伤）
 
 ## 硬件配置
