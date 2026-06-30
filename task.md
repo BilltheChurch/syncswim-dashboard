@@ -390,6 +390,30 @@ data/
 - [ ] Emily 现场 onboarding + 全流程现场验证（iPad→隧道→Mac→M5/摄像头→实时→录制→赛后）
 - [ ] 实时页现场控制台专门布局 + emoji→SVG
 
+## 阶段十二：自训 detector 数据飞轮 + 系统优化（2026-06）✅
+### 12.1 Phase A detector v1→v2（数据飞轮闭环）✅
+- [x] v1 标注入库（150 帧 raw clips；git -f 突破 .gitignore —— 此前"训过却找不到"的根因）
+- [x] v2 数据扩充：set_004~008 抽帧 → CVAT 标注(200 帧单人) → 合并 350 帧重训
+- [x] CPU 训练（MPS torch2.11 EmbeddingBag 崩；改总统大人自己终端 nohup 跑避免会话 teardown）
+- [x] 成果：检测率 nano 1% → v1 70% → **v2 98%**；mAP50 0.915；set_008 holdout 验证
+- [x] 启用 config swimmer_detector + 模型备份 + Emily 部署包（待下周部署）
+### 12.2 单人锁定（ID 通胀根治）✅
+- [x] HybridSwimmerDetector max_persons==1 时锁最高置信单框 + 固定 track_id=1
+- [x] ID 通胀 v1 11× → v2 3× → +单人锁定 **1×**（set_008 验证）
+### 12.3 IMU 融合（项目灵魂 · 水下盲区补腿部动力学）✅
+- [x] dashboard/core/imu_fusion.py：静止标定去陀螺零偏 + 重力对齐解剖系
+- [x] 腿部动力学：打腿频率/峰值摆速/RMS/动作强度（用角速度统计避免积分漂移）
+- [x] 复盘页"🦵 腿部动力学"卡片：视觉下身<50%入镜时标注"由 IMU 补全"
+- [x] set_004 验证：视觉丢腿 84% 帧时 IMU 全程连续（不受水下折射影响）
+### 12.4 Phase B 脚尖（绷脚可评）✅
+- [x] HybridSwimmerDetector 支持 pose_backend="mediapipe"：v2 框 → MediaPipe 33 点(含脚尖)
+- [x] 脚尖可见度 0%(YOLO COCO17 架构无此点) → 12%(set_004 远景；近景/出水更高)
+- [x] config swimmer_pose_backend 切换（默认 yolo 实时，复盘可设 mediapipe）
+### 12.5 待办
+- [ ] Emily 下周部署 v2 detector（发 syncswim_v2_deploy.zip）
+- [ ] 评分纳入 IMU 腿部指标 + 脚尖绷脚角度
+- [ ] v3 数据扩充（更多场景/距离）；现场保证 IMU 采样率不断连（set_004 那次 9s gap 是硬伤）
+
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
 - IMU: 内置 MPU6886, 实测 72.5Hz（零丢包零重复）
