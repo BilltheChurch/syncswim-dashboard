@@ -1,0 +1,36 @@
+# SyncSwim Phase B — YOLOv8-pose 关键点微调数据集(含脚尖,绷脚可评)
+#
+# 相比 data/training/syncswim.yaml 的 COCO-17:
+#   - 扩到 19 点 = COCO-17 + 左右脚尖(foot_index 17/18)
+#   - 脚尖是花游绷脚评分的核心,COCO-17 架构压根没有这两点
+#
+# 布局(tools/preannotate_pose.py + CVAT 修正后):
+#   data/training/phase_b/
+#     images/        # 帧 jpg
+#     labels/        # YOLO pose label(19 点)
+#     train.txt / val.txt   # 整段拆分(防泄漏,见 DEVLOG #33)
+#     swimmer_pose.yaml
+#
+# 预标注: preannotate_pose.py 用 v2 detector(98% 召回) + MediaPipe(33 点含
+#   脚尖)生成 19 点初始标注 → CVAT 人工修正。比从零画 19 点快 5-10x,
+#   也解决旧 preannotate.py "COCO 7% 召回漏 93%" 的问题。
+
+path: ../../data/training/phase_b
+train: images
+val: images   # 占位 — 发布前换成 val.txt(整段拆分,val 用训练没见过的 set/clip)
+
+nc: 1
+names:
+  0: person
+
+# 19 点 = COCO-17 + [17 left_foot_index, 18 right_foot_index]
+kpt_shape: [19, 3]
+
+# 左右翻转配对(水平翻转增强用)。COCO-17 配对 + 脚尖 17↔18:
+#  0 nose
+#  1 L_eye  ↔ 2 R_eye      3 L_ear  ↔ 4 R_ear
+#  5 L_sho  ↔ 6 R_sho      7 L_elb  ↔ 8 R_elb
+#  9 L_wri  ↔ 10 R_wri    11 L_hip  ↔ 12 R_hip
+# 13 L_knee ↔ 14 R_knee   15 L_ank  ↔ 16 R_ank
+# 17 L_foot ↔ 18 R_foot
+flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17]
