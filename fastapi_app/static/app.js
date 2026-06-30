@@ -109,6 +109,58 @@ const METRIC_HINTS = {
     elbow:                   'FINA 扣分依据',
 };
 
+// 指标详解(点 ⓘ 弹出): 是什么 / 怎么判断 / 什么用 —— 让教练看懂每个数字。
+const METRIC_EXPLAIN = {
+    leg_deviation: { what: '腿偏离垂直方向的平均角度(IMU 倾角与 90° 之差)', judge: '越小越好 · 达标<15° / 轻微15-30° / 需改进>30°', why: 'FINA 评判核心——腿要绷直竖直。Edriss 2024 验证与人工测角 r=0.93' },
+    knee_extension: { what: '膝关节伸直角度(180°=完全伸直)', judge: '越大越好 · 达标>170° / 轻微155-170° / 需改进<155°', why: '绷腿是否到位。Edriss 2024' },
+    shoulder_knee_alignment: { what: '肩-髋-膝三点连线的对齐角度', judge: '越大越对齐 · 达标>170° / 轻微155-170° / 需改进<155°', why: '上身到腿的整体直线性;Edriss 2024 发现它与总分相关最强(r=-0.444)' },
+    trunk_vertical: { what: '躯干偏离垂直方向的角度', judge: '越小越好 · 达标<10° / 轻微10-20° / 需改进>20°', why: '倒立/定型时躯干要正直' },
+    leg_symmetry: { what: '左右两腿角度的差异', judge: '越小越对称 · 达标<5° / 轻微5-15° / 需改进>15°', why: '双人/团体的同步性' },
+    leg_height_index: { what: '腿抬出髋部以上的比例(%)', judge: '越高越好 · 顶级队约 32.7%', why: '腿举越高分越高。Yue 2023 显著预测因子' },
+    movement_frequency: { what: '每秒动作峰值数(Hz,由加速度峰值检测)', judge: '越高越密集 · 顶级队约 1.92Hz', why: 'Yue 2023 最强正向预测(标准化β=0.345):动作越密集分越高' },
+    rotation_frequency: { what: '身体旋转角速度(°/s,陀螺幅度均值)', judge: '越快越好 · 顶级队约 44.95°/s', why: '旋转速度。Yue 2023' },
+    mean_pattern_duration: { what: '相邻动作变化之间的平均间隔(秒)', judge: '反映动作节奏快慢', why: '混合图形(HF)的节奏。Yue 2023' },
+    last_hf_duration: { what: '最后一个图形动作的持续时间(秒)', judge: '收尾图形的时长', why: 'Yue 2023' },
+    smoothness: { what: '陀螺信号的 jerk(角速度变化率)', judge: '越小越平滑(顿挫越少)', why: '动作流畅度,不卡顿' },
+    stability: { what: '定型阶段倾角的标准差', judge: '越小越稳(定住不晃)', why: '造型保持的稳定性' },
+    explosive_power: { what: '动态加速度峰值', judge: '越大爆发力越强', why: '起跳/出水等爆发动作的力度' },
+    energy_index: { what: '整段加速度的积分能量', judge: '代谢消耗代理,越高越费力', why: '整体运动量' },
+    motion_complexity: { what: '动作信号的谱熵', judge: '越高动作越多变', why: '动作的丰富/复杂程度' },
+    elbow: { what: '肘关节角度', judge: 'FINA 扣分依据', why: '手臂划水/造型动作' },
+};
+
+function showMetricInfo(name) {
+    const e = METRIC_EXPLAIN[name];
+    if (!e) return;
+    const label = METRIC_LABELS[name] || name;
+    const root = document.getElementById('modal-root');
+    if (!root) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal-box metric-info-box">
+            <div class="modal-title">${label}</div>
+            <div class="modal-body metric-info-body">
+                <div class="mi-row"><span class="mi-k">是什么</span><span class="mi-v">${e.what}</span></div>
+                <div class="mi-row"><span class="mi-k">怎么判断</span><span class="mi-v">${e.judge}</span></div>
+                <div class="mi-row"><span class="mi-k">什么用</span><span class="mi-v">${e.why}</span></div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-confirm" style="background:var(--primary);border-color:var(--primary)">明白了</button>
+            </div>
+        </div>`;
+    root.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.querySelector('.modal-btn-confirm').onclick = close;
+    overlay.onclick = (ev) => { if (ev.target === overlay) close(); };
+}
+
+// 全局委托:点击任意指标卡片的 ⓘ 显示详解
+document.addEventListener('click', (ev) => {
+    const info = ev.target.closest && ev.target.closest('.mc-info');
+    if (info && info.dataset.metric) showMetricInfo(info.dataset.metric);
+});
+
 const ZONE_LABELS = { clean: '达标', minor: '轻微', major: '需改进', no_data: '无数据' };
 const PHASE_NAMES = { prep: '准备', exhibition: '展示', recovery: '恢复', '准备': '准备', '动作': '动作', '恢复': '恢复' };
 const GROUP_NAMES = { posture: '姿态', extension: '伸展', symmetry: '对称', motion: '运动', power: '能量' };
@@ -2076,7 +2128,7 @@ function buildMetricCards(metrics) {
         if (zone === 'no_data' || m.value === null || m.value === undefined) {
             return `
                 <div class="metric-card no-data" data-metric="${name}">
-                    <div class="mc-name">${label}</div>
+                    <div class="mc-name">${label}<span class="mc-info" data-metric="${name}" title="点击查看详解">ⓘ</span></div>
                     <div class="mc-value-row">
                         <span class="mc-value mono">—</span>
                     </div>
@@ -2090,7 +2142,7 @@ function buildMetricCards(metrics) {
         const barPct = radar.toFixed(0);
         return `
             <div class="metric-card" data-metric="${name}">
-                <div class="mc-name">${label}${hint ? ` · <span style="color:var(--text-muted);font-size:0.68rem">${hint}</span>` : ''}</div>
+                <div class="mc-name">${label}${hint ? ` · <span style="color:var(--text-muted);font-size:0.68rem">${hint}</span>` : ''}<span class="mc-info" data-metric="${name}" title="点击查看详解">ⓘ</span></div>
                 <div class="mc-value-row">
                     <span class="mc-value mono">${typeof m.value === 'number' ? m.value.toFixed(1) : m.value}</span>
                     <span class="mc-unit mono">${unit}</span>
