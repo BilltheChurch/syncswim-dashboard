@@ -77,6 +77,11 @@ yolo_imgsz = 640                   # inference resolution. 640 = realtime; 1280 
 # out until you've trained one with `python tools/train_detector.py`.
 # v2(350帧, mAP50 0.915): set_008 holdout 检测率98%/ID通胀3x — 碾压通用nano(1%)。
 swimmer_detector = "runs/detect/swimmer_det_v2/weights/best.pt"
+# Phase B: hybrid 模式下关键点后端。
+#   "mediapipe" = 33 点(含脚尖 foot_index/heel,绷脚可评,复盘推荐)
+#   "yolo"      = COCO 17 点(无脚尖,默认,实时录制用)
+# 脚尖 set_004 远景从 0% → 12%(近景/出水更高)。
+# swimmer_pose_backend = "mediapipe"
 # MediaPipe pose model size: "heavy" (30 MB, highest accuracy),
 # "full" (10 MB, balanced), or "lite" (6 MB, fastest). Only used when
 # pose_backend = "mediapipe".

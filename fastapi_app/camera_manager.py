@@ -420,6 +420,9 @@ class CameraManager:
                     sd_raw if os.path.isabs(sd_raw)
                     else os.path.join(_PROJECT_ROOT, sd_raw)
                 )
+            # Phase B: hybrid 模式下 pose 关键点的后端。
+            #   "mediapipe" → 33 点(含脚尖,绷脚可评);"yolo" → COCO 17 点(无脚尖)。
+            pose_backend = str(cfg_hw.get("swimmer_pose_backend", "yolo"))
             self._yolo = create_pose_detector(
                 swimmer_detector_path=sd_path,
                 pose_model_path=yolo_model,
@@ -427,6 +430,7 @@ class CameraManager:
                 max_persons=num_poses,
                 device=yolo_device,
                 imgsz=yolo_imgsz,
+                pose_backend=pose_backend,
             )
             self._landmarker = None
             print(

@@ -267,6 +267,7 @@ class HybridSwimmerDetector:
         max_persons: int = 8,
         device: str = "mps",
         imgsz: int = 1280,
+        pose_backend: str = "yolo",
     ):
         from ultralytics import YOLO
 
@@ -277,16 +278,26 @@ class HybridSwimmerDetector:
                 f"  python tools/train_detector.py\n"
                 f"(see docs/phase-a-annotation.md)"
             )
-        if not os.path.exists(pose_model_path):
-            raise FileNotFoundError(
-                f"Pose model not found at {pose_model_path}. Download with:\n"
-                f"  curl -L -o {pose_model_path} "
-                f"https://github.com/ultralytics/assets/releases/download/"
-                f"v8.3.0/yolov8s-pose.pt"
-            )
 
         self._det_model = YOLO(swimmer_detector_path)   # custom bbox
-        self._pose_model = YOLO(pose_model_path)         # COCO keypoints
+        # pose_backend="mediapipe": 在裁剪框内跑 MediaPipe → 33 点(含脚尖
+        #   foot_index/heel,绷脚可评);"yolo": yolov8s-pose COCO 17 点(无脚尖)。
+        #   crop 内是单人,MediaPipe 最稳的场景。
+        self._pose_backend = pose_backend
+        self._mp_landmarker = None
+        self._pose_model = None
+        if pose_backend == "mediapipe":
+            from dashboard.core.landmarks import get_landmarker
+            self._mp_landmarker = get_landmarker()
+        else:
+            if not os.path.exists(pose_model_path):
+                raise FileNotFoundError(
+                    f"Pose model not found at {pose_model_path}. Download with:\n"
+                    f"  curl -L -o {pose_model_path} "
+                    f"https://github.com/ultralytics/assets/releases/download/"
+                    f"v8.3.0/yolov8s-pose.pt"
+                )
+            self._pose_model = YOLO(pose_model_path)     # COCO keypoints
         self._conf = float(conf)
         self._iou = float(iou)
         self._max_persons = max(1, int(max_persons))
@@ -300,19 +311,21 @@ class HybridSwimmerDetector:
                 dummy, verbose=False, conf=self._conf, iou=self._iou,
                 device=self._device, max_det=self._max_persons,
             )
-            self._pose_model.predict(
-                dummy, verbose=False, conf=0.1, max_det=1,
-                device=self._device,
-            )
+            if self._pose_model is not None:
+                self._pose_model.predict(
+                    dummy, verbose=False, conf=0.1, max_det=1,
+                    device=self._device,
+                )
         except Exception:
             self._device = "cpu"
             self._det_model.predict(
                 dummy, verbose=False, conf=self._conf, iou=self._iou,
                 device="cpu", max_det=self._max_persons,
             )
-            self._pose_model.predict(
-                dummy, verbose=False, conf=0.1, max_det=1, device="cpu",
-            )
+            if self._pose_model is not None:
+                self._pose_model.predict(
+                    dummy, verbose=False, conf=0.1, max_det=1, device="cpu",
+                )
 
     def detect(self, frame_bgr: np.ndarray, w: int, h: int):
         """Two-stage detection. See class docstring for rationale.
@@ -384,6 +397,27 @@ class HybridSwimmerDetector:
 
             crop = frame_bgr[y1i:y2i, x1i:x2i]
             mp33 = _empty_mp33()
+            cw, ch = x2i - x1i, y2i - y1i
+
+            # MediaPipe 后端:在裁剪框内出 33 点(含脚尖 foot_index/heel → 绷脚
+            # 可评),直接映射回全帧并跳过下面的 YOLO-17 分支。crop 内是单人,
+            # 正是 MediaPipe 最稳的场景;v2 detector 已解决"找人"(98%)。
+            if self._pose_backend == "mediapipe":
+                try:
+                    from dashboard.core.landmarks import detect_landmarks
+                    lms = detect_landmarks(crop)
+                except Exception:
+                    lms = None
+                if lms is not None and len(lms) >= 33:
+                    for j in range(33):
+                        mp33[j] = _Landmark(
+                            x=(x1i + float(lms[j].x) * cw) / max(1, w),
+                            y=(y1i + float(lms[j].y) * ch) / max(1, h),
+                            visibility=float(getattr(lms[j], "visibility", 1.0)),
+                        )
+                persons.append(mp33)
+                continue
+
             try:
                 pose_out = self._pose_model.predict(
                     crop,
@@ -456,6 +490,7 @@ def create_pose_detector(
     max_persons: int,
     device: str,
     imgsz: int = 640,
+    pose_backend: str = "yolo",
 ):
     """Factory: pick HybridSwimmerDetector if a custom detector is
     configured, otherwise fall back to the single-model YoloPoseDetector.
@@ -465,9 +500,11 @@ def create_pose_detector(
     instead of hard-coded at each instantiation site.
     """
     if swimmer_detector_path and os.path.exists(swimmer_detector_path):
+        pose_desc = ("MediaPipe-33(含脚尖)" if pose_backend == "mediapipe"
+                     else pose_model_path)
         print(
             f"[pose] hybrid mode: detector={swimmer_detector_path} "
-            f"+ pose={pose_model_path}"
+            f"+ pose={pose_desc}"
         )
         return HybridSwimmerDetector(
             swimmer_detector_path=swimmer_detector_path,
@@ -476,6 +513,7 @@ def create_pose_detector(
             max_persons=max_persons,
             device=device,
             imgsz=imgsz,
+            pose_backend=pose_backend,
         )
     return YoloPoseDetector(
         model_path=pose_model_path,
