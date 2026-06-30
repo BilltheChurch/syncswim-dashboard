@@ -348,13 +348,28 @@ class HybridSwimmerDetector:
         if n == 0:
             return [], []
 
-        # Track IDs (None for brand-new detections the tracker hasn't
-        # matched yet on this frame).
-        track_ids: list[int | None] = [None] * n
-        if getattr(result.boxes, "id", None) is not None:
-            ids_np = result.boxes.id.cpu().numpy().astype(int)
-            if len(ids_np) == n:
-                track_ids = [int(x) for x in ids_np]
+        # 单人锁定(max_persons==1 → 复盘单运动员):只保留最高置信度的 1 个框、
+        # 强制 track_id=1。即使检测器偶尔丢帧后重检测,ID 也恒为 1 → 彻底消除
+        # 多人追踪残留的 ID 通胀(set_008 实测满血 v2 仍有 3× 就是这来的)。
+        single_lock = self._max_persons == 1 and n >= 1
+        if single_lock:
+            confs = (
+                result.boxes.conf.cpu().numpy()
+                if getattr(result.boxes, "conf", None) is not None
+                else np.ones(n, dtype=np.float32)
+            )
+            best = int(np.argmax(confs))
+            boxes_xyxy = boxes_xyxy[best:best + 1]
+            n = 1
+            track_ids: list[int | None] = [1]
+        else:
+            # Track IDs (None for brand-new detections the tracker hasn't
+            # matched yet on this frame).
+            track_ids = [None] * n
+            if getattr(result.boxes, "id", None) is not None:
+                ids_np = result.boxes.id.cpu().numpy().astype(int)
+                if len(ids_np) == n:
+                    track_ids = [int(x) for x in ids_np]
 
         persons: list[list[_Landmark]] = []
         for i in range(n):
