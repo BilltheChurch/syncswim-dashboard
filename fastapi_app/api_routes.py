@@ -20,6 +20,7 @@ Endpoints:
                GET  /api/data/stats
 """
 import json
+import math
 import os
 import shutil
 import urllib.request
@@ -208,6 +209,26 @@ def _imu_summary(set_dir: str) -> dict:
                 "tilt_mean": 0.0, "tilt_std": 0.0, "lost": 0, "loss_pct": 0.0,
             }
     return summary
+
+
+def _json_safe(obj):
+    """把 NaN / ±Inf 递归换成 None，让响应能被 JSON 序列化。
+
+    为什么必须做：Starlette 的 JSONResponse 用 ``allow_nan=False``，dict 里只要
+    有一个 NaN，整个响应就在序列化时抛 ValueError → 500 → 前端只看到"加载失败"。
+    而稀疏数据(帧数少 / 单样本求方差 / 除零)非常容易算出 NaN —— 一个指标的
+    NaN 不该让整份报告(评分、其余指标、AI 建议)全军覆没。numpy 标量也一并转成
+    Python 原生类型。
+    """
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, (np.floating, np.integer)):
+        obj = obj.item()
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
 
 
 def _score_breakdown(metrics: list[dict]) -> dict:
@@ -428,13 +449,23 @@ async def set_report(name: str):
     video_fps = 25.0
     video_path = os.path.join(set_dir, "video.mp4")
     if os.path.exists(video_path):
-        cap = cv2.VideoCapture(video_path)
-        if cap.isOpened():
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            vf = cap.get(cv2.CAP_PROP_FPS)
-            if vf and vf > 0:
-                video_fps = float(vf)
-        cap.release()
+        # 损坏/未转码完的 video.mp4(录制异常中断、transcode 失败)会让
+        # cap.get() 返回 nan/inf —— int(nan) 抛 ValueError,整个报告 500,
+        # 前端只显示"加载失败"。视频元数据不该有权阻断整份报告:探测失败就
+        # 退回默认值,评分/指标/建议照常出。
+        try:
+            cap = cv2.VideoCapture(video_path)
+            if cap.isOpened():
+                fc = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                if fc is not None and math.isfinite(fc) and fc > 0:
+                    frame_count = int(fc)
+                vf = cap.get(cv2.CAP_PROP_FPS)
+                if vf is not None and math.isfinite(vf) and vf > 0:
+                    video_fps = float(vf)
+            cap.release()
+        except Exception as e:
+            print(f"[report] video probe failed for {name}: "
+                  f"{type(e).__name__}: {e}", flush=True)
 
     # Last-ditch fallback: video container duration
     if duration <= 0.0 and frame_count > 0:
@@ -447,7 +478,9 @@ async def set_report(name: str):
     from dashboard.core.advice import build_advice
     advice = build_advice(metrics_json, overall, breakdown)
 
-    return {
+    # _json_safe：稀疏数据算出的 NaN 会让整个响应序列化失败(500 → 前端"加载失败")。
+    # 净化成 null 后，单个指标缺失不再拖垮整份报告。
+    return _json_safe({
         "name": name,
         "overall_score": overall,
         "metrics": metrics_json,
@@ -463,7 +496,7 @@ async def set_report(name: str):
         "advice": advice,
         "has_video": os.path.exists(video_path),
         "has_landmarks": os.path.exists(os.path.join(set_dir, "landmarks.csv")),
-    }
+    })
 
 
 @router.get("/sets/{name}/choreography")

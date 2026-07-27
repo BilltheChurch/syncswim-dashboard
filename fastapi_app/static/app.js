@@ -1563,9 +1563,21 @@ async function loadReport(name) {
     let report;
     try {
         const res = await fetch(`/api/sets/${encodeURIComponent(name)}/report`);
-        report = await res.json();
-    } catch {
-        content.innerHTML = `<div class="analysis-placeholder"><p>加载失败</p></div>`;
+        if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            throw new Error(`HTTP ${res.status} ${res.statusText} — ${body.slice(0, 400)}`);
+        }
+        report = await res.json();   // 非法 JSON(如 NaN)会在这里抛
+    } catch (e) {
+        // 显示真实原因，不再是笼统的"加载失败" —— 现场排错时 Emily 能直接把这行
+        // 念给 Tim 老师，不用去翻服务器日志。用 textContent 填，避免把响应体当 HTML。
+        content.innerHTML = `<div class="analysis-placeholder">
+            <p>加载失败</p>
+            <p class="load-err-detail" id="load-err-detail"></p>
+            <p class="load-err-hint">把上面这行发给 Tim 老师；服务器日志：/tmp/syncswim.log</p>
+        </div>`;
+        const d = $('#load-err-detail');
+        if (d) d.textContent = String((e && e.message) || e);
         return;
     }
     if (report.error) {

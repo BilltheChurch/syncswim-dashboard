@@ -81,6 +81,9 @@ class _MjpegStreamReader:
         self.lock = threading.Lock()
         self.running = True
         self.connected = False
+        # 丢弃的过期帧数 —— 关键诊断:>0 说明摄像头供帧比我们处理快(瓶颈在本机
+        # 推理/编码);≈0 说明摄像头本身只给这么多帧(瓶颈在 DroidCam/网络)。
+        self.skipped_frames = 0
         self._thread = threading.Thread(target=self._reader, daemon=True)
         self._thread.start()
 
@@ -101,9 +104,13 @@ class _MjpegStreamReader:
                     f"{stream.headers.get('Content-Type')}",
                     flush=True,
                 )
-                buf = b""
+                # 性能:64KB 分块 + bytearray + 记住扫描位置。
+                # 原来 4KB 分块 + `buf += chunk`(整块重拷)+ 每块对整个 buffer
+                # 全量 find,是 O(n²) —— 帧越大越慢(实测分辨率翻倍耗时 5×)。
+                buf = bytearray()
+                scan = 0  # 已扫过的位置,避免重复扫描已看过的字节
                 while self.running:
-                    chunk = stream.read(4096)
+                    chunk = stream.read(65536)
                     if not chunk:
                         print("[reader] stream ended (empty read)", flush=True)
                         break
@@ -112,24 +119,41 @@ class _MjpegStreamReader:
                     # 高分辨率 JPEG(如 iPhone DroidCam)压缩数据里会偶然出现 0xFFD9
                     # 字节,find(EOI)会把帧截断 → imdecode 失败 → 永远 no frames。
                     # (开发机当年低分辨率没触发,这就是"之前能、现在不能"的根因。)
-                    start = buf.find(b"\xff\xd8")
-                    if start == -1:
-                        if len(buf) > 4_000_000:
-                            buf = b""  # 防异常流撑爆内存
-                        continue
-                    nxt = buf.find(b"\xff\xd8", start + 2)
-                    if nxt == -1:
-                        continue  # 下一帧还没到,继续累积
-                    jpg = buf[start:nxt]
-                    buf = buf[nxt:]
+                    #
+                    # 一次把缓冲里所有完整帧都取出,但**只解码最后一帧** ——
+                    # 主循环只用最新帧,解码中间帧纯属浪费(还和推理线程抢 GIL)。
+                    # 摄像头快于处理速度时(正是现场情况)省下大量解码。
+                    jpg = None
+                    skipped = 0
+                    while True:
+                        start = buf.find(b"\xff\xd8")
+                        if start == -1:
+                            if len(buf) > 4_000_000:
+                                del buf[:]  # 防异常流撑爆内存
+                            scan = 0
+                            break
+                        nxt = buf.find(b"\xff\xd8", max(start + 2, scan))
+                        if nxt == -1:
+                            # 下一帧还没到。记住扫到哪了(回退 1 字节,防 SOI 跨块被切开)
+                            scan = max(start + 2, len(buf) - 1)
+                            break
+                        if jpg is not None:
+                            skipped += 1
+                        jpg = bytes(buf[start:nxt])
+                        del buf[:nxt]
+                        scan = 0
+                    if jpg is None:
+                        continue  # 本轮没有完整帧,继续累积
                     arr = np.frombuffer(jpg, dtype=np.uint8)
                     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
                     if frame is not None:
                         decoded += 1
+                        self.skipped_frames += skipped
                         if decoded == 1 or decoded % 100 == 0:
                             print(
                                 f"[reader] decoded {decoded} frames "
-                                f"(shape={frame.shape})",
+                                f"(shape={frame.shape}, "
+                                f"skipped={self.skipped_frames} stale)",
                                 flush=True,
                             )
                         with self.lock:

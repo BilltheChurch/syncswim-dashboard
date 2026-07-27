@@ -3761,3 +3761,11 @@ kbd {
 .btn-det.active { background: var(--primary); color: #fff; border-color: var(--primary-hi); }
 #detector-mode-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
+
+/* 加载失败时显示真实错误(便于现场排错) */
+.load-err-detail {
+    font-size: 0.78rem; color: var(--major-text); margin-top: 8px;
+    max-width: 620px; word-break: break-word; font-family: 'Fira Code', monospace;
+    line-height: 1.5; text-align: left;
+}
+.load-err-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 8px; }
