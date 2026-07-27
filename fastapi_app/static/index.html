@@ -373,6 +373,28 @@
                     <div class="save-feedback" id="save-feedback"></div>
                 </div>
 
+                <!-- Detection Model Settings -->
+                <div class="settings-section">
+                    <div class="section-title">检测模型</div>
+                    <div class="settings-field">
+                        <label class="field-label">检测模式</label>
+                        <div class="rotation-group" id="detector-mode-group">
+                            <button class="btn-det active" data-det="pool">泳池 v2 · 水下游泳者</button>
+                            <button class="btn-det" data-det="generic">通用 · 岸上/普通场景</button>
+                        </div>
+                        <div class="field-hint">泳池现场用 v2（专识别水下游泳者）；岸上/室内测试切通用模型，识别得到人也更快。</div>
+                    </div>
+                    <div class="settings-field">
+                        <label class="field-label">同时检测人数（单人 = 1，最快）</label>
+                        <input type="number" id="num-poses" class="field-input mono" min="1" max="10" value="1" style="max-width:120px">
+                        <div class="field-hint">单人训练填 1；多人队列临时调高。8 人会明显变卡。</div>
+                    </div>
+                    <div class="settings-actions">
+                        <button id="btn-save-detector" class="save-btn">保存并应用（约 1-2 秒重连）</button>
+                    </div>
+                    <div class="save-feedback" id="detector-feedback"></div>
+                </div>
+
                 <!-- Device Info -->
                 <div class="settings-section">
                     <div class="section-title">设备信息</div>

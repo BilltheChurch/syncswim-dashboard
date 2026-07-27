@@ -66,7 +66,7 @@ camera_rotation = 270
 #                 multi-person unstable; kept as fallback)
 pose_backend = "yolo"
 # YOLO-specific options (ignored for mediapipe backend):
-yolo_model = "yolov8n-pose.pt"    # "yolov8n-pose.pt" (6MB, fast) or "yolov8s-pose.pt" (22MB, more accurate)
+yolo_model = "yolov8s-pose.pt"    # kit 打包的就是 s(22MB,更准);用 nano 需另装,避免"缺文件"崩
 yolo_conf = 0.35                   # detection confidence threshold
 yolo_device = "mps"                # "mps" (Apple Metal), "cuda", or "cpu"
 yolo_imgsz = 640                   # inference resolution. 640 = realtime; 1280 = better small-target recall (~4× cost)
@@ -77,6 +77,9 @@ yolo_imgsz = 640                   # inference resolution. 640 = realtime; 1280 
 # out until you've trained one with `python tools/train_detector.py`.
 # v2(350帧, mAP50 0.915): set_008 holdout 检测率98%/ID通胀3x — 碾压通用nano(1%)。
 swimmer_detector = "runs/detect/swimmer_det_v2/weights/best.pt"
+# 泳池 v2 检测器开关(网页设置页可切)。true=泳池现场(专识别水下游泳者);
+# false=通用模型(岸上/室内/普通场景能识别人,且省一阶段推理更快)。默认 true。
+swimmer_detector_enabled = true
 # Phase B: hybrid 模式下关键点后端。
 #   "mediapipe" = 33 点(含脚尖 foot_index/heel,绷脚可评,复盘推荐)
 #   "yolo"      = COCO 17 点(无脚尖,默认,实时录制用)
@@ -86,9 +89,9 @@ swimmer_detector = "runs/detect/swimmer_det_v2/weights/best.pt"
 # "full" (10 MB, balanced), or "lite" (6 MB, fastest). Only used when
 # pose_backend = "mediapipe".
 pose_model_size = "heavy"
-# num_poses: how many swimmers to detect simultaneously (1–10). 8 for team
-# free routines, 1 for solo.
-num_poses = 8
+# num_poses: 同时检测几个人(1–10)。Emily 主要单人 → 默认 1(最快,配合单人锁定);
+# 多人队列训练时在网页设置页临时调高。实测:8 人 hybrid ~9 FPS,1 人 ~25 FPS。
+num_poses = 1
 # pose_mode: "video" = fast, smooth, tracks through frames (may fail if face
 #            gets occluded since re-detection uses face cues);
 #            "image" = every-frame independent detection (slightly jittery

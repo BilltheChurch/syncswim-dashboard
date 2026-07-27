@@ -33,7 +33,9 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
-from dashboard.config import load_config, save_config, save_camera_override
+from dashboard.config import (
+    load_config, save_config, save_camera_override, save_runtime_override,
+)
 from dashboard.core.analysis import calc_imu_tilt
 from dashboard.core.imu_fusion import (
     calibrate_from_rest, apply_calibration, leg_dynamics,
@@ -903,6 +905,40 @@ async def camera_snapshot(skeleton: int = 1):
     if not ok:
         return JSONResponse({"error": "Encode failed"}, status_code=500)
     return Response(content=buf.tobytes(), media_type="image/jpeg")
+
+
+# ── Pose / detector 运行时切换 ──────────────────────────────────
+class PoseConfigRequest(BaseModel):
+    # true=泳池 v2 检测器(识别水下游泳者);false=通用模型(岸上/普通场景,更快)
+    swimmer_detector_enabled: Optional[bool] = None
+    num_poses: Optional[int] = None  # 同时检测几个人(1–10);单人=1 最快
+
+
+@router.post("/pose/config")
+async def pose_config(req: PoseConfigRequest):
+    """网页设置页切换检测模型 / 人数。写 data/ 覆盖层(不被 kit 更新冲),
+    并重启相机线程让新检测器即时生效(约 1-2 秒重连)。"""
+    fields: dict = {}
+    if req.swimmer_detector_enabled is not None:
+        fields["swimmer_detector_enabled"] = bool(req.swimmer_detector_enabled)
+    if req.num_poses is not None:
+        fields["num_poses"] = max(1, min(10, int(req.num_poses)))
+    if not fields:
+        return {"status": "no change"}
+    try:
+        save_runtime_override(**fields)
+    except Exception as e:
+        return JSONResponse({"error": f"保存失败: {e}"}, status_code=500)
+    # 重启相机线程 → _run 重新读 config(含新 override)重建检测器
+    restarted = False
+    if _camera is not None:
+        try:
+            _camera.stop()
+            _camera.start()
+            restarted = True
+        except Exception:
+            pass
+    return {"status": "ok", "restarted": restarted, "applied": fields}
 
 
 # ── Config ─────────────────────────────────────────────────────

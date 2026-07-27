@@ -64,8 +64,16 @@ def _override_path(cfg: dict, config_path: Path) -> Path:
     return config_path.parent / data_dir / "camera_override.json"
 
 
+# 允许网页运行时覆盖的 hardware 字段白名单(防止 override 文件塞入无关字段)。
+# camera_url/rotation = 现场摄像头;swimmer_detector_enabled = 泳池 v2/通用模型切换;
+# num_poses = 单人/多人。都放 data/ 覆盖层,改一次不被 kit 更新冲。
+_OVERRIDABLE = {
+    "camera_url", "camera_rotation", "swimmer_detector_enabled", "num_poses",
+}
+
+
 def _apply_runtime_overrides(cfg: dict, config_path: Path) -> None:
-    """把用户在网页存的运行时覆盖(摄像头 URL/旋转)合并进 config 字典。"""
+    """把用户在网页存的运行时覆盖(白名单内的 hardware 字段)合并进 config。"""
     override = _override_path(cfg, config_path)
     if not override.exists():
         return
@@ -74,19 +82,16 @@ def _apply_runtime_overrides(cfg: dict, config_path: Path) -> None:
     except Exception:
         return
     hw = cfg.setdefault("hardware", {})
-    if o.get("camera_url"):
-        hw["camera_url"] = o["camera_url"]
-    if o.get("camera_rotation") is not None:
-        hw["camera_rotation"] = o["camera_rotation"]
+    for k in _OVERRIDABLE:
+        if k in o and o[k] is not None:
+            hw[k] = o[k]
 
 
-def save_camera_override(camera_url: str | None = None,
-                         camera_rotation: int | None = None,
-                         config_path: Path | None = None) -> None:
-    """把摄像头 URL/旋转持久化到 data/camera_override.json(不受 kit 更新影响)。
+def save_runtime_override(config_path: Path | None = None, **fields) -> None:
+    """把白名单内的 hardware 字段持久化到 data/camera_override.json(不受 kit 更新影响)。
 
-    与 save_config() 互补：save_config 写 config.toml(会被更新覆盖)，这里写
-    data/ 下的覆盖文件(不会)。网页 POST /api/camera/config 两个都写，靠这个兜底。
+    与 save_config() 互补：save_config 写 config.toml(会被 code.zip 更新覆盖)，这里写
+    data/ 下的覆盖文件(更新从不碰 data/)。网页设置改一次就永久生效。
     """
     path = config_path or CONFIG_PATH
     cfg = get_defaults()
@@ -104,12 +109,22 @@ def save_camera_override(camera_url: str | None = None,
             current = json.loads(override_path.read_text(encoding="utf-8"))
         except Exception:
             current = {}
-    if camera_url:
-        current["camera_url"] = camera_url
-    if camera_rotation is not None:
-        current["camera_rotation"] = camera_rotation
+    for k, v in fields.items():
+        if k in _OVERRIDABLE and v is not None:
+            current[k] = v
     override_path.write_text(
         json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def save_camera_override(camera_url: str | None = None,
+                         camera_rotation: int | None = None,
+                         config_path: Path | None = None) -> None:
+    """向后兼容的薄封装 —— 摄像头设置走通用的 save_runtime_override。"""
+    save_runtime_override(
+        config_path=config_path,
+        camera_url=camera_url,
+        camera_rotation=camera_rotation,
     )
 
 

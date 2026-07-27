@@ -3623,6 +3623,12 @@ function populateSettings(cfg, stats) {
     // rotation buttons — camera rotation isn't persisted in config, use current module state
     $$('.btn-rot').forEach(b => b.classList.toggle('active', parseInt(b.dataset.rot, 10) === currentRotation));
 
+    // detector mode + num_poses（泳池 v2 / 通用切换）
+    const detEnabled = hw.swimmer_detector_enabled !== false;  // 默认 true = 泳池 v2
+    $$('#detector-mode-group .btn-det').forEach(b =>
+        b.classList.toggle('active', b.dataset.det === (detEnabled ? 'pool' : 'generic')));
+    if (hw.num_poses) $('#num-poses').value = hw.num_poses;
+
     // devices
     const nodes = hw.imu_nodes || [];
     if (nodes[0]) $('#cfg-node-a1').value = nodes[0];
@@ -3696,6 +3702,37 @@ $('#btn-test-camera').addEventListener('click', async () => {
         if (j.ok) toast(`连接成功 · 读取 ${j.bytes} 字节 JPEG 流`, 'success');
         else toast(`连接失败: ${j.error || '无 JPEG 响应'}`, 'error');
     } catch { toast('测试失败', 'error'); }
+});
+
+// 检测模式切换（泳池 v2 / 通用）—— 独立 btn-det，不与相机旋转按钮冲突
+$$('#detector-mode-group .btn-det').forEach(btn => {
+    btn.addEventListener('click', () => {
+        $$('#detector-mode-group .btn-det').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+});
+
+$('#btn-save-detector').addEventListener('click', async () => {
+    const active = $('#detector-mode-group .btn-det.active');
+    const poolMode = !active || active.dataset.det === 'pool';
+    const numPoses = Math.max(1, Math.min(10, parseInt($('#num-poses').value, 10) || 1));
+    const fb = $('#detector-feedback');
+    if (fb) fb.textContent = '正在应用…（相机重连约 1-2 秒）';
+    try {
+        const r = await fetch('/api/pose/config', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ swimmer_detector_enabled: poolMode, num_poses: numPoses }),
+        });
+        const j = await r.json();
+        if (j.status === 'ok') {
+            const label = poolMode ? '泳池 v2 检测器' : '通用模型';
+            toast(`已切换：${label} · ${numPoses} 人`, 'success');
+            if (fb) fb.textContent = `✓ 当前：${label}，检测 ${numPoses} 人`;
+        } else {
+            toast('切换失败', 'error');
+            if (fb) fb.textContent = j.error || '切换失败';
+        }
+    } catch { toast('切换失败', 'error'); if (fb) fb.textContent = ''; }
 });
 
 $('#btn-save-devices').addEventListener('click', async () => {

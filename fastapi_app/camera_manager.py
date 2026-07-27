@@ -413,7 +413,10 @@ class CameraManager:
             # Phase A: optional custom-trained detector. When set, the
             # factory returns a HybridSwimmerDetector (custom bbox +
             # COCO keypoints). Path is resolved relative to project root.
-            sd_raw = cfg_hw.get("swimmer_detector")
+            # 泳池 v2 检测器开关(网页设置页可切换)。关掉时用通用单模型 ——
+            # 岸上/室内/普通场景下通用模型反而识别得到人,且省掉一阶段推理更快。
+            sd_enabled = bool(cfg_hw.get("swimmer_detector_enabled", True))
+            sd_raw = cfg_hw.get("swimmer_detector") if sd_enabled else None
             sd_path: str | None = None
             if sd_raw:
                 sd_path = (
