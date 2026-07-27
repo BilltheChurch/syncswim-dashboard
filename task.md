@@ -429,10 +429,19 @@ data/
 - [x] 实测:set_006(视觉,3 条建议) / set_004(视觉+双IMU,5 条建议) / set_001(IMU,6 条建议)均正确
 - 回答"评分可读吗/能对照评分表吗/评分有逻辑吗/能导出AI报告吗/能给训练建议吗" → 全部 ✅
 
-### 12.8 待办
-- [ ] Emily 下周部署 v2 detector（发 syncswim_v2_deploy.zip）
+### 12.8 Emily 部署 kit + 现场配置体验 ✅（emily_kit_20260727.zip）
+- [x] build-emily-kit.sh 补打 v2 检测器权重（原脚本漏了 → Emily 端静默退化通用模型 1% 召回）
+- [x] start-dashboard.command 权重"缺失才落位"自愈 + update.command 覆盖式落 runs/（双保险）
+- [x] code.zip 剔除 data/training（Emily 不训练），kit 150M→81M，微信/AirDrop 可发
+- [x] 摄像头 URL 存 `data/camera_override.json`，网页设置页改一次永久生效，不被 code.zip 更新覆盖
+      （config.py load_config 优先合并 override；data/ 从不被 kit 更新触碰）
+- [x] 一个 kit + Emily 熟悉的两次双击（1-update → 3-start-dashboard），零新认知拿到 AI 报告 + v2
+
+### 12.9 待办
+- [ ] Emily 部署 emily_kit_20260727.zip（双击 1-update，网页设置页填 DroidCam URL）
 - [ ] Phase B 标注+训练(脚尖准了再把绷脚角度纳入 FINA 评分;当前 MediaPipe 通用脚尖仅 12%)
 - [ ] v3 数据扩充（更多场景/距离）；现场保证 IMU 采样率不断连（set_004 那次 9s gap 是硬伤）
+- [ ] 未来:kit 更新时保护 config.toml 其余用户字段(imu_nodes 等),目前仅摄像头走 override 层
 
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)
