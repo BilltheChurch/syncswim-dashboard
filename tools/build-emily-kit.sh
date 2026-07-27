@@ -110,8 +110,12 @@ mkdir -p "$KIT_DIR"/{setup,desktop,models,videos,frames}
 # 自动排除 .venv/, runs/, data/raw_videos/, *.pt 等（在 .gitignore 里）
 echo "[+] 打包代码（git archive HEAD）..."
 git archive --format=zip HEAD -o "$REPO_ROOT/$KIT_DIR/code.zip"
+# 剔除 Emily 不需要的训练数据 —— git 追踪了 ~82MB 的 phase 训练图/裁剪图,
+# 但训练在 Tim 机器跑,Emily 只做标注(帧另走 frames/)+ 现场录制。留着会让 kit
+# 从 ~70MB 膨胀到 150MB+,微信难发。运行 workstation 不依赖 data/training。
+zip -dq "$KIT_DIR/code.zip" 'data/training/*' 2>/dev/null || true
 CODE_SIZE=$(du -h "$KIT_DIR/code.zip" | cut -f1)
-echo "    ✓ code.zip ($CODE_SIZE)"
+echo "    ✓ code.zip ($CODE_SIZE, 已剔除训练数据)"
 
 # 2b. 帧 zip
 echo "[+] 打包 $FRAME_COUNT 张帧..."
