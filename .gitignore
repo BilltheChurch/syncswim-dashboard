@@ -52,6 +52,9 @@ docs/lessons/
 data/athletes.json
 
 # Emily kit packaging output (large, regenerated each build)
+# 运行时用户设置(网页设置页改的摄像头 URL/旋转),Emily 机器生成,不进仓库
+data/camera_override.json
+
 emily_kit_*/
 emily_kit_*.zip
 

@@ -33,7 +33,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
-from dashboard.config import load_config, save_config
+from dashboard.config import load_config, save_config, save_camera_override
 from dashboard.core.analysis import calc_imu_tilt
 from dashboard.core.imu_fusion import (
     calibrate_from_rest, apply_calibration, leg_dynamics,
@@ -864,6 +864,13 @@ async def camera_config(req: CameraConfigRequest):
     cfg["hardware"] = hw
     try:
         save_config(cfg)
+    except Exception:
+        pass
+    # 额外持久化到 data/camera_override.json —— config.toml 会被 kit 更新(code.zip)
+    # 覆盖,而 data/ 从不被更新触碰。这样"在网页改摄像头 URL"改一次就永久生效,
+    # 不用每次更新后重填,也不用碰任何代码/配置文件。
+    try:
+        save_camera_override(camera_url=req.url, camera_rotation=req.rotation)
     except Exception:
         pass
     return {"status": "ok"}
