@@ -420,7 +420,16 @@ data/
 - [x] train_pose.py 已支持 `--data`,直接吃 phase_b yaml
 - [ ] 待标注 ~150 帧关键点 → 训练 → 脚尖准 → 绷脚角度进评分
 
-### 12.7 待办
+### 12.7 AI 训练报告 + 提升建议 ✅（外行可读 · 可导出）
+- [x] `dashboard/core/advice.py` 规则引擎 —— 16 项指标判定 → "问题(大白话) + 怎么练(具体训练法)"
+- [x] 按扣分严重度排序,`top_priority` 标 ★ 优先;达标项列为"亮点";总评按总分分档措辞
+- [x] report 端点(`/api/sets/{name}/report`)返回 `advice` 字段;复盘页新增"🎯 AI 训练建议"卡片
+- [x] PDF 报告新增第 3 页"AI 训练建议"(`tools/export_pdf.py::_page_advice`);"导出报告 PDF"金色按钮
+- [x] 无 LLM 依赖 —— 离线可跑、可解释、可复现;依据 Edriss 2024 / Yue 2023 + 花游训练常识
+- [x] 实测:set_006(视觉,3 条建议) / set_004(视觉+双IMU,5 条建议) / set_001(IMU,6 条建议)均正确
+- 回答"评分可读吗/能对照评分表吗/评分有逻辑吗/能导出AI报告吗/能给训练建议吗" → 全部 ✅
+
+### 12.8 待办
 - [ ] Emily 下周部署 v2 detector（发 syncswim_v2_deploy.zip）
 - [ ] Phase B 标注+训练(脚尖准了再把绷脚角度纳入 FINA 评分;当前 MediaPipe 通用脚尖仅 12%)
 - [ ] v3 数据扩充（更多场景/距离）；现场保证 IMU 采样率不断连（set_004 那次 9s gap 是硬伤）

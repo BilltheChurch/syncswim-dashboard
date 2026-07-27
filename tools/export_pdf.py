@@ -402,6 +402,57 @@ def _page_notes(pdf, note_text: str, imu_rows):
     plt.close(fig)
 
 
+def _page_advice(pdf, advice: dict):
+    """AI 训练建议页 — 总评 + 亮点 + 逐条(问题/怎么练),按优先级。"""
+    fig = plt.figure(figsize=A4_PORTRAIT)
+    ax = fig.add_axes([0.07, 0.04, 0.86, 0.93])
+    ax.axis("off")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    y = 0.99
+
+    ax.text(0, y, "AI 训练建议", fontsize=16, weight="bold", color="#333", va="top")
+    y -= 0.045
+    ax.text(0, y, advice.get("verdict", ""), fontsize=10, color="#1B3A5C",
+            va="top", wrap=True)
+    y -= 0.05
+
+    strengths = advice.get("strengths") or []
+    if strengths:
+        ax.text(0, y, "已达标亮点：" + "、".join(strengths), fontsize=9.5,
+                color="#065f46", va="top", wrap=True)
+        y -= 0.045
+
+    impr = advice.get("improvements") or []
+    top = set(advice.get("top_priority") or [])
+    zone_c = {"major": "#b91c1c", "minor": "#b45309", "clean": "#065f46"}
+    if impr:
+        ax.text(0, y, f"重点提升（{len(impr)} 项 · 已按优先级排序）",
+                fontsize=11.5, weight="bold", color="#333", va="top")
+        y -= 0.04
+        for t in impr:
+            if y < 0.07:
+                break  # 一页放不下就截断(极少见,>10 项才触发)
+            star = "★ " if t["name"] in top else ""
+            v = t.get("value")
+            vs = f"   {v:.1f}{t.get('unit','')}" if isinstance(v, (int, float)) else ""
+            ax.text(0, y, f"{star}{t['label']}{vs}   [{t.get('zone_cn','')}]",
+                    fontsize=9.5, weight="bold",
+                    color=zone_c.get(t.get("zone"), "#333"), va="top")
+            y -= 0.028
+            ax.text(0.02, y, f"问题：{t.get('issue','')}", fontsize=8.5,
+                    color="#555", va="top", wrap=True)
+            y -= 0.026
+            ax.text(0.02, y, f"怎么练：{t.get('drill','')}", fontsize=8.5,
+                    color="#1B3A5C", va="top", wrap=True)
+            y -= 0.038
+
+    ax.text(1, 0.005, "Coach Workstation · AI 训练建议",
+            fontsize=8, color="#aaa", ha="right")
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
 def render_pdf(set_dir: Path, output: Path) -> None:
     """Render the full report. Raises ``ValueError`` when the Set has
     no compute-able metrics (so callers can return a clean 404)."""
@@ -423,6 +474,14 @@ def render_pdf(set_dir: Path, output: Path) -> None:
                     duration_s, frame_count, len(imu_rows))
         if metrics:
             _page_details(pdf, set_dir, metrics)
+            # AI 训练建议页 — 复用后端同一个引擎(dashboard/core/advice.py)
+            metrics_d = [
+                {"name": m.name, "value": m.value, "unit": m.unit,
+                 "zone": m.zone, "deduction": m.deduction}
+                for m in metrics
+            ]
+            from dashboard.core.advice import build_advice
+            _page_advice(pdf, build_advice(metrics_d, overall, None))
         if note_text or imu_rows:
             _page_notes(pdf, note_text, imu_rows)
 

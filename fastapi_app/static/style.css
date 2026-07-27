@@ -3700,3 +3700,52 @@ kbd {
 .mi-row { display:flex; gap:10px; align-items:flex-start; }
 .mi-k { flex:0 0 56px; color:var(--brand-gold,#C4A55A); font-size:0.8rem; font-weight:600; }
 .mi-v { flex:1; color:var(--text-hi); font-size:0.84rem; line-height:1.5; }
+
+/* ── AI 训练建议卡片(advice.py · 问题+怎么练) ── */
+.advice-card {
+    background: linear-gradient(180deg, var(--bg-card2) 0%, var(--bg-card) 100%);
+    border: 1px solid var(--border-hi);
+    border-left: 3px solid var(--cta);
+    border-radius: 12px; padding: 16px 18px; margin: 14px 0;
+}
+.advice-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.advice-title { font-size:1rem; font-weight:700; color:var(--text-hi); }
+.advice-pdf-btn {
+    font-size:0.78rem; padding:5px 12px; border-radius:7px; text-decoration:none;
+    background:var(--cta); color:#1a1205; font-weight:600; border:1px solid var(--cta-hi);
+    transition:background .15s;
+}
+.advice-pdf-btn:hover { background:var(--cta-hi); }
+.advice-verdict {
+    font-size:0.9rem; color:var(--text); line-height:1.6; padding:8px 12px;
+    background:rgba(74,144,217,0.08); border-radius:8px; margin-bottom:12px;
+}
+.advice-sec-label { display:block; font-size:0.78rem; color:var(--text-dim); font-weight:600; margin:10px 0 6px; }
+.advice-strengths { margin-bottom:4px; }
+.advice-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.advice-chip {
+    font-size:0.76rem; padding:3px 9px; border-radius:12px;
+    background:var(--clean-bg); color:var(--clean-text); border:1px solid rgba(74,222,128,0.25);
+}
+.advice-list { display:flex; flex-direction:column; gap:8px; }
+.advice-item {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:9px;
+    padding:10px 12px;
+}
+.advice-item.advice-top { border-color:var(--cta); box-shadow:0 0 0 1px rgba(196,165,90,0.2); }
+.advice-item-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.advice-star { font-size:0.68rem; color:#1a1205; background:var(--cta); padding:1px 7px; border-radius:10px; font-weight:700; }
+.advice-item-name { font-size:0.9rem; font-weight:600; color:var(--text-hi); }
+.advice-item-val { font-size:0.82rem; color:var(--text-mono); }
+.advice-item-zone { font-size:0.7rem; padding:1px 8px; border-radius:9px; margin-left:auto; }
+.advice-item-zone.zone-clean { background:var(--clean-bg); color:var(--clean-text); }
+.advice-item-zone.zone-minor { background:var(--minor-bg); color:var(--minor-text); }
+.advice-item-zone.zone-major { background:var(--major-bg); color:var(--major-text); }
+.advice-issue, .advice-drill { font-size:0.82rem; line-height:1.55; color:var(--text-dim); margin-top:3px; }
+.advice-issue b, .advice-drill b {
+    display:inline-block; min-width:44px; margin-right:6px; font-size:0.72rem;
+    color:var(--text-muted); font-weight:600;
+}
+.advice-drill b { color:var(--cta); }
+.advice-drill { color:var(--text); }
+.advice-allgood { font-size:0.9rem; color:var(--clean-text); padding:8px 0; }

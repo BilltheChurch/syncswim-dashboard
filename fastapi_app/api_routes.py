@@ -438,10 +438,16 @@ async def set_report(name: str):
     if duration <= 0.0 and frame_count > 0:
         duration = frame_count / video_fps
 
+    overall = (round(report.overall_score, 1)
+               if report.overall_score is not None else None)
+    breakdown = _score_breakdown(metrics_json)
+    # AI 训练建议 — 把指标判定转成"问题 + 怎么练"(dashboard/core/advice.py)
+    from dashboard.core.advice import build_advice
+    advice = build_advice(metrics_json, overall, breakdown)
+
     return {
         "name": name,
-        "overall_score": (round(report.overall_score, 1)
-                          if report.overall_score is not None else None),
+        "overall_score": overall,
         "metrics": metrics_json,
         "phases": report.phases,
         "correlation": report.correlation,
@@ -451,7 +457,8 @@ async def set_report(name: str):
         "frame_count": frame_count,
         "imu_summary": _imu_summary(set_dir),
         "visibility": _visibility_stats(set_dir),
-        "score_breakdown": _score_breakdown(metrics_json),
+        "score_breakdown": breakdown,
+        "advice": advice,
         "has_video": os.path.exists(video_path),
         "has_landmarks": os.path.exists(os.path.join(set_dir, "landmarks.csv")),
     }

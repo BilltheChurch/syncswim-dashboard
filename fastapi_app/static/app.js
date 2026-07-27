@@ -1827,6 +1827,48 @@ function renderReport(name, report) {
         </div>
     `;
 
+    // ── AI 训练建议(advice.py) ──
+    // 把 16 项指标的判定翻成"问题 + 怎么练",按优先级排序。
+    // 外行(运动员/家长)不用懂指标也能照着练。
+    const adv = report.advice || {};
+    const advImpr = adv.improvements || [];
+    const advTop = adv.top_priority || [];
+    const pdfHref = apiUrl('/api/sets/' + encodeURIComponent(name) + '/report.pdf');
+    const adviceHTML = adv.verdict ? `
+        <div class="advice-card">
+            <div class="advice-header">
+                <span class="advice-title">🎯 AI 训练建议</span>
+                <a class="advice-pdf-btn" target="_blank" href="${pdfHref}"
+                   title="导出完整训练报告 PDF（评分 + 建议 + 关键帧）">导出报告 PDF</a>
+            </div>
+            <div class="advice-verdict">${adv.verdict}</div>
+            ${adv.strengths && adv.strengths.length ? `
+                <div class="advice-strengths">
+                    <span class="advice-sec-label">✅ 已达标亮点</span>
+                    <div class="advice-chips">${adv.strengths.map(s => `<span class="advice-chip">${s}</span>`).join('')}</div>
+                </div>` : ''}
+            ${advImpr.length ? `
+                <div class="advice-sec-label">📈 重点提升 · 共 ${advImpr.length} 项（已按优先级排序）</div>
+                <div class="advice-list">
+                    ${advImpr.map(t => {
+                        const isTop = advTop.includes(t.name);
+                        const v = (typeof t.value === 'number') ? `${t.value.toFixed(1)}${t.unit || ''}` : '';
+                        return `
+                        <div class="advice-item${isTop ? ' advice-top' : ''}">
+                            <div class="advice-item-head">
+                                ${isTop ? '<span class="advice-star">★ 优先</span>' : ''}
+                                <span class="advice-item-name">${t.label}</span>
+                                <span class="advice-item-val mono">${v}</span>
+                                <span class="advice-item-zone zone-${t.zone}">${t.zone_cn}</span>
+                            </div>
+                            <div class="advice-issue"><b>问题</b>${t.issue}</div>
+                            <div class="advice-drill"><b>怎么练</b>${t.drill}</div>
+                        </div>`;
+                    }).join('')}
+                </div>` : `<div class="advice-allgood">🎉 各项指标均达标，继续保持！</div>`}
+        </div>
+    ` : '';
+
     // ── Video + Timeseries row ──
     const videoHTML = report.has_video ? `
         <div class="video-player-card">
@@ -1918,6 +1960,7 @@ function renderReport(name, report) {
         ${noteHTML}
         ${scoreRowHTML}
         ${groupsHTML}
+        ${adviceHTML}
         ${legDynHTML}
         <div class="video-analysis-row">
             ${videoHTML}
