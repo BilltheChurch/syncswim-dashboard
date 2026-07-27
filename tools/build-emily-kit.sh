@@ -131,6 +131,17 @@ chmod +x "$KIT_DIR/desktop/"*.command
 # 2e. 模型文件
 cp yolov8s-pose.pt           "$KIT_DIR/models/"
 cp pose_landmarker_lite.task "$KIT_DIR/models/"
+# v2 自训检测器权重(~22MB, mAP 0.915)。git 不追踪它(runs/ 与 *.pt 都在 .gitignore),
+# 所以 git archive 打不进 code.zip,必须在这里手工拷。命名带 swimmer_det_v2 前缀,
+# 避免和根目录的通用 yolov8s-pose.pt 混。落位链路:update.command 把它 cp 到仓库根,
+# start-dashboard.command 首次启动再落位到 config 指向的 runs/.../best.pt。
+DET_V2="runs/detect/swimmer_det_v2/weights/best.pt"
+if [ -f "$DET_V2" ]; then
+    cp "$DET_V2" "$KIT_DIR/models/swimmer_det_v2_best.pt"
+    echo "    ✓ v2 检测器权重已打包 (models/swimmer_det_v2_best.pt, $(du -h "$DET_V2" | cut -f1))"
+else
+    echo "    ⚠ 没找到 v2 检测器权重 $DET_V2 — kit 将不含 v2,Emily 端会退化成通用模型(水下召回~1%)"
+fi
 
 # 2f. 训练视频
 echo "[+] 打包 raw_videos..."
@@ -287,7 +298,9 @@ Emily：
 
 - **训练 / 评估在 Tim 老师机器跑**（M2 GPU，Emily 笔记本不够）
 - Emily 这边只做：标注 + dogfood 测试（dashboard 实时看模型效果）
-- 训完的 `best.pt` 体积 ~50MB — 通过新 emily_kit zip 的 models/ 自动同步给 Emily
+- 训完的 v2 检测器 `best.pt`(~22MB)随 kit 的 `models/swimmer_det_v2_best.pt` 一起发；
+  Emily 双击 `1-update.command` 后，`3-start-dashboard.command` 首次启动会自动把它落位到
+  `runs/detect/swimmer_det_v2/weights/best.pt`(config 指向的路径)，无需她手工操作。
 
 ## 完整文档
 

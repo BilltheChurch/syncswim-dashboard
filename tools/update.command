@@ -100,6 +100,16 @@ if [ -d "$KIT_DIR/models" ]; then
     echo "    ✓ 模型同步（已存在的不覆盖）"
 fi
 
+# v2 检测器权重 — 直接落位到 config 指向的 runs/ 路径（覆盖式，让 Tim 训练更新的
+# 新权重能生效）。区别于上面通用模型的 cp -n：v2 权重总是取 Tim 发的最新版。
+# （start-dashboard.command 里还有一层"缺失才落位"的自愈保险，两者不冲突。）
+if [ -f "$KIT_DIR/models/swimmer_det_v2_best.pt" ]; then
+    DET_DST="$REPO/runs/detect/swimmer_det_v2/weights/best.pt"
+    mkdir -p "$(dirname "$DET_DST")"
+    cp "$KIT_DIR/models/swimmer_det_v2_best.pt" "$DET_DST"
+    echo "    ✓ v2 检测器权重已落位 runs/（$(du -h "$DET_DST" | cut -f1)）"
+fi
+
 # ────────── 4: 刷新桌面图标 ──────────
 echo ""
 echo "[4/4] 刷新桌面图标..."

@@ -46,6 +46,20 @@ ERR
 fi
 echo "    ✓ 仓库 + venv + 模型 都在"
 
+# ────────── v2 检测器权重自愈 ──────────
+# best.pt 不在 git(runs/ 与 *.pt 都 gitignored),靠 update.command 把 kit 里的
+# models/swimmer_det_v2_best.pt 拷到仓库根(cp -n)。这里落位到 config.toml 指向的
+# runs/ 路径 —— 仅当目标缺失时执行,幂等,不会覆盖已有权重。
+# 少了这步,hybrid 检测会静默退化成通用模型(水下召回~1%),现场"能跑但检不到人"。
+DET="$REPO/runs/detect/swimmer_det_v2/weights/best.pt"
+SEED="$REPO/swimmer_det_v2_best.pt"
+if [ ! -f "$DET" ] && [ -f "$SEED" ]; then
+    echo "    → 首次落位 v2 检测器权重..."
+    mkdir -p "$(dirname "$DET")"
+    cp "$SEED" "$DET"
+    echo "    ✓ v2 检测器已就位 ($(du -h "$DET" | cut -f1))"
+fi
+
 # ────────── 启动 uvicorn ──────────
 echo "[2/3] 启动后端..."
 cd "$REPO"
