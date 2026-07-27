@@ -442,6 +442,19 @@ data/
 - [x] **网页设置页"检测模型"切换**：泳池 v2(水下游泳者) / 通用(岸上/普通场景更快)，
       POST /api/pose/config 即时重建检测器(stop→start)；运行时覆盖层泛化到任意 hardware 字段
 
+### 12.10 现场稳定性:set 加载失败 + 帧率瓶颈定位 ✅
+- [x] **修 set 加载失败(根因)**：Starlette `allow_nan=False` —— 报告 dict 里一个 NaN 就让
+      整个响应序列化抛 ValueError → 500 → 前端只显示"加载失败"。稀疏数据(帧少/单样本方差/
+      除零)易产生 NaN,完整旧录制不会 → 正好是"新录失败、旧的正常"。加 `_json_safe()` 净化
+- [x] 视频探测加固：损坏/未转码完的 video.mp4 让 `cap.get()` 返回 nan → `int(nan)` 同样 500
+- [x] **MJPEG 读流 O(n²) 修复**：4KB 分块 + `buf+=` + 每块全量 find(分辨率翻倍慢 5×)
+      → 64KB + bytearray + 记住扫描位置(快 35-60×);一轮只解码最新帧,跳过过期帧
+- [x] 前端"加载失败"改为显示**真实错误**(HTTP 状态/JSON 解析错),现场不用翻日志
+- [x] **帧率结论(实测)**：hybrid 42ms=23FPS / 通用单模型 15ms=65FPS;高清下图像搬运仅 5.5ms。
+      **两种模型都 13 FPS ⇒ 瓶颈不在模型**,在 Emily 机器算力或 DroidCam 供帧率。
+      新增 `skipped_frames` 诊断:>0=本机处理慢,≈0=摄像头只给这么多帧
+- [ ] 待 Emily 机器日志确认 13 FPS 归属(看 `[reader] decoded N frames ... skipped=M`)
+
 ### 12.9 待办
 - [ ] Emily 部署 emily_kit_20260727.zip（双击 1-update，网页设置页填 DroidCam URL）
 - [ ] Phase B 标注+训练(脚尖准了再把绷脚角度纳入 FINA 评分;当前 MediaPipe 通用脚尖仅 12%)
