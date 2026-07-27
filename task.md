@@ -436,6 +436,11 @@ data/
 - [x] 摄像头 URL 存 `data/camera_override.json`，网页设置页改一次永久生效，不被 code.zip 更新覆盖
       （config.py load_config 优先合并 override；data/ 从不被 kit 更新触碰）
 - [x] 一个 kit + Emily 熟悉的两次双击（1-update → 3-start-dashboard），零新认知拿到 AI 报告 + v2
+- [x] **修复 FPS 卡顿**：Emily 电脑掉到 13 FPS/卡/识别不到人。基准测试定位 = v2 hybrid × num_poses=8
+      每帧对 8 人各跑一次 pose(8人 9FPS / 1人 25FPS,2.7x)。num_poses 默认 8→1(主要单人)
+- [x] 修 `yolo_model` nano→s 不一致（config 指向 nano 但 kit 只打包 s → 缺文件会崩）
+- [x] **网页设置页"检测模型"切换**：泳池 v2(水下游泳者) / 通用(岸上/普通场景更快)，
+      POST /api/pose/config 即时重建检测器(stop→start)；运行时覆盖层泛化到任意 hardware 字段
 
 ### 12.9 待办
 - [ ] Emily 部署 emily_kit_20260727.zip（双击 1-update，网页设置页填 DroidCam URL）
