@@ -312,14 +312,63 @@ data/
 - [ ] 重新 import 3 dogfood 视频，看 ID 通胀从 19.8× 降到多少（期望 ≤ 3×）
 - [ ] 浏览器分析页对比 set_002 (PR #7) vs set_新 (PR #8 后)，截图入 DEVLOG
 
-### 9.2 Phase B — keypoint head fine-tune
+### 9.2 Phase B — keypoint head fine-tune 🚧 训练管线已打通（2026-07-30，DEVLOG #37）
 **目标**：让 keypoint 落到水里运动员**真实位置**（不是 COCO 模型猜的水下幻象）。
-- [ ] 复用 9.1 的 bbox 标注，**只补关键 4-6 个点**：双髋、双脚踝、双膝
-- [ ] 水下不可见的点全部 visibility=0（让 loss 不惩罚）
-- [ ] freeze backbone + detect head，只训 pose head
+- [x] Emily 交接包：`tools/build_emily_phase_b_kit.py` 复用本机已完成的 Phase B crop 标准（橙色 `swimmer`、19 点、COCO Keypoints）。当前发给 Emily 的严格单人包仅保留裁剪范围内没有第二位已确认 swimmer、且有真实本机模型关键点预标注的 53 张 crop（41 个源帧、630 个可见点）；原 bbox 居中并占 crop 的 2/3，附 53 张真实已完成标注样例。
+- [x] 本机 53 张 crop 的 19 点标注完成（CVAT job_4 导出 2026-07-16，水下点 visibility=0 规范执行）
+- [x] **7/27 首次训练失败验尸**：`runs/pose/swimmer_pose_v1` 100 epochs box mAP 0.911 但 **pose mAP 全程 0**。
+  三组探针二分定位根因：ultralytics 的 OKS 指数损失在关键点头全新初始化时梯度饱和
+  （17→19 点头必须重建 → 初始预测离人太远 → exp(-e)≈0 → 永远学不动）
+- [x] [tools/seed_pose19_head.py](tools/seed_pose19_head.py)：把 17 点预训练 cv4 头逐通道移植进 19 点头，
+  脚尖通道用脚踝通道播种 → 探针 pose mAP 0 → **0.995**
+- [x] [tools/sanitize_pose_labels.py](tools/sanitize_pose_labels.py)：CVAT 允许点标出 crop 边界，导出坐标越界
+  → ultralytics 整图拒收（损失 13/53 张）。清洗：越界点置 invisible、bbox 裁回边界
+- [x] [data/training/phase_b/](data/training/phase_b/swimmer_pose19.yaml)：53 crop 数据集（42 train / 11 val，
+  整段隔离切分）、kpt_shape [19,3] + flip_idx（含 17↔18 脚尖对）
+- [x] `tools/train_pose.py` 加 `--freeze/--patience/--base`（freeze=10 冻 backbone）
+- [x] v1（mosaic 配方）早停失败 → 对照实验证明 **mosaic 饿死小数据姿态训练**（train_pose.py 默认已改 mosaic=0）
+- [x] **v2 训练完成并部署**（244 epochs 早停；部署 last.pt——fitness 被 box 主导，best.pt 姿态头反而弱）：
+  held-out val 肉眼验收通过（倒立/出水/垂直骨架落到真实肢体，COCO 全空白）；
+  旧场地 set_008 全帧端到端成立；`[analysis] model` 已指向新权重
+- [x] HybridSwimmerDetector 推理裁剪外扩 1.5×（匹配训练 crop 几何，否则 conf 掉出门控）
+- [ ] **域差（已确认）**：Emily 新泳池 set_013 骨架仍缺失——训练 crop 全来自旧素材。
+  解药 = 9.3：回收 Emily 53 张 + 新泳池素材补标重训
 - [ ] 验证：`leg_deviation` / `knee_extension` 这些指标在 dogfood 视频上是否给出合理数值（不再是 NaN/0）
 
-### 9.3 数据扩充（依赖 Tim 老师现场补素材）
+### 9.3 数据扩充
+- [x] **新泳池标注包 v2（2026-08-04，DEVLOG #38）**：`emily_phase_b_swimmer19_crops_20260804.zip`
+  - v1（94 crop）被总统大人打回：大量地砖误检 + 模糊 crop。教训：面积过滤挡不住大块地砖；
+    锐度排序反而偏爱瓷砖缝直线；**QA 只抽两端不看全量 = 没有 QA**
+  - v2 过滤管线：v2 检测器逐帧追踪 → 面积 ≥7000px²（新泳池框分布 p75）→ **肤色占比 ≥0.3%
+    门控**（地砖/纯水花全部 0.00~0.04%，真人 0.32% 起跳，天然双峰）→ 锐度排序 + 帧间隔
+    → **全量 46 张逐一目检通过**（零地砖零水花，含双脚特写等绷脚黄金素材）
+  - 46 crop 中 38 张带 Phase B v2 权重预标注（398 个可见点种子，含脚尖）
+  - 清晰度天花板 = 素材本身（机位远 + DroidCam 压缩）。**已知改进项：下次录制机位靠近 +
+    1080p**，那是数据质量的治本
+  - 原料存 `data/training/phase_b_newpool/`（帧+自动框标签，可复现）
+- [x] **新泳池 46 张标注已回收（job_6，2026-08-04 总统大人亲标）**：216 点（93 occluded），
+  CVAT 1.1 XML → YOLO-19 转换（bbox 取自 crop_manifest 的 `swimmer_bbox_in_crop_pixels`），
+  sanitize 后与旧 53 张合并为 `data/training/phase_b_v3/`（99 张，81 train / 18 val，
+  val 含 set_016 新泳池整段隔离）
+- [x] **v3 训练完成并部署**（159 epoch 早停）：同 val 集对照 **v2 pose mAP50 0.006 → v3 0.110（18×）**，
+  `[analysis] model` 已指向 `runs/pose/swimmer_pose19_v3/weights/last.pt`
+  （又一次 best.pt 不如 last.pt：0.055 vs 0.110，姿态任务勿信默认 fitness）
+
+### 9.5 detector v3 —— 瓶颈搬家后的补位（2026-08-04，DEVLOG #39）
+**发现**：Phase B v3 修好姿态模型后，端到端在新泳池仍然差。逐框诊断 + 40 框目视审计证明
+**瓶颈已转移到检测器**：置信度最高的 18 个框（0.72~0.85）全是新泳池的红色泳道浮标，
+真运动员只有 0.35~0.67 —— **提高阈值会让系统更糟**（留浮标、丢运动员），目视误检率约 60%。
+- [x] 教训入册：代理指标（肤色占比）先后骗了我两次，修正判据后结论完全反转；最终以目视审计为准
+- [x] `data/training/phase_a_v3/`：150 旧泳池 + 46 新泳池帧（后者是 Phase B 质检时已人工确认的
+  单人框，且每帧都含红浮标作未标注负样本）→ **零额外标注成本**
+- [x] **detector v3 训练完成并部署**（69 epoch 早停 / 6.75h）：
+  分域评测 **旧泳池 mAP50 0.842→0.880（无退化）、新泳池 0.493→0.867 且精确率 0.463→1.000**；
+  40 框目视审计零误检（v2 是最高置信度 18 框全浮标）；`[analysis] swimmer_detector` 已启用
+- [x] **端到端双域验收通过**：新泳池 set_013 216/294 帧有骨架、track ID 21→13、
+  倒立姿态绿色脚尖点正确；旧泳池 set_008 回归零退化
+- [ ] ⚠️ 教训：v2 的 350 帧训练素材已丢失（`swimmer_det_local.yaml` 也不在），
+  **训练数据必须与权重一起进版本管理**
+- [ ] （可选）交接包里 6 位帧号的旧素材"待标 53 张"——优先级低于新泳池
 - [ ] Tim 老师下次去泳池录 5-10 段，覆盖：不同时段、不同泳池、不同动作（ballet leg / barracuda / 转体 / 出水）
 - [ ] 重新跑 9.1 + 9.2 → 期望 mAP 大幅提升 + 真正可用的 generalize
 
@@ -347,6 +396,84 @@ data/
 
 ### 10.E 裁判偏差量化 — 把因变量变成被测对象
 - [ ] N≥5 裁判评分 + Bland–Altman/ICC + 一致性校正分
+
+### 9.4 Emily v2 实测反馈修复（2026-07-29）— DEVLOG #36
+**起因**：Emily 用 v2 部署包实测 6 个 Set（set_011~016），反馈"大部分骨架错 + 预览/录制非常卡"。
+逐帧量化：有效帧率仅 1.9~4.1 fps（名义 25，重复帧 6~14×）；set_015/016 关键点 conf 中位 ≈0
+（v2 detector 框稳 → track ID 通胀已解决 ✅，但 COCO pose 在 crop 内输出幻觉/全零）。
+
+**骨架错 = Phase B 未训（主因，见 9.2）+ crop pose conf=0.1 无下游过滤 + 前端 0.3 阈值过松。**
+**卡 = 同步架构（预览/录制帧率=推理帧率）+ Intel Mac 无 MPS 回落 CPU + hybrid 每帧多次推理。**
+
+- [x] [camera_manager.py](fastapi_app/camera_manager.py) 录制/推理解耦：帧通路（MJPEG seq → 旋转 → JPEG → `_latest`）跟满相机帧率；`_infer_loop` 独立线程只消费最新帧；后端 init 失败不再影响预览/录制；`_latest` 新增 `frame_seq/frame_ts/pose_seq/pose_ts`
+- [x] 评审补丁（13-agent 多视角评审，8 条确认全修）：generation 令牌防重启竞态；`pose_rot` 朝向戳防旧基骨架；JSONL 加 `frame_seq/pose_seq` 溯源；tracker yaml 缺失回退+警告；`import_video --kpt-min-conf`；`pose_error` 透传 + 前端"姿态后端故障" badge；标签锚点阈值统一
+- [ ] ⚠️ 打 kit 前必须 `git add data/tracker_configs/`（swimmer_botsort.yaml 目前 untracked，git archive 不会带上）
+- [x] [yolo_pose.py](fastapi_app/yolo_pose.py) `_apply_kpt_gate()`：conf < `kpt_min_conf`(0.35) 的关键点源头置零（双 detector 类 + factory 均接线），幻觉不落盘、不污染 Phase B 预标注
+- [x] [app.js](fastapi_app/static/app.js) `BONE_MIN_VIS=0.45` / `DOT_MIN_VIS=0.35` 常量化，替换 6 处散落阈值
+- [x] [config.toml](config.toml) 新增 `kpt_min_conf` + Intel Mac `yolo_device="cpu"` 指引注释
+- [x] 保留 writer 25Hz 固定节拍（视频 wall-clock 与 IMU 对齐的前提，阶段三 8.8ms 同步精度不能破坏）
+- [x] [tests/test_camera_decouple.py](tests/test_camera_decouple.py) 6 项：门控 3 + 解耦 3；全套件 3 连跑稳定（16 个失败均为改动前已存在）
+- [ ] Emily 侧：config 显式 `yolo_device = "cpu"`，打 kit v3 zip 推送更新
+- [ ] 骨架真正落对位置：等 9.2 Phase B keypoint 微调（唯一根治方案）
+
+## 阶段十一：架构转向 — 实时只留画面 + IMU，视觉全部离线后处理 ✅（2026-07-30）
+
+**总统大人拍板的重大角色改变**（详见 DEVLOG #37）：抛弃所有实时段推理和分析。
+前端实时页只展示摄像头画面和 IMU 数据；视觉方案移到录制结束后的分析阶段——
+可以跑更重的权重、更久的时间，确保准确性。
+
+**实测支撑**（Emily set_013，294 帧）：录制时实时推理（COCO@640）只有 29.6% 帧检出；
+离线重配置（hybrid v2 + imgsz 1280）检出率 98%（conf 0.35 时 95.6%、误检更少），
+在 M 系机器上 56 秒跑完，离线完全可接受。
+
+### 11.1 后端
+- [x] [offline_vision.py](fastapi_app/offline_vision.py)：`analyze_set()` 对 video.mp4 逐帧跑重模型，
+  **原子重写** vision.csv / landmarks.csv / landmarks_multi.jsonl（tmp + os.replace，失败不碰原文件）
+- [x] **时间戳锚点**：复用录制时 vision.csv 的 wall-clock 时间戳（DEVLOG #13 的 1:1 不变量），
+  IMU↔视觉对齐在重分析后完整保留；无时间戳的旧/导入 set 回退合成时间轴
+- [x] 后台任务注册表：单进程同时只跑一个分析（重模型吃满 CPU，保护录制/面板响应），进度可查
+- [x] `POST /api/sets/{name}/analyze` + `GET /api/sets/{name}/analyze/status`（含路径越权保护）
+- [x] `config.toml [analysis]` 段：imgsz 1280 默认；conf 智能默认（hybrid→0.35 / 单模型→0.15，实测校准）
+- [x] [camera_manager.py](fastapi_app/camera_manager.py) `pose_backend = "none"`（新默认）：
+  不再拉起推理线程，帧通路照常满帧率
+- [x] 录制期间 writer 照常写 video + 空 landmarks 行（时间戳载体，离线分析的对齐锚）
+
+### 11.2 前端
+- [x] 实时页隐藏所有视觉组件（`pose_backend=none` 时）：骨架 badge / 实时评分环 /
+  三维条 / 队员实时绑定 / 详细标注 / 原图快照——只留画面 + 录制控制 + 标记 + BLE
+- [x] 分析页视频卡新增「视觉分析」按钮：启动离线分析 → 按钮实时显示进度 % →
+  完成后自动刷新报告；页面重进可恢复进行中的进度显示
+- [x] 队员绑定保留在分析页（7.2 模态），离线分析产出 track ID 后照常可用
+
+### 11.3 测试与验证
+- [x] [tests/test_offline_vision.py](tests/test_offline_vision.py) 10 项：文件重写+时间戳保留 /
+  无时间戳回退 / 行数漂移全合成 / 撕裂尾行保留前缀 / 部分解码拒绝提交 / 垃圾视频拒绝提交 /
+  失败原子性 / 缺视频报错 / 任务注册表生命周期 / 并发互斥
+- [x] test_camera_decouple 新增 backend=none 用例（不拉推理线程、帧照常流动）
+- [x] 真实数据端到端：Emily set_013 离线重分析成功，检出率 29.6% → 98%
+- [x] 15-agent 多视角评审：确认 8 项全部修复，其中 **critical**——`pose_backend=none`
+  的新录制（角度恒 0）令相关系数出 NaN → 报告接口 500 → 分析页全挂（scoring.py 已加
+  visible 过滤 + 零方差/有限性守卫）；其余：分析任务完成时（而非开始时）失效 sessions
+  缓存、录制中禁止启动分析（409）、轮询器跨 set 不再劫持按钮
+- [ ] Emily 侧验证：新 kit 部署后录一组 → 分析页点「视觉分析」→ 检查骨架/角度
+
+### 11.5 Emily kit 交付链路修复（2026-08-06，DEVLOG #41）
+打包 v3 双模型时发现三个"静默不生效"的断点，全部修复并模拟验证：
+- [x] `build-emily-kit.sh` 改打**工作树**而非 `git archive HEAD`（否则未提交的修复全漏掉）
+- [x] `models/` 作为部署权重规范位置（开发机硬链接 → runs/，kit 里是真文件）；
+  config 改指 `models/swimmer_det_v3.pt` / `models/swimmer_pose19_v3.pt`
+- [x] kit 分 `models/`（底座，不覆盖）与 `vision_models/`（自训权重，**必须覆盖**）；
+  原 `cp -n` 会导致新模型永远装不上
+- [x] **分层配置**：`config.local.toml`（机器相关，永不进包）深度合并覆盖 `config.toml`；
+  `update.command` 首次自动迁移 + 按 `uname -m` 判定 cpu/mps（Emily 的 Intel Mac 终于对了）
+- [x] 模拟 Emily 处境跑完整更新流程验证 + 10 条 `tests/test_config_local.py`
+- [x] 产出 `emily_kit_20260806.zip`（含两个 v3 权重）
+- [ ] ⚠️ 本次改动仍未提交 git（kit 打的是工作树）。**建议尽快 commit**，
+  否则换机器 / 回滚会丢失这几天的全部成果
+
+### 11.4 被本阶段取代/降级的旧能力
+- 实时骨架叠加、实时评分环、实时队员绑定（8.1）→ 仅 `pose_backend != "none"` 的 legacy 模式保留
+- 9.4 的录制/推理解耦仍是地基（帧通路 = 现在的唯一实时通路；推理线程 = legacy 模式）
 
 ## 硬件配置
 - M5StickC Plus2 x2 (NODE_A1 前臂 / NODE_A2 小腿)

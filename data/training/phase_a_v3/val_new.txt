@@ -1,0 +1,7 @@
+./images/set_016_f000000.jpg
+./images/set_016_f000022.jpg
+./images/set_016_f000068.jpg
+./images/set_016_f000123.jpg
+./images/set_016_f000135.jpg
+./images/set_016_f000262.jpg
+./images/set_016_f000279.jpg

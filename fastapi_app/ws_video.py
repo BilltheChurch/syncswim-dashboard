@@ -39,6 +39,7 @@ async def video_ws(websocket: WebSocket, camera_manager):
                     "track_ids": data.get("track_ids") or [],
                     "person_count": data.get("person_count", 0),
                     "angles": data.get("angles"),
+                    "pose_error": data.get("pose_error"),
                 }
                 try:
                     await asyncio.wait_for(websocket.send_json(msg), timeout=1.0)

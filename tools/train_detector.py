@@ -59,8 +59,12 @@ def main():
              "small water targets, see DEVLOG #33)",
     )
     parser.add_argument(
-        "--batch", type=int, default=8,
-        help="Batch size (default: 8 — M2 16GB tops out here at imgsz 1280)",
+        "--batch", type=int, default=4,
+        help="Batch size (default: 4 — Apple M-series 16GB shared memory: "
+             "fp32 + imgsz 1280 + batch 8 OOMs out around 13GB GPU_mem then "
+             "process dies silently after first batch (~1500s/it). Drop to "
+             "batch 4 to fit comfortably under 10GB. If you have 32GB M2 Max+ "
+             "or NVIDIA CUDA, try --batch 8 or 16 manually.",
     )
     parser.add_argument(
         "--device", default="mps",
@@ -69,6 +73,14 @@ def main():
     parser.add_argument(
         "--name", default="swimmer_det_v1",
         help="Output run name → runs/detect/<name>/",
+    )
+    parser.add_argument(
+        "--amp", action="store_true",
+        help="Enable Automatic Mixed Precision (fp16). Default OFF — "
+             "ultralytics + Apple MPS + AMP has a known NaN bug: first "
+             "batch trains fine, second batch onward all loss = NaN, "
+             "model gets thrown away with no warning. Keep OFF on M1/M2/M5 "
+             "Macs. ~1.5× slower but produces valid weights.",
     )
     args = parser.parse_args()
 
@@ -95,6 +107,7 @@ def main():
         batch=args.batch,
         device=args.device,
         name=args.name,
+        amp=args.amp,   # default OFF — MPS + AMP NaN bug, see --amp help
         # Pool-tuned augmentation (matches tools/train_pose.py)
         hsv_h=0.015,
         hsv_s=0.7,

@@ -1,0 +1,27 @@
+# Swimmer-tuned BoT-SORT — replaces failed bytetrack tweaks (v3 dogfood made
+# inflation WORSE: 14× → 26×).
+#
+# Real culprit was likely BBox jitter across frames (mAP 0.84 is single-frame;
+# same swimmer's box position/size wobbles ±15-20px across frames + handheld
+# camera shake) — IoU drops below match threshold → re-id fails → new ID.
+#
+# BoT-SORT's killer feature: GMC (Global Motion Compensation) — corrects for
+# camera motion BEFORE IoU matching. Specifically built for moving-camera
+# scenes (CCTV, drones, handheld). Should fix our phone-shot dogfood case.
+#
+# All thresholds kept at ultralytics defaults (v3 lesson: don't second-guess
+# the team-tuned baseline). Only GMC is the value-add.
+
+tracker_type: botsort
+track_high_thresh: 0.25  # default — proven by v2 better than v3's 0.5
+track_low_thresh: 0.1
+new_track_thresh: 0.25   # default — v3's 0.6 didn't help
+track_buffer: 30         # default — v3's 90 didn't help either
+match_thresh: 0.8        # default — v3's 0.6 didn't help
+fuse_score: True
+
+# BoT-SORT specifics (the only real lever vs ByteTrack)
+gmc_method: sparseOptFlow  # Lucas-Kanade optical flow — fast + good for swim
+proximity_thresh: 0.5
+appearance_thresh: 0.8
+with_reid: False  # keep off — ReID needs extra model + GPU; revisit later

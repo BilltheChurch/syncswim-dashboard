@@ -1,0 +1,22 @@
+# Swimmer-tuned ByteTrack — fights ID inflation in synchronized swimming
+#
+# Default ultralytics bytetrack.yaml gives 14× ID inflation on our dogfood
+# videos even with mAP=0.834 detector. Root cause: defaults assume single-
+# object or fast-moving CCTV pedestrians, NOT slowly-moving swimmers with
+# heavy mutual occlusion + frequent rotation.
+#
+# 3 key tweaks (verified against 14× → goal ≤ 3×):
+#   - new_track_thresh 0.25 → 0.6   (only HIGH-conf detections open new tracks)
+#   - match_thresh     0.8  → 0.6   (allow looser IoU across frames — swimmers
+#                                    rotate/flip and bbox shifts a lot)
+#   - track_buffer     30   → 90    (handle multi-second mutual occlusion in
+#                                    formation routines; was losing tracks
+#                                    every time one swimmer crossed another)
+
+tracker_type: bytetrack
+track_high_thresh: 0.5   # raised from 0.25 — first-stage only confident dets
+track_low_thresh: 0.1    # kept — second-stage rescue for fast-moving swimmers
+new_track_thresh: 0.6    # raised from 0.25 — kill the FP-as-new-ID problem
+track_buffer: 90         # raised from 30 — 3 seconds of occlusion tolerance
+match_thresh: 0.6        # loosened from 0.8 — accept IoU 0.6+ for re-id
+fuse_score: True         # kept — detection score fusion stabilizes weak matches

@@ -108,8 +108,31 @@ mkdir -p "$KIT_DIR"/{setup,desktop,models,videos,frames}
 # 2a. 仓库代码 zip（用 git archive，自动排除 untracked / gitignored）
 # 注意：git archive 出 HEAD 状态，包含 tools/, fastapi_app/, docs/, requirements.txt 等
 # 自动排除 .venv/, runs/, data/raw_videos/, *.pt 等（在 .gitignore 里）
-echo "[+] 打包代码（git archive HEAD）..."
-git archive --format=zip HEAD -o "$REPO_ROOT/$KIT_DIR/code.zip"
+#
+# 打的是**工作树**而不是 HEAD（DEVLOG #41）：git archive HEAD 只含已提交内容，
+# 会把"刚验证通过但还没提交"的修复漏在外面 —— Emily 拿到的必须是我们实测过的
+# 那份代码。跟踪文件用 git ls-files 取（自动尊重 .gitignore），另外显式补上几个
+# 尚未纳入版本管理、但运行时必需的文件。
+echo "[+] 打包代码（工作树 = 实际验证过的版本）..."
+EXTRA_UNTRACKED=(
+    "fastapi_app/offline_vision.py"      # 离线视觉分析（2026-07-30 架构转向）
+    "data/tracker_configs"               # hybrid 追踪器配置，缺了会静默退化
+)
+CODE_LIST="$(mktemp)"
+git ls-files > "$CODE_LIST"
+for p in "${EXTRA_UNTRACKED[@]}"; do
+    if [ -d "$p" ]; then
+        find "$p" -type f >> "$CODE_LIST"
+    elif [ -f "$p" ]; then
+        echo "$p" >> "$CODE_LIST"
+    else
+        echo "[warn] 预期的运行时文件不存在，已跳过: $p"
+    fi
+done
+# config.local.toml 绝不进包 —— 那是每台电脑自己的设置
+sort -u "$CODE_LIST" | grep -v '^config\.local\.toml$' \
+    | zip -q "$REPO_ROOT/$KIT_DIR/code.zip" -@
+rm -f "$CODE_LIST"
 CODE_SIZE=$(du -h "$KIT_DIR/code.zip" | cut -f1)
 echo "    ✓ code.zip ($CODE_SIZE)"
 
@@ -128,9 +151,30 @@ cp tools/start-dashboard.command "$KIT_DIR/desktop/3-start-dashboard.command"
 cp docs/emily-cheatsheet.html    "$KIT_DIR/desktop/cheatsheet.html"
 chmod +x "$KIT_DIR/desktop/"*.command
 
-# 2e. 模型文件
+# 2e. 模型文件 —— 两类，落地位置不同（见 tools/update.command）
+#   models/        通用底座 → 仓库根，已存在则不覆盖
+#   vision_models/ 我们自训的花泳权重 → 仓库 models/，每次覆盖
 cp yolov8s-pose.pt           "$KIT_DIR/models/"
 cp pose_landmarker_lite.task "$KIT_DIR/models/"
+
+mkdir -p "$KIT_DIR/vision_models"
+DEPLOYED_MISSING=0
+for w in models/swimmer_det_v3.pt models/swimmer_pose19_v3.pt; do
+    if [ -f "$w" ]; then
+        cp "$w" "$KIT_DIR/vision_models/"
+    else
+        echo "[error] 缺少上线权重: $w"
+        DEPLOYED_MISSING=1
+    fi
+done
+if [ "$DEPLOYED_MISSING" = "1" ]; then
+    echo "        本地建立方式（硬链接，不占额外磁盘）："
+    echo "          mkdir -p models"
+    echo "          ln -f runs/detect/swimmer_det_v3/weights/best.pt models/swimmer_det_v3.pt"
+    echo "          ln -f runs/pose/swimmer_pose19_v3/weights/last.pt models/swimmer_pose19_v3.pt"
+    exit 1
+fi
+echo "[+] 已带上线权重: $(ls -1 "$KIT_DIR/vision_models" | tr '\n' ' ')"
 
 # 2f. 训练视频
 echo "[+] 打包 raw_videos..."
@@ -306,7 +350,7 @@ cat <<EOF
 [done] 输出 $ZIP_OUT  ($SIZE)
 
 包含：
-  code.zip                      (仓库代码 HEAD, $CODE_SIZE)
+  code.zip                      (仓库代码 = 当前工作树, $CODE_SIZE)
   setup/
     setup-system.command        (Tim 老师双击一次性装全套)
   desktop/
@@ -314,9 +358,12 @@ cat <<EOF
     2-start-cvat.command        (Emily 标注)
     3-start-dashboard.command   (Emily 训练 / 录制)
     cheatsheet.html             (一页 A4 速查表)
-  models/
+  models/                       (通用底座 → 仓库根，已存在不覆盖)
     yolov8s-pose.pt             (22MB)
     pose_landmarker_lite.task   (5MB)
+  vision_models/                (我们自训的花泳权重 → 仓库 models/，每次覆盖)
+    swimmer_det_v3.pt           (22MB, 检测器)
+    swimmer_pose19_v3.pt        (23MB, 19 点姿态含脚尖)
   videos/
     raw_videos.zip              (~11MB, 3 段)
   frames/

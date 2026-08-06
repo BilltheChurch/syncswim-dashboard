@@ -155,6 +155,13 @@ def main():
         "--device", default="mps",
         help="Inference device: mps / cuda / cpu",
     )
+    parser.add_argument(
+        "--kpt-min-conf", type=float, default=0.35,
+        help="Zero out keypoints below this confidence at the source "
+             "(DEVLOG #36: COCO-pose hallucinates underwater joints at "
+             "conf 0.1-0.4). Set 0 to keep every keypoint the model "
+             "emits (pre-gate behaviour).",
+    )
     parser.add_argument("--max-persons", type=int, default=8)
     parser.add_argument(
         "--imgsz", type=int, default=1280,
@@ -221,6 +228,7 @@ def main():
         max_persons=args.max_persons,
         device=args.device,
         imgsz=args.imgsz,
+        kpt_min_conf=args.kpt_min_conf,
     )
     # Reset BYTETracker state — same reason live recording does it
     # at every start_recording (see DEVLOG #25). Without this, IDs

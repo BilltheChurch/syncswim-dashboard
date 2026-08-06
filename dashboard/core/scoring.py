@@ -574,7 +574,17 @@ def compute_set_report(
             imu_tilt = calc_imu_tilt(
                 arm_imu_df[["ax", "ay", "az"]].to_dict("records")
             )
-            vision_angles = vision_df["angle_deg"].values
+            # Only rows where the joint was actually visible — a set
+            # recorded under pose_backend="none" (or before offline
+            # analysis has run) has angle_deg=0 with visible=0 on every
+            # row; correlating against that constant vector yields NaN,
+            # which Starlette's JSON encoder (allow_nan=False) turns
+            # into a 500 for the whole report endpoint.
+            if "visible" in vision_df.columns:
+                vis_rows = vision_df[vision_df["visible"] == 1]
+            else:
+                vis_rows = vision_df
+            vision_angles = vis_rows["angle_deg"].values
             common_len = min(len(imu_tilt), len(vision_angles))
             if common_len > 1:
                 imu_interp = np.interp(
@@ -587,8 +597,11 @@ def compute_set_report(
                     np.linspace(0, 1, len(vision_angles)),
                     vision_angles,
                 )
-                corr_matrix = np.corrcoef(imu_interp, vis_interp)
-                correlation = float(corr_matrix[0, 1])
+                # Zero-variance input (constant signal) makes corrcoef
+                # emit NaN with only a RuntimeWarning — guard explicitly.
+                if np.std(imu_interp) > 1e-9 and np.std(vis_interp) > 1e-9:
+                    corr = float(np.corrcoef(imu_interp, vis_interp)[0, 1])
+                    correlation = corr if np.isfinite(corr) else None
         except (ValueError, IndexError, KeyError):
             correlation = None
 

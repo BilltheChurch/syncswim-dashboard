@@ -473,6 +473,51 @@ async def choreography_rank():
     return rank_sets(_DATA_DIR)
 
 
+# ── Offline vision analysis (DEVLOG #37: no live inference) ──
+@router.post("/sets/{name}/analyze")
+async def analyze_set_start(name: str):
+    """Kick background vision analysis over this set's video.mp4.
+
+    The live path records camera + IMU only since the 2026-07-30
+    architecture pivot; this endpoint runs the heavy offline pipeline
+    (hybrid detector + pose, imgsz 1280) and rewrites the set's
+    vision.csv / landmarks.csv / landmarks_multi.jsonl in place.
+    """
+    from fastapi_app import offline_vision
+    set_dir = _set_dir(name)
+    if not os.path.isdir(set_dir):
+        return JSONResponse({"error": "Set not found"}, status_code=404)
+    real = os.path.realpath(set_dir)
+    root = os.path.realpath(_DATA_DIR)
+    if not real.startswith(root + os.sep):
+        return JSONResponse({"error": "Invalid set path"}, status_code=400)
+    if not os.path.exists(os.path.join(set_dir, "video.mp4")):
+        return JSONResponse({"error": "Set has no video.mp4"},
+                            status_code=409)
+    # Heavy models saturate the CPU and the in-progress video.mp4 has
+    # no moov atom yet (unopenable) — refuse to analyze while a
+    # recording is active rather than fail with a low-level error or
+    # starve the recorder.
+    if getattr(_recorder, "recording", False):
+        return JSONResponse(
+            {"error": "录制进行中 — 请先停止录制再运行视觉分析"},
+            status_code=409)
+    # Sessions cache is invalidated when the job FINISHES (that's when
+    # the on-disk files actually change); clearing it here would let a
+    # mid-run index rebuild go stale forever.
+    started, reason = offline_vision.start_job(
+        name, set_dir, on_done=_clear_sessions_cache)
+    if not started:
+        return JSONResponse({"error": reason}, status_code=409)
+    return {"status": "started", "name": name}
+
+
+@router.get("/sets/{name}/analyze/status")
+async def analyze_set_status(name: str):
+    from fastapi_app import offline_vision
+    return offline_vision.job_status(name)
+
+
 @router.delete("/sets/{name}")
 async def delete_set(name: str):
     set_dir = _set_dir(name)

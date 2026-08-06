@@ -1,0 +1,6447 @@
+{
+  "schema": "phase-b-swimmer19-crops/v1",
+  "crop_scale": 1.5,
+  "original_bbox_fraction_of_crop": 0.6666666666666666,
+  "source_frame_selection": "all_frames",
+  "crop_selection": "at_least_one_reliable_visible_local_model_keypoint",
+  "records": [
+    {
+      "crop_image": "clip_horizontal_f000028_p3.jpg",
+      "source_image": "clip_horizontal_f000028.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.758094,
+        0.575021,
+        0.151438,
+        0.180792
+      ],
+      "source_bbox_pixels": [
+        655.08,
+        348.93,
+        145.38047999999998,
+        130.17024
+      ],
+      "crop_window_pixels": [
+        618,
+        316,
+        219,
+        196
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        37.08000000000004,
+        32.93000000000001,
+        145.38047999999998,
+        130.17024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000046_p1.jpg",
+      "source_image": "clip_horizontal_f000046.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.776563,
+        0.633264,
+        0.139583,
+        0.145972
+      ],
+      "source_bbox_pixels": [
+        678.50064,
+        403.40016,
+        133.99968,
+        105.09984
+      ],
+      "crop_window_pixels": [
+        645,
+        377,
+        201,
+        158
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.500639999999976,
+        26.400160000000028,
+        133.99968,
+        105.09984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000046_p2.jpg",
+      "source_image": "clip_horizontal_f000046.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.292177,
+        0.690875,
+        0.152729,
+        0.153806
+      ],
+      "source_bbox_pixels": [
+        207.18,
+        442.05983999999995,
+        146.61984,
+        110.74032
+      ],
+      "crop_window_pixels": [
+        170,
+        414,
+        220,
+        167
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        37.180000000000035,
+        28.05984000000001,
+        146.61984,
+        110.74032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000064_p2.jpg",
+      "source_image": "clip_horizontal_f000064.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.608714,
+        0.472667,
+        0.076219,
+        0.140611
+      ],
+      "source_bbox_pixels": [
+        547.78032,
+        289.70027999999996,
+        73.17023999999999,
+        101.23992000000001
+      ],
+      "crop_window_pixels": [
+        529,
+        264,
+        110,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.780320000000074,
+        25.70028000000002,
+        73.17023999999999,
+        101.23992000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000082_p1.jpg",
+      "source_image": "clip_horizontal_f000082.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.770052,
+        0.639757,
+        0.115104,
+        0.165347
+      ],
+      "source_bbox_pixels": [
+        683.9999999999999,
+        401.10012000000006,
+        110.49983999999999,
+        119.04983999999999
+      ],
+      "crop_window_pixels": [
+        656,
+        371,
+        166,
+        179
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        28.0,
+        30.100120000000004,
+        110.49983999999999,
+        119.04983999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000082_p4.jpg",
+      "source_image": "clip_horizontal_f000082.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.617083,
+        0.531674,
+        0.069167,
+        0.085292
+      ],
+      "source_bbox_pixels": [
+        559.19952,
+        352.10015999999996,
+        66.40032000000001,
+        61.41024
+      ],
+      "crop_window_pixels": [
+        542,
+        336,
+        100,
+        93
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        17.199520000000007,
+        16.10015999999996,
+        66.40032000000001,
+        61.41024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000100_p1.jpg",
+      "source_image": "clip_horizontal_f000100.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.283635,
+        0.619653,
+        0.105812,
+        0.150972
+      ],
+      "source_bbox_pixels": [
+        221.49984,
+        391.80024000000003,
+        101.57952,
+        108.69984
+      ],
+      "crop_window_pixels": [
+        196,
+        364,
+        153,
+        164
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.499840000000006,
+        27.80024000000003,
+        101.57952,
+        108.69984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000100_p3.jpg",
+      "source_image": "clip_horizontal_f000100.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.741979,
+        0.552153,
+        0.122708,
+        0.204306
+      ],
+      "source_bbox_pixels": [
+        653.4000000000001,
+        324.0,
+        117.79968,
+        147.10031999999998
+      ],
+      "crop_window_pixels": [
+        624,
+        287,
+        177,
+        221
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        29.399999999999977,
+        37.0,
+        117.79968,
+        147.10031999999998
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000118_p0.jpg",
+      "source_image": "clip_horizontal_f000118.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.451427,
+        0.540806,
+        0.061604,
+        0.101611
+      ],
+      "source_bbox_pixels": [
+        403.8,
+        352.80036,
+        59.13984,
+        73.15992
+      ],
+      "crop_window_pixels": [
+        389,
+        334,
+        89,
+        110
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.800000000000011,
+        18.800359999999955,
+        59.13984,
+        73.15992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000118_p2.jpg",
+      "source_image": "clip_horizontal_f000118.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.776557,
+        0.567847,
+        0.225406,
+        0.123194
+      ],
+      "source_bbox_pixels": [
+        637.29984,
+        364.5,
+        216.38976,
+        88.69968
+      ],
+      "crop_window_pixels": [
+        583,
+        342,
+        325,
+        134
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        54.29984000000002,
+        22.5,
+        216.38976,
+        88.69968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000118_p3.jpg",
+      "source_image": "clip_horizontal_f000118.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.271927,
+        0.599722,
+        0.105729,
+        0.148139
+      ],
+      "source_bbox_pixels": [
+        210.29999999999995,
+        378.46979999999996,
+        101.49984,
+        106.66008
+      ],
+      "crop_window_pixels": [
+        185,
+        352,
+        153,
+        160
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.299999999999983,
+        26.469799999999964,
+        101.49984,
+        106.66008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p0.jpg",
+      "source_image": "clip_horizontal_f000136.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.602333,
+        0.469993,
+        0.13925,
+        0.076764
+      ],
+      "source_bbox_pixels": [
+        511.39968,
+        310.75991999999997,
+        133.68,
+        55.27008
+      ],
+      "crop_window_pixels": [
+        478,
+        297,
+        201,
+        83
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.39967999999999,
+        13.759919999999966,
+        133.68,
+        55.27008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p1.jpg",
+      "source_image": "clip_horizontal_f000136.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.258036,
+        0.564049,
+        0.088385,
+        0.163236
+      ],
+      "source_bbox_pixels": [
+        205.28976,
+        347.35032,
+        84.84960000000001,
+        117.52991999999999
+      ],
+      "crop_window_pixels": [
+        184,
+        318,
+        128,
+        177
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.289759999999973,
+        29.350320000000067,
+        84.84960000000001,
+        117.52991999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p2.jpg",
+      "source_image": "clip_horizontal_f000136.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.396276,
+        0.453007,
+        0.05351,
+        0.079542
+      ],
+      "source_bbox_pixels": [
+        354.74016,
+        297.52992,
+        51.369600000000005,
+        57.27024
+      ],
+      "crop_window_pixels": [
+        341,
+        283,
+        78,
+        86
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.740160000000003,
+        14.529919999999947,
+        51.369600000000005,
+        57.27024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p3.jpg",
+      "source_image": "clip_horizontal_f000136.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.459271,
+        0.533778,
+        0.101458,
+        0.098389
+      ],
+      "source_bbox_pixels": [
+        392.20032,
+        348.90011999999996,
+        97.39968,
+        70.84008
+      ],
+      "crop_window_pixels": [
+        367,
+        331,
+        147,
+        107
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.200319999999977,
+        17.900120000000015,
+        97.39968,
+        70.84008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p4.jpg",
+      "source_image": "clip_horizontal_f000136.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.735781,
+        0.567799,
+        0.151562,
+        0.118847
+      ],
+      "source_bbox_pixels": [
+        633.6,
+        366.0303600000001,
+        145.49952,
+        85.56984
+      ],
+      "crop_window_pixels": [
+        597,
+        344,
+        219,
+        129
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        36.60000000000002,
+        22.03036000000003,
+        145.49952,
+        85.56984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000154_p0.jpg",
+      "source_image": "clip_horizontal_f000154.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.431016,
+        0.521097,
+        0.08724,
+        0.099139
+      ],
+      "source_bbox_pixels": [
+        371.90016,
+        339.49980000000005,
+        83.7504,
+        71.38008
+      ],
+      "crop_window_pixels": [
+        351,
+        321,
+        126,
+        108
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.900160000000028,
+        18.499799999999993,
+        83.7504,
+        71.38008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000154_p1.jpg",
+      "source_image": "clip_horizontal_f000154.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.725958,
+        0.565521,
+        0.144229,
+        0.133903
+      ],
+      "source_bbox_pixels": [
+        627.68976,
+        358.97004000000004,
+        138.45983999999999,
+        96.41015999999999
+      ],
+      "crop_window_pixels": [
+        593,
+        335,
+        208,
+        145
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        34.68975999999998,
+        23.97004000000004,
+        138.45983999999999,
+        96.41015999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000154_p2.jpg",
+      "source_image": "clip_horizontal_f000154.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.278302,
+        0.574083,
+        0.163479,
+        0.128222
+      ],
+      "source_bbox_pixels": [
+        188.7,
+        367.17984,
+        156.93984,
+        92.31984
+      ],
+      "crop_window_pixels": [
+        149,
+        344,
+        236,
+        139
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        39.69999999999999,
+        23.179840000000013,
+        156.93984,
+        92.31984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000154_p3.jpg",
+      "source_image": "clip_horizontal_f000154.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.378208,
+        0.439937,
+        0.064104,
+        0.079292
+      ],
+      "source_bbox_pixels": [
+        332.30976000000004,
+        288.20952,
+        61.53984,
+        57.09024
+      ],
+      "crop_window_pixels": [
+        317,
+        274,
+        93,
+        86
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.309759999999983,
+        14.209519999999998,
+        61.53984,
+        57.09024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000172_p3.jpg",
+      "source_image": "clip_horizontal_f000172.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.444359,
+        0.528542,
+        0.128719,
+        0.100333
+      ],
+      "source_bbox_pixels": [
+        364.79952,
+        344.43035999999995,
+        123.57024,
+        72.23976
+      ],
+      "crop_window_pixels": [
+        334,
+        326,
+        186,
+        109
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        30.799519999999973,
+        18.43035999999995,
+        123.57024,
+        72.23976
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000172_p4.jpg",
+      "source_image": "clip_horizontal_f000172.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.749839,
+        0.579347,
+        0.173219,
+        0.158806
+      ],
+      "source_bbox_pixels": [
+        636.70032,
+        359.95967999999993,
+        166.29024,
+        114.34032
+      ],
+      "crop_window_pixels": [
+        595,
+        331,
+        250,
+        172
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        41.70032000000003,
+        28.959679999999935,
+        166.29024,
+        114.34032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p0.jpg",
+      "source_image": "clip_horizontal_f000190.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.283573,
+        0.588007,
+        0.095604,
+        0.137736
+      ],
+      "source_bbox_pixels": [
+        226.34016,
+        373.78007999999994,
+        91.77984,
+        99.16992
+      ],
+      "crop_window_pixels": [
+        203,
+        349,
+        138,
+        149
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.340160000000054,
+        24.78007999999994,
+        91.77984,
+        99.16992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p1.jpg",
+      "source_image": "clip_horizontal_f000190.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.465932,
+        0.521701,
+        0.10249,
+        0.103819
+      ],
+      "source_bbox_pixels": [
+        398.09952000000004,
+        338.24987999999996,
+        98.3904,
+        74.74968
+      ],
+      "crop_window_pixels": [
+        373,
+        319,
+        148,
+        113
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.099519999999984,
+        19.249879999999962,
+        98.3904,
+        74.74968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p2.jpg",
+      "source_image": "clip_horizontal_f000190.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.586161,
+        0.463118,
+        0.121073,
+        0.077069
+      ],
+      "source_bbox_pixels": [
+        504.59952000000004,
+        305.70012,
+        116.23008,
+        55.48968
+      ],
+      "crop_window_pixels": [
+        475,
+        291,
+        175,
+        84
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        29.599519999999984,
+        14.70011999999997,
+        116.23008,
+        55.48968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p3.jpg",
+      "source_image": "clip_horizontal_f000190.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.766953,
+        0.571062,
+        0.186615,
+        0.155181
+      ],
+      "source_bbox_pixels": [
+        646.6996800000001,
+        355.29947999999996,
+        179.1504,
+        111.73032
+      ],
+      "crop_window_pixels": [
+        602,
+        327,
+        269,
+        168
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        44.699679999999944,
+        28.29947999999996,
+        179.1504,
+        111.73032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p4.jpg",
+      "source_image": "clip_horizontal_f000190.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.358755,
+        0.447687,
+        0.063969,
+        0.089431
+      ],
+      "source_bbox_pixels": [
+        313.69967999999994,
+        290.13948,
+        61.41024,
+        64.39032
+      ],
+      "crop_window_pixels": [
+        298,
+        274,
+        93,
+        97
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.699679999999944,
+        16.139479999999992,
+        61.41024,
+        64.39032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000209_p2.jpg",
+      "source_image": "clip_horizontal_f000209.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.74,
+        0.535069,
+        0.126458,
+        0.192222
+      ],
+      "source_bbox_pixels": [
+        649.70016,
+        316.04976,
+        121.39967999999999,
+        138.39984
+      ],
+      "crop_window_pixels": [
+        619,
+        281,
+        183,
+        208
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        30.700159999999983,
+        35.04975999999999,
+        121.39967999999999,
+        138.39984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000245_p2.jpg",
+      "source_image": "clip_horizontal_f000245.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.53938,
+        0.470097,
+        0.136865,
+        0.036861
+      ],
+      "source_bbox_pixels": [
+        452.10959999999994,
+        325.19988,
+        131.3904,
+        26.53992
+      ],
+      "crop_window_pixels": [
+        419,
+        318,
+        198,
+        40
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.1096,
+        7.1998799999999505,
+        131.3904,
+        26.53992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000263_p0.jpg",
+      "source_image": "clip_horizontal_f000263.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.318917,
+        0.476521,
+        0.196271,
+        0.051653
+      ],
+      "source_bbox_pixels": [
+        211.95024,
+        324.50004,
+        188.42016,
+        37.19016
+      ],
+      "crop_window_pixels": [
+        165,
+        315,
+        283,
+        56
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        46.95024000000001,
+        9.500039999999956,
+        188.42016,
+        37.19016
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000263_p2.jpg",
+      "source_image": "clip_horizontal_f000263.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.275375,
+        0.620722,
+        0.229438,
+        0.113389
+      ],
+      "source_bbox_pixels": [
+        154.22975999999997,
+        406.0998,
+        220.26048,
+        81.64008
+      ],
+      "crop_window_pixels": [
+        99,
+        385,
+        331,
+        123
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        55.22975999999994,
+        21.099800000000016,
+        220.26048,
+        81.64008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000263_p3.jpg",
+      "source_image": "clip_horizontal_f000263.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.719057,
+        0.533208,
+        0.211448,
+        0.074639
+      ],
+      "source_bbox_pixels": [
+        588.7996799999999,
+        357.03972,
+        202.99008,
+        53.74008
+      ],
+      "crop_window_pixels": [
+        538,
+        343,
+        305,
+        81
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        50.79967999999997,
+        14.039719999999988,
+        202.99008,
+        53.74008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000263_p4.jpg",
+      "source_image": "clip_horizontal_f000263.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.519677,
+        0.473771,
+        0.165167,
+        0.049764
+      ],
+      "source_bbox_pixels": [
+        419.60975999999994,
+        323.20008,
+        158.56032000000002,
+        35.83008
+      ],
+      "crop_window_pixels": [
+        380,
+        314,
+        238,
+        54
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        39.60975999999994,
+        9.200080000000014,
+        158.56032000000002,
+        35.83008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000299_p2.jpg",
+      "source_image": "clip_horizontal_f000299.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.286875,
+        0.611083,
+        0.133542,
+        0.1595
+      ],
+      "source_bbox_pixels": [
+        211.29984,
+        382.55976000000004,
+        128.20032,
+        114.84
+      ],
+      "crop_window_pixels": [
+        179,
+        353,
+        193,
+        173
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        32.29983999999996,
+        29.55976000000004,
+        128.20032,
+        114.84
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000299_p3.jpg",
+      "source_image": "clip_horizontal_f000299.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.758568,
+        0.519486,
+        0.096969,
+        0.134583
+      ],
+      "source_bbox_pixels": [
+        681.68016,
+        325.58004,
+        93.09024,
+        96.89976
+      ],
+      "crop_window_pixels": [
+        658,
+        301,
+        140,
+        146
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.68016,
+        24.580039999999997,
+        93.09024,
+        96.89976
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000299_p4.jpg",
+      "source_image": "clip_horizontal_f000299.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.418385,
+        0.526375,
+        0.066771,
+        0.127167
+      ],
+      "source_bbox_pixels": [
+        369.59952,
+        333.20988,
+        64.10016,
+        91.56024000000001
+      ],
+      "crop_window_pixels": [
+        353,
+        310,
+        97,
+        138
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.59952000000004,
+        23.20988,
+        64.10016,
+        91.56024000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000317_p0.jpg",
+      "source_image": "clip_horizontal_f000317.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.763891,
+        0.511396,
+        0.106844,
+        0.165236
+      ],
+      "source_bbox_pixels": [
+        682.05024,
+        308.72016,
+        102.57024,
+        118.96992
+      ],
+      "crop_window_pixels": [
+        656,
+        279,
+        154,
+        179
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        26.05024000000003,
+        29.720159999999964,
+        102.57024,
+        118.96992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000317_p1.jpg",
+      "source_image": "clip_horizontal_f000317.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.538995,
+        0.469368,
+        0.10149,
+        0.123931
+      ],
+      "source_bbox_pixels": [
+        468.72,
+        293.3298,
+        97.43039999999999,
+        89.23032
+      ],
+      "crop_window_pixels": [
+        444,
+        271,
+        147,
+        134
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        24.720000000000027,
+        22.329799999999977,
+        97.43039999999999,
+        89.23032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000317_p2.jpg",
+      "source_image": "clip_horizontal_f000317.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.295406,
+        0.595438,
+        0.127146,
+        0.219375
+      ],
+      "source_bbox_pixels": [
+        222.55968000000001,
+        349.74036,
+        122.06016000000001,
+        157.95
+      ],
+      "crop_window_pixels": [
+        192,
+        310,
+        184,
+        237
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        30.559680000000014,
+        39.74036000000001,
+        122.06016000000001,
+        157.95
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000317_p3.jpg",
+      "source_image": "clip_horizontal_f000317.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.385146,
+        0.451569,
+        0.071583,
+        0.076917
+      ],
+      "source_bbox_pixels": [
+        335.38032,
+        297.43956,
+        68.71968,
+        55.38024
+      ],
+      "crop_window_pixels": [
+        318,
+        283,
+        104,
+        84
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        17.380319999999983,
+        14.439560000000029,
+        68.71968,
+        55.38024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000335_p2.jpg",
+      "source_image": "clip_horizontal_f000335.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.766583,
+        0.517896,
+        0.098583,
+        0.180153
+      ],
+      "source_bbox_pixels": [
+        688.59984,
+        308.03004,
+        94.63968,
+        129.71016
+      ],
+      "crop_window_pixels": [
+        665,
+        275,
+        142,
+        195
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.599839999999972,
+        33.03004000000004,
+        94.63968,
+        129.71016
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000335_p4.jpg",
+      "source_image": "clip_horizontal_f000335.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.289271,
+        0.610458,
+        0.110833,
+        0.231306
+      ],
+      "source_bbox_pixels": [
+        224.50032,
+        356.2596,
+        106.39968,
+        166.54032
+      ],
+      "crop_window_pixels": [
+        198,
+        315,
+        160,
+        250
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        26.500319999999988,
+        41.25959999999998,
+        106.39968,
+        166.54032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000353_p0.jpg",
+      "source_image": "clip_horizontal_f000353.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.402083,
+        0.537438,
+        0.083479,
+        0.144319
+      ],
+      "source_bbox_pixels": [
+        345.92976000000004,
+        335.00052,
+        80.13983999999999,
+        103.90968000000001
+      ],
+      "crop_window_pixels": [
+        325,
+        309,
+        121,
+        156
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.929759999999987,
+        26.000519999999995,
+        80.13983999999999,
+        103.90968000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000353_p1.jpg",
+      "source_image": "clip_horizontal_f000353.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.354151,
+        0.480021,
+        0.05674,
+        0.118264
+      ],
+      "source_bbox_pixels": [
+        312.74976,
+        303.04008,
+        54.4704,
+        85.15008
+      ],
+      "crop_window_pixels": [
+        299,
+        282,
+        82,
+        128
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.74975999999998,
+        21.04007999999999,
+        54.4704,
+        85.15008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000353_p3.jpg",
+      "source_image": "clip_horizontal_f000353.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.523396,
+        0.467417,
+        0.087396,
+        0.113917
+      ],
+      "source_bbox_pixels": [
+        460.51007999999996,
+        295.53012,
+        83.90016,
+        82.02024
+      ],
+      "crop_window_pixels": [
+        439,
+        275,
+        126,
+        124
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.51007999999996,
+        20.53012000000001,
+        83.90016,
+        82.02024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000353_p4.jpg",
+      "source_image": "clip_horizontal_f000353.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.280125,
+        0.619556,
+        0.093917,
+        0.2495
+      ],
+      "source_bbox_pixels": [
+        223.83984,
+        356.26032,
+        90.16032,
+        179.64
+      ],
+      "crop_window_pixels": [
+        201,
+        311,
+        136,
+        270
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.83984000000001,
+        45.26031999999998,
+        90.16032,
+        179.64
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p0.jpg",
+      "source_image": "clip_horizontal_f000371.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.390667,
+        0.535243,
+        0.095875,
+        0.133042
+      ],
+      "source_bbox_pixels": [
+        329.02031999999997,
+        337.47984,
+        92.04,
+        95.79024
+      ],
+      "crop_window_pixels": [
+        306,
+        313,
+        139,
+        144
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.020320000000027,
+        24.479840000000024,
+        92.04,
+        95.79024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p1.jpg",
+      "source_image": "clip_horizontal_f000371.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.338182,
+        0.476111,
+        0.066552,
+        0.117389
+      ],
+      "source_bbox_pixels": [
+        292.70976,
+        300.53988000000004,
+        63.889920000000004,
+        84.52008
+      ],
+      "crop_window_pixels": [
+        277,
+        279,
+        96,
+        127
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.709760000000017,
+        21.539879999999982,
+        63.889920000000004,
+        84.52008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p2.jpg",
+      "source_image": "clip_horizontal_f000371.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.759161,
+        0.529153,
+        0.09849,
+        0.153917
+      ],
+      "source_bbox_pixels": [
+        681.51936,
+        325.58004,
+        94.5504,
+        110.82024
+      ],
+      "crop_window_pixels": [
+        658,
+        297,
+        142,
+        167
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.519359999999892,
+        28.580039999999997,
+        94.5504,
+        110.82024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p3.jpg",
+      "source_image": "clip_horizontal_f000371.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.515896,
+        0.468285,
+        0.091958,
+        0.140014
+      ],
+      "source_bbox_pixels": [
+        451.12032000000005,
+        286.76016000000004,
+        88.27968,
+        100.81008
+      ],
+      "crop_window_pixels": [
+        429,
+        261,
+        133,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.12032000000005,
+        25.76016000000004,
+        88.27968,
+        100.81008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p4.jpg",
+      "source_image": "clip_horizontal_f000371.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.273599,
+        0.628722,
+        0.095219,
+        0.245222
+      ],
+      "source_bbox_pixels": [
+        216.94992,
+        364.39992,
+        91.41024,
+        176.55984
+      ],
+      "crop_window_pixels": [
+        194,
+        320,
+        138,
+        265
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.94991999999999,
+        44.39992000000001,
+        91.41024,
+        176.55984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p0.jpg",
+      "source_image": "clip_horizontal_f000390.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.518823,
+        0.464771,
+        0.091958,
+        0.133986
+      ],
+      "source_bbox_pixels": [
+        453.93024,
+        286.40015999999997,
+        88.27968,
+        96.46992
+      ],
+      "crop_window_pixels": [
+        432,
+        262,
+        133,
+        145
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.930240000000026,
+        24.40015999999997,
+        88.27968,
+        96.46992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p1.jpg",
+      "source_image": "clip_horizontal_f000390.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.762094,
+        0.531326,
+        0.098479,
+        0.153931
+      ],
+      "source_bbox_pixels": [
+        684.34032,
+        327.13955999999996,
+        94.53984,
+        110.83032000000001
+      ],
+      "crop_window_pixels": [
+        661,
+        299,
+        142,
+        167
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.340320000000133,
+        28.13955999999996,
+        94.53984,
+        110.83032000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p3.jpg",
+      "source_image": "clip_horizontal_f000390.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.334911,
+        0.460021,
+        0.066552,
+        0.112181
+      ],
+      "source_bbox_pixels": [
+        289.5696,
+        290.82996,
+        63.889920000000004,
+        80.77032
+      ],
+      "crop_window_pixels": [
+        274,
+        270,
+        96,
+        122
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.569600000000037,
+        20.82996000000003,
+        63.889920000000004,
+        80.77032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p4.jpg",
+      "source_image": "clip_horizontal_f000390.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.270339,
+        0.632181,
+        0.095219,
+        0.229528
+      ],
+      "source_bbox_pixels": [
+        213.82032,
+        372.54024000000004,
+        91.41024,
+        165.26016
+      ],
+      "crop_window_pixels": [
+        191,
+        331,
+        138,
+        248
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.82032000000001,
+        41.54023999999998,
+        91.41024,
+        165.26016
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000444_p3.jpg",
+      "source_image": "clip_horizontal_f000444.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.223068,
+        0.574806,
+        0.222385,
+        0.255667
+      ],
+      "source_bbox_pixels": [
+        107.40047999999999,
+        321.82020000000006,
+        213.4896,
+        184.08023999999997
+      ],
+      "crop_window_pixels": [
+        54,
+        275,
+        321,
+        277
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        53.40047999999999,
+        46.8202,
+        213.4896,
+        184.08023999999997
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000462_p4.jpg",
+      "source_image": "clip_horizontal_f000462.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.367177,
+        0.506979,
+        0.041063,
+        0.198264
+      ],
+      "source_bbox_pixels": [
+        332.77968,
+        293.64984,
+        39.420480000000005,
+        142.75008
+      ],
+      "crop_window_pixels": [
+        322,
+        258,
+        60,
+        215
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.779679999999985,
+        35.64983999999998,
+        39.420480000000005,
+        142.75008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p0.jpg",
+      "source_image": "clip_horizontal_f000516.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.521557,
+        0.470965,
+        0.040427,
+        0.146097
+      ],
+      "source_bbox_pixels": [
+        481.28976000000006,
+        286.49988,
+        38.80992,
+        105.18984
+      ],
+      "crop_window_pixels": [
+        471,
+        260,
+        59,
+        158
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.289760000000058,
+        26.49988000000002,
+        38.80992,
+        105.18984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p1.jpg",
+      "source_image": "clip_horizontal_f000516.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.370474,
+        0.529083,
+        0.040427,
+        0.146083
+      ],
+      "source_bbox_pixels": [
+        336.25008,
+        328.34988,
+        38.80992,
+        105.17975999999999
+      ],
+      "crop_window_pixels": [
+        326,
+        302,
+        59,
+        158
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.250080000000025,
+        26.349879999999985,
+        38.80992,
+        105.17975999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p2.jpg",
+      "source_image": "clip_horizontal_f000516.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.321177,
+        0.486215,
+        0.040437,
+        0.146097
+      ],
+      "source_bbox_pixels": [
+        288.92016,
+        297.47988,
+        38.81952,
+        105.18984
+      ],
+      "crop_window_pixels": [
+        279,
+        271,
+        59,
+        158
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.92016000000001,
+        26.47987999999998,
+        38.81952,
+        105.18984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p3.jpg",
+      "source_image": "clip_horizontal_f000516.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.788464,
+        0.532764,
+        0.081198,
+        0.205139
+      ],
+      "source_bbox_pixels": [
+        717.9504,
+        309.74004,
+        77.95008,
+        147.70007999999999
+      ],
+      "crop_window_pixels": [
+        698,
+        273,
+        117,
+        222
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        19.95040000000006,
+        36.74004000000002,
+        77.95008,
+        147.70007999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p4.jpg",
+      "source_image": "clip_horizontal_f000516.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.253677,
+        0.607688,
+        0.071187,
+        0.225181
+      ],
+      "source_bbox_pixels": [
+        209.36015999999998,
+        356.47020000000003,
+        68.33952,
+        162.13031999999998
+      ],
+      "crop_window_pixels": [
+        192,
+        316,
+        103,
+        244
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        17.36015999999998,
+        40.470200000000034,
+        68.33952,
+        162.13031999999998
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p1.jpg",
+      "source_image": "clip_horizontal_f000534.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.519073,
+        0.479576,
+        0.036437,
+        0.139986
+      ],
+      "source_bbox_pixels": [
+        480.82032,
+        294.89976,
+        34.979519999999994,
+        100.78992
+      ],
+      "crop_window_pixels": [
+        472,
+        269,
+        53,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.820320000000038,
+        25.899760000000015,
+        34.979519999999994,
+        100.78992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p2.jpg",
+      "source_image": "clip_horizontal_f000534.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.370464,
+        0.532403,
+        0.039281,
+        0.161861
+      ],
+      "source_bbox_pixels": [
+        336.79056,
+        325.06019999999995,
+        37.70976,
+        116.53992000000001
+      ],
+      "crop_window_pixels": [
+        327,
+        296,
+        57,
+        175
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.790560000000028,
+        29.060199999999952,
+        37.70976,
+        116.53992000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p3.jpg",
+      "source_image": "clip_horizontal_f000534.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.319031,
+        0.486215,
+        0.036438,
+        0.139986
+      ],
+      "source_bbox_pixels": [
+        288.77952000000005,
+        299.67984,
+        34.98048,
+        100.78992
+      ],
+      "crop_window_pixels": [
+        280,
+        274,
+        53,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.779520000000048,
+        25.679840000000013,
+        34.98048,
+        100.78992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p4.jpg",
+      "source_image": "clip_horizontal_f000534.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.255089,
+        0.633389,
+        0.068573,
+        0.285722
+      ],
+      "source_bbox_pixels": [
+        211.9704,
+        353.18016,
+        65.83008,
+        205.71983999999998
+      ],
+      "crop_window_pixels": [
+        195,
+        302,
+        99,
+        309
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.970400000000012,
+        51.18016,
+        65.83008,
+        205.71983999999998
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p0.jpg",
+      "source_image": "clip_horizontal_f000552.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.314052,
+        0.490028,
+        0.046479,
+        0.139972
+      ],
+      "source_bbox_pixels": [
+        279.17999999999995,
+        302.43024,
+        44.619839999999996,
+        100.77984000000001
+      ],
+      "crop_window_pixels": [
+        268,
+        277,
+        67,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        11.180000000000007,
+        25.43023999999997,
+        44.619839999999996,
+        100.77984000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p2.jpg",
+      "source_image": "clip_horizontal_f000552.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.251151,
+        0.642431,
+        0.07499,
+        0.252361
+      ],
+      "source_bbox_pixels": [
+        205.10976000000002,
+        371.70035999999993,
+        71.9904,
+        181.69992
+      ],
+      "crop_window_pixels": [
+        187,
+        326,
+        108,
+        273
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.109759999999994,
+        45.70035999999999,
+        71.9904,
+        181.69992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p3.jpg",
+      "source_image": "clip_horizontal_f000552.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.509073,
+        0.494792,
+        0.036437,
+        0.139972
+      ],
+      "source_bbox_pixels": [
+        471.22031999999996,
+        305.86032,
+        34.979519999999994,
+        100.77984000000001
+      ],
+      "crop_window_pixels": [
+        462,
+        280,
+        53,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.220320000000015,
+        25.86032,
+        34.979519999999994,
+        100.77984000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p4.jpg",
+      "source_image": "clip_horizontal_f000552.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.376172,
+        0.53,
+        0.036406,
+        0.149444
+      ],
+      "source_bbox_pixels": [
+        343.65024,
+        327.80016,
+        34.94976,
+        107.59967999999999
+      ],
+      "crop_window_pixels": [
+        335,
+        301,
+        53,
+        162
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.650239999999997,
+        26.800160000000005,
+        34.94976,
+        107.59967999999999
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p0.jpg",
+      "source_image": "clip_horizontal_f000571.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.306469,
+        0.498792,
+        0.030396,
+        0.139083
+      ],
+      "source_bbox_pixels": [
+        279.62016,
+        309.06036,
+        29.18016,
+        100.13976000000001
+      ],
+      "crop_window_pixels": [
+        272,
+        284,
+        44,
+        151
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.6201599999999985,
+        25.060360000000003,
+        29.18016,
+        100.13976000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p2.jpg",
+      "source_image": "clip_horizontal_f000571.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.505234,
+        0.509118,
+        0.03224,
+        0.139986
+      ],
+      "source_bbox_pixels": [
+        469.54943999999995,
+        316.17,
+        30.9504,
+        100.78992
+      ],
+      "crop_window_pixels": [
+        462,
+        291,
+        47,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.549440000000004,
+        25.16999999999996,
+        30.9504,
+        100.78992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p3.jpg",
+      "source_image": "clip_horizontal_f000571.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.380172,
+        0.540896,
+        0.034448,
+        0.146264
+      ],
+      "source_bbox_pixels": [
+        348.43008,
+        336.79008000000005,
+        33.07008,
+        105.31008
+      ],
+      "crop_window_pixels": [
+        340,
+        310,
+        50,
+        158
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.430080000000032,
+        26.790080000000046,
+        33.07008,
+        105.31008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p4.jpg",
+      "source_image": "clip_horizontal_f000571.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.257135,
+        0.662792,
+        0.073646,
+        0.254417
+      ],
+      "source_bbox_pixels": [
+        211.49952000000002,
+        385.62012,
+        70.70016,
+        183.18024
+      ],
+      "crop_window_pixels": [
+        193,
+        340,
+        107,
+        275
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.499520000000018,
+        45.62012000000004,
+        70.70016,
+        183.18024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000589_p1.jpg",
+      "source_image": "clip_horizontal_f000589.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.501406,
+        0.50375,
+        0.036437,
+        0.139972
+      ],
+      "source_bbox_pixels": [
+        463.86,
+        312.31008,
+        34.979519999999994,
+        100.77984000000001
+      ],
+      "crop_window_pixels": [
+        455,
+        287,
+        53,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.860000000000014,
+        25.310080000000028,
+        34.979519999999994,
+        100.77984000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000589_p4.jpg",
+      "source_image": "clip_horizontal_f000589.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.272,
+        0.673576,
+        0.0885,
+        0.256181
+      ],
+      "source_bbox_pixels": [
+        218.64000000000001,
+        392.74956,
+        84.96,
+        184.45032
+      ],
+      "crop_window_pixels": [
+        197,
+        346,
+        128,
+        277
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.640000000000015,
+        46.749559999999974,
+        84.96,
+        184.45032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000607_p0.jpg",
+      "source_image": "clip_horizontal_f000607.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.498031,
+        0.50375,
+        0.036438,
+        0.139972
+      ],
+      "source_bbox_pixels": [
+        460.61952,
+        312.31008,
+        34.98048,
+        100.77984000000001
+      ],
+      "crop_window_pixels": [
+        452,
+        287,
+        53,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.619519999999966,
+        25.310080000000028,
+        34.98048,
+        100.77984000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000607_p1.jpg",
+      "source_image": "clip_horizontal_f000607.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.400057,
+        0.546993,
+        0.037802,
+        0.176014
+      ],
+      "source_bbox_pixels": [
+        365.90976,
+        330.46991999999995,
+        36.28992,
+        126.73008
+      ],
+      "crop_window_pixels": [
+        357,
+        298,
+        55,
+        191
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.909759999999949,
+        32.469919999999945,
+        36.28992,
+        126.73008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000607_p2.jpg",
+      "source_image": "clip_horizontal_f000607.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.277063,
+        0.648813,
+        0.062125,
+        0.260708
+      ],
+      "source_bbox_pixels": [
+        236.16048,
+        373.29048,
+        59.64,
+        187.70976
+      ],
+      "crop_window_pixels": [
+        221,
+        326,
+        90,
+        282
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.160480000000007,
+        47.29048,
+        59.64,
+        187.70976
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000661_p1.jpg",
+      "source_image": "clip_horizontal_f000661.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.477396,
+        0.492069,
+        0.075,
+        0.158639
+      ],
+      "source_bbox_pixels": [
+        422.30016,
+        297.17964,
+        72.0,
+        114.22008
+      ],
+      "crop_window_pixels": [
+        404,
+        268,
+        108,
+        172
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.300160000000005,
+        29.17963999999995,
+        72.0,
+        114.22008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000661_p2.jpg",
+      "source_image": "clip_horizontal_f000661.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.425031,
+        0.542924,
+        0.05,
+        0.172097
+      ],
+      "source_bbox_pixels": [
+        384.02975999999995,
+        328.95036,
+        48.0,
+        123.90984
+      ],
+      "crop_window_pixels": [
+        372,
+        298,
+        72,
+        186
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.02976000000001,
+        30.950359999999932,
+        48.0,
+        123.90984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000679_p1.jpg",
+      "source_image": "clip_horizontal_f000679.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.502406,
+        0.469931,
+        0.039875,
+        0.136056
+      ],
+      "source_bbox_pixels": [
+        463.16976,
+        289.37016,
+        38.28,
+        97.96032000000001
+      ],
+      "crop_window_pixels": [
+        453,
+        265,
+        58,
+        147
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.169760000000053,
+        24.37016,
+        38.28,
+        97.96032000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000679_p2.jpg",
+      "source_image": "clip_horizontal_f000679.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.408813,
+        0.519944,
+        0.055417,
+        0.113528
+      ],
+      "source_bbox_pixels": [
+        365.86031999999994,
+        333.4896,
+        53.20032,
+        81.74016
+      ],
+      "crop_window_pixels": [
+        352,
+        313,
+        80,
+        123
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.860319999999945,
+        20.489599999999996,
+        53.20032,
+        81.74016
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000715_p2.jpg",
+      "source_image": "clip_horizontal_f000715.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.453609,
+        0.536042,
+        0.05576,
+        0.168472
+      ],
+      "source_bbox_pixels": [
+        408.69984,
+        325.30032000000006,
+        53.529599999999995,
+        121.29984
+      ],
+      "crop_window_pixels": [
+        395,
+        295,
+        81,
+        182
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.699839999999995,
+        30.30032,
+        53.529599999999995,
+        121.29984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000715_p3.jpg",
+      "source_image": "clip_horizontal_f000715.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.324286,
+        0.469153,
+        0.02899,
+        0.094139
+      ],
+      "source_bbox_pixels": [
+        297.39936000000006,
+        303.90012,
+        27.830399999999997,
+        67.78008
+      ],
+      "crop_window_pixels": [
+        290,
+        287,
+        42,
+        102
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.3993600000000015,
+        16.900120000000015,
+        27.830399999999997,
+        67.78008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000715_p4.jpg",
+      "source_image": "clip_horizontal_f000715.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.326516,
+        0.653479,
+        0.075073,
+        0.270542
+      ],
+      "source_bbox_pixels": [
+        277.42031999999995,
+        373.10976,
+        72.07008,
+        194.79024
+      ],
+      "crop_window_pixels": [
+        259,
+        324,
+        109,
+        293
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.420320000000004,
+        49.109759999999994,
+        72.07008,
+        194.79024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000733_p0.jpg",
+      "source_image": "clip_horizontal_f000733.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.792911,
+        0.538028,
+        0.095135,
+        0.146667
+      ],
+      "source_bbox_pixels": [
+        715.52976,
+        334.58003999999994,
+        91.3296,
+        105.60024
+      ],
+      "crop_window_pixels": [
+        693,
+        308,
+        137,
+        159
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.52976000000001,
+        26.580039999999997,
+        91.3296,
+        105.60024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000733_p2.jpg",
+      "source_image": "clip_horizontal_f000733.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.456964,
+        0.526632,
+        0.065406,
+        0.169458
+      ],
+      "source_bbox_pixels": [
+        407.29056,
+        318.17016,
+        62.78976000000001,
+        122.00976
+      ],
+      "crop_window_pixels": [
+        391,
+        287,
+        95,
+        184
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.29055999999997,
+        31.170159999999953,
+        62.78976000000001,
+        122.00976
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000733_p4.jpg",
+      "source_image": "clip_horizontal_f000733.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.331719,
+        0.63366,
+        0.124125,
+        0.219014
+      ],
+      "source_bbox_pixels": [
+        258.87023999999997,
+        377.39016,
+        119.16,
+        157.69008
+      ],
+      "crop_window_pixels": [
+        229,
+        338,
+        179,
+        237
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        29.870240000000024,
+        39.39016000000004,
+        119.16,
+        157.69008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p0.jpg",
+      "source_image": "clip_horizontal_f000752.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.772844,
+        0.524653,
+        0.066896,
+        0.1655
+      ],
+      "source_bbox_pixels": [
+        709.82016,
+        318.17016,
+        64.22015999999999,
+        119.16000000000001
+      ],
+      "crop_window_pixels": [
+        693,
+        288,
+        97,
+        179
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.820159999999987,
+        30.170160000000067,
+        64.22015999999999,
+        119.16000000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p1.jpg",
+      "source_image": "clip_horizontal_f000752.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.328766,
+        0.630694,
+        0.091427,
+        0.265556
+      ],
+      "source_bbox_pixels": [
+        271.7304,
+        358.49951999999996,
+        87.76992,
+        191.20032
+      ],
+      "crop_window_pixels": [
+        250,
+        311,
+        132,
+        287
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.73040000000003,
+        47.49951999999996,
+        87.76992,
+        191.20032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p2.jpg",
+      "source_image": "clip_horizontal_f000752.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.333214,
+        0.459264,
+        0.030448,
+        0.112972
+      ],
+      "source_bbox_pixels": [
+        305.2704,
+        290.00016,
+        29.23008,
+        81.33984
+      ],
+      "crop_window_pixels": [
+        298,
+        269,
+        44,
+        123
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.270399999999995,
+        21.000159999999994,
+        29.23008,
+        81.33984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p3.jpg",
+      "source_image": "clip_horizontal_f000752.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.46812,
+        0.532097,
+        0.089177,
+        0.169472
+      ],
+      "source_bbox_pixels": [
+        406.59023999999994,
+        322.09992,
+        85.60992,
+        122.01984
+      ],
+      "crop_window_pixels": [
+        385,
+        291,
+        129,
+        184
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.590239999999994,
+        31.099919999999997,
+        85.60992,
+        122.01984
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p4.jpg",
+      "source_image": "clip_horizontal_f000752.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.510875,
+        0.472632,
+        0.043875,
+        0.155569
+      ],
+      "source_bbox_pixels": [
+        469.38,
+        284.2902,
+        42.12,
+        112.00968
+      ],
+      "crop_window_pixels": [
+        458,
+        256,
+        64,
+        169
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        11.379999999999939,
+        28.29019999999997,
+        42.12,
+        112.00968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000770_p1.jpg",
+      "source_image": "clip_horizontal_f000770.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.335245,
+        0.642847,
+        0.084302,
+        0.289028
+      ],
+      "source_bbox_pixels": [
+        281.37024,
+        358.79975999999994,
+        80.92992,
+        208.10016000000002
+      ],
+      "crop_window_pixels": [
+        261,
+        306,
+        122,
+        313
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.370239999999967,
+        52.79975999999999,
+        80.92992,
+        208.10016000000002
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000770_p2.jpg",
+      "source_image": "clip_horizontal_f000770.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.33225,
+        0.4525,
+        0.023625,
+        0.116944
+      ],
+      "source_bbox_pixels": [
+        307.62,
+        283.70016,
+        22.68,
+        84.19968
+      ],
+      "crop_window_pixels": [
+        301,
+        262,
+        35,
+        127
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        6.6200000000000045,
+        21.700159999999983,
+        22.68,
+        84.19968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000770_p3.jpg",
+      "source_image": "clip_horizontal_f000770.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.458281,
+        0.509708,
+        0.060104,
+        0.178639
+      ],
+      "source_bbox_pixels": [
+        411.09984,
+        302.67972000000003,
+        57.699839999999995,
+        128.62008
+      ],
+      "crop_window_pixels": [
+        396,
+        270,
+        87,
+        193
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.099839999999972,
+        32.67972000000003,
+        57.699839999999995,
+        128.62008
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000788_p0.jpg",
+      "source_image": "clip_horizontal_f000788.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.782146,
+        0.516306,
+        0.066896,
+        0.1655
+      ],
+      "source_bbox_pixels": [
+        718.75008,
+        312.16032,
+        64.22015999999999,
+        119.16000000000001
+      ],
+      "crop_window_pixels": [
+        702,
+        282,
+        97,
+        179
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.75007999999991,
+        30.16032000000007,
+        64.22015999999999,
+        119.16000000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000788_p2.jpg",
+      "source_image": "clip_horizontal_f000788.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.505365,
+        0.471236,
+        0.046354,
+        0.164472
+      ],
+      "source_bbox_pixels": [
+        462.90047999999996,
+        280.08,
+        44.49984,
+        118.41984000000001
+      ],
+      "crop_window_pixels": [
+        452,
+        250,
+        67,
+        178
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.900479999999959,
+        30.079999999999984,
+        44.49984,
+        118.41984000000001
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000788_p4.jpg",
+      "source_image": "clip_horizontal_f000788.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.313234,
+        0.456049,
+        0.053948,
+        0.117931
+      ],
+      "source_bbox_pixels": [
+        274.8096,
+        285.90011999999996,
+        51.79008,
+        84.91032
+      ],
+      "crop_window_pixels": [
+        262,
+        264,
+        78,
+        128
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.809600000000046,
+        21.900120000000015,
+        51.79008,
+        84.91032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000806_p1.jpg",
+      "source_image": "clip_horizontal_f000806.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.333766,
+        0.637785,
+        0.067677,
+        0.278875
+      ],
+      "source_bbox_pixels": [
+        287.9304,
+        358.81020000000007,
+        64.96992,
+        200.79
+      ],
+      "crop_window_pixels": [
+        271,
+        308,
+        98,
+        302
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.93040000000002,
+        50.810200000000066,
+        64.96992,
+        200.79
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000860_p0.jpg",
+      "source_image": "clip_horizontal_f000860.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.420193,
+        0.622111,
+        0.094615,
+        0.132444
+      ],
+      "source_bbox_pixels": [
+        357.97008,
+        400.24008,
+        90.8304,
+        95.35968
+      ],
+      "crop_window_pixels": [
+        335,
+        376,
+        137,
+        144
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.97007999999994,
+        24.240079999999978,
+        90.8304,
+        95.35968
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000860_p1.jpg",
+      "source_image": "clip_horizontal_f000860.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.360495,
+        0.49084,
+        0.06026,
+        0.095292
+      ],
+      "source_bbox_pixels": [
+        317.1504,
+        319.09968,
+        57.8496,
+        68.61024
+      ],
+      "crop_window_pixels": [
+        303,
+        302,
+        87,
+        103
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.15039999999999,
+        17.099680000000035,
+        57.8496,
+        68.61024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000860_p2.jpg",
+      "source_image": "clip_horizontal_f000860.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.504396,
+        0.521118,
+        0.052458,
+        0.096958
+      ],
+      "source_bbox_pixels": [
+        459.04031999999995,
+        340.30008,
+        50.35968,
+        69.80976
+      ],
+      "crop_window_pixels": [
+        446,
+        323,
+        76,
+        105
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.040319999999952,
+        17.30007999999998,
+        50.35968,
+        69.80976
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000878_p1.jpg",
+      "source_image": "clip_horizontal_f000878.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.423703,
+        0.650333,
+        0.235969,
+        0.140028
+      ],
+      "source_bbox_pixels": [
+        293.48976,
+        417.82968,
+        226.53024000000002,
+        100.82016000000002
+      ],
+      "crop_window_pixels": [
+        237,
+        392,
+        340,
+        152
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        56.48975999999999,
+        25.829680000000053,
+        226.53024000000002,
+        100.82016000000002
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000878_p3.jpg",
+      "source_image": "clip_horizontal_f000878.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.509922,
+        0.524569,
+        0.151698,
+        0.089028
+      ],
+      "source_bbox_pixels": [
+        416.71008,
+        345.6396,
+        145.63008,
+        64.10016
+      ],
+      "crop_window_pixels": [
+        380,
+        329,
+        219,
+        97
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        36.710080000000005,
+        16.639599999999973,
+        145.63008,
+        64.10016
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000878_p4.jpg",
+      "source_image": "clip_horizontal_f000878.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.583177,
+        0.479625,
+        0.088167,
+        0.066556
+      ],
+      "source_bbox_pixels": [
+        517.5297599999999,
+        321.36984,
+        84.64032,
+        47.920320000000004
+      ],
+      "crop_window_pixels": [
+        496,
+        309,
+        127,
+        72
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.52976000000001,
+        12.369840000000067,
+        84.64032,
+        47.920320000000004
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000896_p1.jpg",
+      "source_image": "clip_horizontal_f000896.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.846089,
+        0.539271,
+        0.114677,
+        0.078681
+      ],
+      "source_bbox_pixels": [
+        757.20048,
+        359.94996,
+        110.08992,
+        56.65032
+      ],
+      "crop_window_pixels": [
+        729,
+        346,
+        166,
+        85
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        28.20047999999997,
+        13.949959999999976,
+        110.08992,
+        56.65032
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000896_p2.jpg",
+      "source_image": "clip_horizontal_f000896.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.383505,
+        0.495604,
+        0.142635,
+        0.057042
+      ],
+      "source_bbox_pixels": [
+        299.69999999999993,
+        336.29976,
+        136.92960000000002,
+        41.07024
+      ],
+      "crop_window_pixels": [
+        265,
+        326,
+        206,
+        62
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        34.69999999999999,
+        10.299759999999992,
+        136.92960000000002,
+        41.07024
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000896_p4.jpg",
+      "source_image": "clip_horizontal_f000896.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.558547,
+        0.497778,
+        0.051865,
+        0.101111
+      ],
+      "source_bbox_pixels": [
+        511.30992,
+        322.00019999999995,
+        49.7904,
+        72.79992
+      ],
+      "crop_window_pixels": [
+        499,
+        303,
+        75,
+        110
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.309919999999977,
+        19.00019999999995,
+        49.7904,
+        72.79992
+      ]
+    },
+    {
+      "crop_image": "clip_horizontal_f000914_p4.jpg",
+      "source_image": "clip_horizontal_f000914.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.546531,
+        0.483958,
+        0.043396,
+        0.082083
+      ],
+      "source_bbox_pixels": [
+        503.83968,
+        318.89988,
+        41.66016,
+        59.09976
+      ],
+      "crop_window_pixels": [
+        493,
+        304,
+        63,
+        89
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.839679999999987,
+        14.899880000000053,
+        41.66016,
+        59.09976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000018_p0.jpg",
+      "source_image": "clip_portrait_1_f000018.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.471389,
+        0.557917,
+        0.122778,
+        0.101875
+      ],
+      "source_bbox_pixels": [
+        295.20000000000005,
+        486.70032000000003,
+        88.40016,
+        97.8
+      ],
+      "crop_window_pixels": [
+        273,
+        462,
+        133,
+        147
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.19999999999999,
+        24.700320000000033,
+        88.40016,
+        97.8
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000029_p0.jpg",
+      "source_image": "clip_portrait_1_f000029.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.50041,
+        0.55363,
+        0.192208,
+        0.108406
+      ],
+      "source_bbox_pixels": [
+        291.10032,
+        479.44991999999996,
+        138.38976,
+        104.06976
+      ],
+      "crop_window_pixels": [
+        256,
+        453,
+        208,
+        157
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        35.10032000000001,
+        26.449919999999963,
+        138.38976,
+        104.06976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000053_p0.jpg",
+      "source_image": "clip_portrait_1_f000053.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.453507,
+        0.554234,
+        0.095347,
+        0.099656
+      ],
+      "source_bbox_pixels": [
+        292.20012,
+        484.22976,
+        68.64984,
+        95.66976
+      ],
+      "crop_window_pixels": [
+        275,
+        460,
+        103,
+        144
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        17.20011999999997,
+        24.229760000000056,
+        68.64984,
+        95.66976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000053_p1.jpg",
+      "source_image": "clip_portrait_1_f000053.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.678167,
+        0.49737,
+        0.085167,
+        0.053323
+      ],
+      "source_bbox_pixels": [
+        457.62012,
+        451.88016,
+        61.320240000000005,
+        51.19008
+      ],
+      "crop_window_pixels": [
+        442,
+        439,
+        92,
+        77
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.620119999999986,
+        12.88015999999999,
+        61.320240000000005,
+        51.19008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000053_p3.jpg",
+      "source_image": "clip_portrait_1_f000053.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.457833,
+        0.487703,
+        0.050778,
+        0.028135
+      ],
+      "source_bbox_pixels": [
+        311.35967999999997,
+        454.69007999999997,
+        36.560159999999996,
+        27.0096
+      ],
+      "crop_window_pixels": [
+        302,
+        448,
+        55,
+        41
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.359679999999969,
+        6.690080000000023,
+        36.560159999999996,
+        27.0096
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000053_p4.jpg",
+      "source_image": "clip_portrait_1_f000053.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.451972,
+        0.462505,
+        0.048444,
+        0.039844
+      ],
+      "source_bbox_pixels": [
+        307.97999999999996,
+        424.87968,
+        34.87968,
+        38.25024
+      ],
+      "crop_window_pixels": [
+        299,
+        415,
+        53,
+        58
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.979999999999961,
+        9.879680000000008,
+        34.87968,
+        38.25024
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000065_p2.jpg",
+      "source_image": "clip_portrait_1_f000065.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.662146,
+        0.484776,
+        0.042181,
+        0.043365
+      ],
+      "source_bbox_pixels": [
+        461.55996,
+        444.56976,
+        30.370320000000003,
+        41.6304
+      ],
+      "crop_window_pixels": [
+        454,
+        434,
+        46,
+        63
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.55995999999999,
+        10.569759999999974,
+        30.370320000000003,
+        41.6304
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000065_p3.jpg",
+      "source_image": "clip_portrait_1_f000065.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.450799,
+        0.500594,
+        0.071097,
+        0.05625
+      ],
+      "source_bbox_pixels": [
+        298.98036,
+        453.57023999999996,
+        51.18984,
+        54.0
+      ],
+      "crop_window_pixels": [
+        286,
+        440,
+        77,
+        81
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.980360000000019,
+        13.570240000000013,
+        51.18984,
+        54.0
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000149_p0.jpg",
+      "source_image": "clip_portrait_1_f000149.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.619951,
+        0.536047,
+        0.057819,
+        0.08849
+      ],
+      "source_bbox_pixels": [
+        425.54988,
+        472.1299200000001,
+        41.62968,
+        84.9504
+      ],
+      "crop_window_pixels": [
+        415,
+        451,
+        63,
+        128
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.54988000000003,
+        21.129920000000084,
+        41.62968,
+        84.9504
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000232_p0.jpg",
+      "source_image": "clip_portrait_1_f000232.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.43541,
+        0.614,
+        0.107208,
+        0.132292
+      ],
+      "source_bbox_pixels": [
+        274.90032,
+        525.93984,
+        77.18975999999999,
+        127.00031999999999
+      ],
+      "crop_window_pixels": [
+        255,
+        494,
+        116,
+        191
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        19.900320000000022,
+        31.939840000000004,
+        77.18975999999999,
+        127.00031999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000244_p0.jpg",
+      "source_image": "clip_portrait_1_f000244.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.443382,
+        0.613146,
+        0.103431,
+        0.143125
+      ],
+      "source_bbox_pixels": [
+        281.99988,
+        519.92016,
+        74.47032,
+        137.4
+      ],
+      "crop_window_pixels": [
+        263,
+        485,
+        112,
+        207
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.99988000000002,
+        34.920159999999896,
+        74.47032,
+        137.4
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000244_p4.jpg",
+      "source_image": "clip_portrait_1_f000244.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.416403,
+        0.493969,
+        0.025083,
+        0.075833
+      ],
+      "source_bbox_pixels": [
+        290.78028,
+        437.81039999999996,
+        18.05976,
+        72.79968
+      ],
+      "crop_window_pixels": [
+        286,
+        419,
+        28,
+        110
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        4.780280000000005,
+        18.810400000000016,
+        18.05976,
+        72.79968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000256_p0.jpg",
+      "source_image": "clip_portrait_1_f000256.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.447979,
+        0.604021,
+        0.082069,
+        0.124875
+      ],
+      "source_bbox_pixels": [
+        293.00004,
+        519.92016,
+        59.08968,
+        119.88
+      ],
+      "crop_window_pixels": [
+        278,
+        490,
+        89,
+        180
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.000040000000013,
+        29.920160000000124,
+        59.08968,
+        119.88
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000292_p1.jpg",
+      "source_image": "clip_portrait_1_f000292.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.461257,
+        0.611432,
+        0.107208,
+        0.156802
+      ],
+      "source_bbox_pixels": [
+        293.51016,
+        511.70976,
+        77.18975999999999,
+        150.52992
+      ],
+      "crop_window_pixels": [
+        274,
+        474,
+        116,
+        226
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        19.510159999999985,
+        37.70975999999996,
+        77.18975999999999,
+        150.52992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000304_p0.jpg",
+      "source_image": "clip_portrait_1_f000304.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.458583,
+        0.608313,
+        0.107194,
+        0.156813
+      ],
+      "source_bbox_pixels": [
+        291.58992,
+        508.71023999999994,
+        77.17968,
+        150.54048
+      ],
+      "crop_window_pixels": [
+        272,
+        471,
+        116,
+        226
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        19.589920000000006,
+        37.71023999999994,
+        77.17968,
+        150.54048
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000316_p1.jpg",
+      "source_image": "clip_portrait_1_f000316.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.663514,
+        0.535318,
+        0.08825,
+        0.095198
+      ],
+      "source_bbox_pixels": [
+        445.96008000000006,
+        468.21023999999994,
+        63.54,
+        91.39008000000001
+      ],
+      "crop_window_pixels": [
+        430,
+        445,
+        96,
+        138
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.960080000000062,
+        23.210239999999942,
+        63.54,
+        91.39008000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000316_p2.jpg",
+      "source_image": "clip_portrait_1_f000316.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.605292,
+        0.510807,
+        0.04025,
+        0.066719
+      ],
+      "source_bbox_pixels": [
+        421.32024000000007,
+        458.3496,
+        28.98,
+        64.05024
+      ],
+      "crop_window_pixels": [
+        414,
+        442,
+        44,
+        97
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.3202400000000125,
+        16.34960000000001,
+        28.98,
+        64.05024
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000327_p0.jpg",
+      "source_image": "clip_portrait_1_f000327.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.44341,
+        0.608313,
+        0.060125,
+        0.156813
+      ],
+      "source_bbox_pixels": [
+        297.6102,
+        508.71023999999994,
+        43.29,
+        150.54048
+      ],
+      "crop_window_pixels": [
+        287,
+        471,
+        65,
+        226
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.61020000000002,
+        37.71023999999994,
+        43.29,
+        150.54048
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000411_p2.jpg",
+      "source_image": "clip_portrait_1_f000411.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.492049,
+        0.615995,
+        0.182458,
+        0.14426
+      ],
+      "source_bbox_pixels": [
+        288.5904,
+        522.1103999999999,
+        131.36976,
+        138.4896
+      ],
+      "crop_window_pixels": [
+        255,
+        487,
+        198,
+        208
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.59039999999999,
+        35.11040000000003,
+        131.36976,
+        138.4896
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000411_p3.jpg",
+      "source_image": "clip_portrait_1_f000411.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.390931,
+        0.529609,
+        0.025861,
+        0.090094
+      ],
+      "source_bbox_pixels": [
+        272.16035999999997,
+        465.17951999999997,
+        18.61992,
+        86.49024
+      ],
+      "crop_window_pixels": [
+        267,
+        443,
+        28,
+        130
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        5.160359999999969,
+        22.179520000000025,
+        18.61992,
+        86.49024
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000435_p1.jpg",
+      "source_image": "clip_portrait_1_f000435.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.692764,
+        0.539302,
+        0.141417,
+        0.1015
+      ],
+      "source_bbox_pixels": [
+        447.8799600000001,
+        469.0099199999999,
+        101.82023999999998,
+        97.44000000000001
+      ],
+      "crop_window_pixels": [
+        422,
+        444,
+        153,
+        147
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.87996000000004,
+        25.009919999999966,
+        101.82023999999998,
+        97.44000000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000494_p0.jpg",
+      "source_image": "clip_portrait_1_f000494.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.473375,
+        0.602458,
+        0.095361,
+        0.139646
+      ],
+      "source_bbox_pixels": [
+        306.50003999999996,
+        511.3296000000001,
+        68.65992,
+        134.06016
+      ],
+      "crop_window_pixels": [
+        289,
+        477,
+        103,
+        202
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        17.500040000000013,
+        34.32960000000003,
+        68.65992,
+        134.06016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000518_p2.jpg",
+      "source_image": "clip_portrait_1_f000518.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.447743,
+        0.511745,
+        0.029319,
+        0.061573
+      ],
+      "source_bbox_pixels": [
+        311.82012000000003,
+        461.72016,
+        21.10968,
+        59.11008
+      ],
+      "crop_window_pixels": [
+        306,
+        447,
+        32,
+        89
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        5.820119999999974,
+        14.720159999999964,
+        21.10968,
+        59.11008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000530_p0.jpg",
+      "source_image": "clip_portrait_1_f000530.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.466438,
+        0.631328,
+        0.068181,
+        0.095115
+      ],
+      "source_bbox_pixels": [
+        311.29019999999997,
+        560.41968,
+        49.090320000000006,
+        91.3104
+      ],
+      "crop_window_pixels": [
+        299,
+        538,
+        74,
+        137
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.290200000000027,
+        22.41967999999997,
+        49.090320000000006,
+        91.3104
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000590_p0.jpg",
+      "source_image": "clip_portrait_1_f000590.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.442986,
+        0.643417,
+        0.12975,
+        0.112708
+      ],
+      "source_bbox_pixels": [
+        272.23992,
+        563.58048,
+        93.42,
+        108.19968
+      ],
+      "crop_window_pixels": [
+        248,
+        536,
+        141,
+        163
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        24.23992000000004,
+        27.58048000000008,
+        93.42,
+        108.19968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000602_p0.jpg",
+      "source_image": "clip_portrait_1_f000602.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.398264,
+        0.61813,
+        0.242639,
+        0.085219
+      ],
+      "source_bbox_pixels": [
+        199.40004000000002,
+        552.49968,
+        174.70007999999999,
+        81.81024000000001
+      ],
+      "crop_window_pixels": [
+        155,
+        532,
+        263,
+        123
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        44.40004000000005,
+        20.4996799999999,
+        174.70007999999999,
+        81.81024000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_1_f000602_p1.jpg",
+      "source_image": "clip_portrait_1_f000602.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.72191,
+        0.543083,
+        0.186208,
+        0.049479
+      ],
+      "source_bbox_pixels": [
+        452.74032000000005,
+        497.60975999999994,
+        134.06976,
+        47.49984
+      ],
+      "crop_window_pixels": [
+        419,
+        485,
+        202,
+        72
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.740320000000054,
+        12.609760000000051,
+        134.06976,
+        47.49984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000019_p0.jpg",
+      "source_image": "clip_portrait_2_f000019.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.489528,
+        0.602734,
+        0.240444,
+        0.12701
+      ],
+      "source_bbox_pixels": [
+        265.90032,
+        517.6598399999999,
+        173.11968,
+        121.92960000000001
+      ],
+      "crop_window_pixels": [
+        222,
+        487,
+        260,
+        183
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        43.90032000000002,
+        30.65984000000003,
+        173.11968,
+        121.92960000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000019_p1.jpg",
+      "source_image": "clip_portrait_2_f000019.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.68709,
+        0.543354,
+        0.123875,
+        0.078625
+      ],
+      "source_bbox_pixels": [
+        450.1098,
+        483.87984000000006,
+        89.19,
+        75.48
+      ],
+      "crop_window_pixels": [
+        428,
+        465,
+        134,
+        114
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.10979999999995,
+        18.879839999999945,
+        89.19,
+        75.48
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000019_p2.jpg",
+      "source_image": "clip_portrait_2_f000019.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.507486,
+        0.504599,
+        0.144417,
+        0.057177
+      ],
+      "source_bbox_pixels": [
+        313.39979999999997,
+        456.97008,
+        103.98024,
+        54.88992
+      ],
+      "crop_window_pixels": [
+        287,
+        443,
+        156,
+        83
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        26.399800000000027,
+        13.970080000000053,
+        103.98024,
+        54.88992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000031_p0.jpg",
+      "source_image": "clip_portrait_2_f000031.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.68334,
+        0.538536,
+        0.138875,
+        0.067927
+      ],
+      "source_bbox_pixels": [
+        442.0097999999999,
+        484.3896,
+        99.99,
+        65.20992
+      ],
+      "crop_window_pixels": [
+        417,
+        468,
+        150,
+        98
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.009799999999984,
+        16.389599999999973,
+        99.99,
+        65.20992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000031_p2.jpg",
+      "source_image": "clip_portrait_2_f000031.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.500354,
+        0.506302,
+        0.138208,
+        0.053646
+      ],
+      "source_bbox_pixels": [
+        310.5,
+        460.29984,
+        99.50976,
+        51.50016
+      ],
+      "crop_window_pixels": [
+        285,
+        447,
+        150,
+        78
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.499999999999943,
+        13.299840000000017,
+        99.50976,
+        51.50016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000031_p3.jpg",
+      "source_image": "clip_portrait_2_f000031.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.484674,
+        0.598589,
+        0.198153,
+        0.111365
+      ],
+      "source_bbox_pixels": [
+        277.6302,
+        521.19024,
+        142.67016,
+        106.91040000000001
+      ],
+      "crop_window_pixels": [
+        241,
+        494,
+        215,
+        161
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        36.6302,
+        27.190240000000017,
+        142.67016,
+        106.91040000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000044_p1.jpg",
+      "source_image": "clip_portrait_2_f000044.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.464556,
+        0.607292,
+        0.264222,
+        0.12875
+      ],
+      "source_bbox_pixels": [
+        239.3604,
+        521.2003200000001,
+        190.23984000000002,
+        123.60000000000001
+      ],
+      "crop_window_pixels": [
+        191,
+        490,
+        286,
+        186
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        48.3604,
+        31.200320000000147,
+        190.23984000000002,
+        123.60000000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000044_p3.jpg",
+      "source_image": "clip_portrait_2_f000044.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.502403,
+        0.509641,
+        0.120472,
+        0.054073
+      ],
+      "source_bbox_pixels": [
+        318.36024000000003,
+        463.30032,
+        86.73984,
+        51.91008
+      ],
+      "crop_window_pixels": [
+        296,
+        450,
+        131,
+        78
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.360240000000033,
+        13.30032,
+        86.73984,
+        51.91008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000044_p4.jpg",
+      "source_image": "clip_portrait_2_f000044.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.634972,
+        0.485891,
+        0.078944,
+        0.046365
+      ],
+      "source_bbox_pixels": [
+        428.76000000000005,
+        444.20016000000004,
+        56.83968,
+        44.510400000000004
+      ],
+      "crop_window_pixels": [
+        414,
+        433,
+        86,
+        67
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.759999999999991,
+        11.20016000000004,
+        56.83968,
+        44.510400000000004
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000056_p0.jpg",
+      "source_image": "clip_portrait_2_f000056.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.482285,
+        0.591667,
+        0.186542,
+        0.095417
+      ],
+      "source_bbox_pixels": [
+        280.09008,
+        522.20016,
+        134.31024000000002,
+        91.60032
+      ],
+      "crop_window_pixels": [
+        246,
+        499,
+        202,
+        138
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        34.09008,
+        23.200160000000096,
+        134.31024000000002,
+        91.60032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000056_p3.jpg",
+      "source_image": "clip_portrait_2_f000056.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.491521,
+        0.514229,
+        0.117792,
+        0.055125
+      ],
+      "source_bbox_pixels": [
+        311.49,
+        467.19984000000005,
+        84.81024,
+        52.92
+      ],
+      "crop_window_pixels": [
+        290,
+        454,
+        128,
+        80
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.489999999999952,
+        13.199840000000052,
+        84.81024,
+        52.92
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000069_p0.jpg",
+      "source_image": "clip_portrait_2_f000069.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.709562,
+        0.528531,
+        0.170875,
+        0.090854
+      ],
+      "source_bbox_pixels": [
+        449.36964,
+        463.77984,
+        123.03,
+        87.21984
+      ],
+      "crop_window_pixels": [
+        418,
+        442,
+        185,
+        131
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        31.369640000000004,
+        21.77983999999998,
+        123.03,
+        87.21984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000069_p1.jpg",
+      "source_image": "clip_portrait_2_f000069.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.482674,
+        0.584505,
+        0.166875,
+        0.090365
+      ],
+      "source_bbox_pixels": [
+        287.45028,
+        517.7496,
+        120.14999999999999,
+        86.7504
+      ],
+      "crop_window_pixels": [
+        257,
+        496,
+        181,
+        131
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        30.45028000000002,
+        21.7496000000001,
+        120.14999999999999,
+        86.7504
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000069_p3.jpg",
+      "source_image": "clip_portrait_2_f000069.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.500389,
+        0.506552,
+        0.116444,
+        0.063312
+      ],
+      "source_bbox_pixels": [
+        318.36024,
+        455.90015999999997,
+        83.83968,
+        60.77951999999999
+      ],
+      "crop_window_pixels": [
+        297,
+        440,
+        126,
+        92
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.360239999999976,
+        15.900160000000028,
+        83.83968,
+        60.77951999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000081_p0.jpg",
+      "source_image": "clip_portrait_2_f000081.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.681618,
+        0.524193,
+        0.083819,
+        0.121135
+      ],
+      "source_bbox_pixels": [
+        460.59011999999996,
+        445.08048,
+        60.349680000000006,
+        116.28960000000001
+      ],
+      "crop_window_pixels": [
+        445,
+        416,
+        91,
+        175
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.590119999999956,
+        29.080479999999966,
+        60.349680000000006,
+        116.28960000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000081_p1.jpg",
+      "source_image": "clip_portrait_2_f000081.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.490812,
+        0.564089,
+        0.128097,
+        0.16974
+      ],
+      "source_bbox_pixels": [
+        307.26972,
+        460.05024,
+        92.22984,
+        162.9504
+      ],
+      "crop_window_pixels": [
+        284,
+        419,
+        139,
+        245
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.269720000000007,
+        41.05024000000003,
+        92.22984,
+        162.9504
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000081_p2.jpg",
+      "source_image": "clip_portrait_2_f000081.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.520785,
+        0.490964,
+        0.050375,
+        0.075677
+      ],
+      "source_bbox_pixels": [
+        356.8302,
+        435.00048000000004,
+        36.27,
+        72.64992
+      ],
+      "crop_window_pixels": [
+        347,
+        417,
+        55,
+        109
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.830200000000048,
+        18.00048000000004,
+        36.27,
+        72.64992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000081_p3.jpg",
+      "source_image": "clip_portrait_2_f000081.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.632264,
+        0.469745,
+        0.059361,
+        0.08949
+      ],
+      "source_bbox_pixels": [
+        433.86012000000005,
+        408.00000000000006,
+        42.73992,
+        85.9104
+      ],
+      "crop_window_pixels": [
+        423,
+        386,
+        65,
+        129
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.860120000000052,
+        22.000000000000057,
+        42.73992,
+        85.9104
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000081_p4.jpg",
+      "source_image": "clip_portrait_2_f000081.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.385201,
+        0.459286,
+        0.066819,
+        0.086906
+      ],
+      "source_bbox_pixels": [
+        253.28988000000004,
+        399.19968,
+        48.109680000000004,
+        83.42976
+      ],
+      "crop_window_pixels": [
+        241,
+        378,
+        73,
+        126
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.289879999999982,
+        21.199680000000058,
+        48.109680000000004,
+        83.42976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000094_p3.jpg",
+      "source_image": "clip_portrait_2_f000094.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.40016,
+        0.492016,
+        0.100181,
+        0.05576
+      ],
+      "source_bbox_pixels": [
+        252.05004000000002,
+        445.57056,
+        72.13032,
+        53.529599999999995
+      ],
+      "crop_window_pixels": [
+        234,
+        432,
+        109,
+        81
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.050040000000024,
+        13.570560000000057,
+        72.13032,
+        53.529599999999995
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000144_p2.jpg",
+      "source_image": "clip_portrait_2_f000144.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.506465,
+        0.650375,
+        0.142431,
+        0.092375
+      ],
+      "source_bbox_pixels": [
+        313.37964000000005,
+        580.02,
+        102.55032,
+        88.67999999999999
+      ],
+      "crop_window_pixels": [
+        288,
+        557,
+        154,
+        134
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.379639999999995,
+        23.019999999999982,
+        102.55032,
+        88.67999999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000156_p0.jpg",
+      "source_image": "clip_portrait_2_f000156.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.685931,
+        0.581146,
+        0.098528,
+        0.07125
+      ],
+      "source_bbox_pixels": [
+        458.40024,
+        523.70016,
+        70.94016,
+        68.39999999999999
+      ],
+      "crop_window_pixels": [
+        440,
+        506,
+        107,
+        103
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.400239999999997,
+        17.700159999999983,
+        70.94016,
+        68.39999999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000156_p1.jpg",
+      "source_image": "clip_portrait_2_f000156.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.542986,
+        0.651411,
+        0.087083,
+        0.093031
+      ],
+      "source_bbox_pixels": [
+        359.60004,
+        580.69968,
+        62.69976,
+        89.30976
+      ],
+      "crop_window_pixels": [
+        343,
+        558,
+        95,
+        134
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.60003999999998,
+        22.699679999999944,
+        62.69976,
+        89.30976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000169_p1.jpg",
+      "source_image": "clip_portrait_2_f000169.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.531993,
+        0.595005,
+        0.179458,
+        0.186052
+      ],
+      "source_bbox_pixels": [
+        318.43008000000003,
+        481.8998399999999,
+        129.20976000000002,
+        178.60992
+      ],
+      "crop_window_pixels": [
+        286,
+        437,
+        194,
+        268
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        32.430079999999975,
+        44.89983999999998,
+        129.20976000000002,
+        178.60992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000181_p3.jpg",
+      "source_image": "clip_portrait_2_f000181.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.533319,
+        0.59363,
+        0.185444,
+        0.239198
+      ],
+      "source_bbox_pixels": [
+        317.22984,
+        455.06976,
+        133.51968,
+        229.63008
+      ],
+      "crop_window_pixels": [
+        283,
+        397,
+        201,
+        345
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        34.22983999999997,
+        58.06976000000003,
+        133.51968,
+        229.63008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000194_p2.jpg",
+      "source_image": "clip_portrait_2_f000194.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.554819,
+        0.61412,
+        0.076139,
+        0.16999
+      ],
+      "source_bbox_pixels": [
+        372.05964,
+        507.96,
+        54.82008,
+        163.1904
+      ],
+      "crop_window_pixels": [
+        358,
+        467,
+        83,
+        245
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.059640000000002,
+        40.960000000000036,
+        54.82008,
+        163.1904
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000194_p4.jpg",
+      "source_image": "clip_portrait_2_f000194.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.565569,
+        0.518042,
+        0.033139,
+        0.081292
+      ],
+      "source_bbox_pixels": [
+        395.27964,
+        458.30016,
+        23.86008,
+        78.04032000000001
+      ],
+      "crop_window_pixels": [
+        389,
+        438,
+        36,
+        118
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        6.279639999999972,
+        20.300160000000005,
+        23.86008,
+        78.04032000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000206_p0.jpg",
+      "source_image": "clip_portrait_2_f000206.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.709806,
+        0.619833,
+        0.088694,
+        0.149167
+      ],
+      "source_bbox_pixels": [
+        479.13048000000003,
+        523.4395199999999,
+        63.85968,
+        143.20032
+      ],
+      "crop_window_pixels": [
+        463,
+        488,
+        96,
+        215
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        16.130480000000034,
+        35.439520000000016,
+        63.85968,
+        143.20032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000206_p1.jpg",
+      "source_image": "clip_portrait_2_f000206.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.544069,
+        0.636969,
+        0.088694,
+        0.136396
+      ],
+      "source_bbox_pixels": [
+        359.79984,
+        546.02016,
+        63.85968,
+        130.94016
+      ],
+      "crop_window_pixels": [
+        344,
+        513,
+        96,
+        197
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.799840000000017,
+        33.02016000000003,
+        63.85968,
+        130.94016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000231_p0.jpg",
+      "source_image": "clip_portrait_2_f000231.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.696368,
+        0.589599,
+        0.067181,
+        0.095406
+      ],
+      "source_bbox_pixels": [
+        477.19980000000004,
+        520.22016,
+        48.37032000000001,
+        91.58976
+      ],
+      "crop_window_pixels": [
+        465,
+        497,
+        73,
+        138
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.199799999999982,
+        23.220159999999964,
+        48.37032000000001,
+        91.58976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000244_p2.jpg",
+      "source_image": "clip_portrait_2_f000244.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.450903,
+        0.526776,
+        0.049278,
+        0.08801
+      ],
+      "source_bbox_pixels": [
+        306.91008,
+        463.46016000000003,
+        35.480160000000005,
+        84.48960000000001
+      ],
+      "crop_window_pixels": [
+        298,
+        442,
+        54,
+        127
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.910079999999994,
+        21.46016000000003,
+        35.480160000000005,
+        84.48960000000001
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000256_p0.jpg",
+      "source_image": "clip_portrait_2_f000256.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.711597,
+        0.571458,
+        0.047472,
+        0.112875
+      ],
+      "source_bbox_pixels": [
+        495.25992,
+        494.41967999999997,
+        34.17984,
+        108.36
+      ],
+      "crop_window_pixels": [
+        486,
+        467,
+        52,
+        163
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.259919999999966,
+        27.419680000000028,
+        34.17984,
+        108.36
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000256_p1.jpg",
+      "source_image": "clip_portrait_2_f000256.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.574083,
+        0.634953,
+        0.100333,
+        0.145802
+      ],
+      "source_bbox_pixels": [
+        377.21988,
+        539.56992,
+        72.23976,
+        139.96992
+      ],
+      "crop_window_pixels": [
+        359,
+        505,
+        109,
+        210
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        18.21987999999999,
+        34.569920000000025,
+        72.23976,
+        139.96992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000281_p1.jpg",
+      "source_image": "clip_portrait_2_f000281.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.656951,
+        0.520057,
+        0.047486,
+        0.090698
+      ],
+      "source_bbox_pixels": [
+        455.90976,
+        455.71968000000004,
+        34.18992,
+        87.07008
+      ],
+      "crop_window_pixels": [
+        447,
+        434,
+        52,
+        131
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.909759999999949,
+        21.71968000000004,
+        34.18992,
+        87.07008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000281_p3.jpg",
+      "source_image": "clip_portrait_2_f000281.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.569604,
+        0.614458,
+        0.154097,
+        0.167979
+      ],
+      "source_bbox_pixels": [
+        354.63996,
+        509.24976000000004,
+        110.94984000000001,
+        161.25984
+      ],
+      "crop_window_pixels": [
+        327,
+        469,
+        167,
+        242
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        27.639959999999974,
+        40.24976000000004,
+        110.94984000000001,
+        161.25984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000281_p4.jpg",
+      "source_image": "clip_portrait_2_f000281.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.553924,
+        0.554323,
+        0.056431,
+        0.116229
+      ],
+      "source_bbox_pixels": [
+        378.51012000000003,
+        476.36016,
+        40.630320000000005,
+        111.57984
+      ],
+      "crop_window_pixels": [
+        368,
+        448,
+        61,
+        168
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.510119999999972,
+        28.360160000000008,
+        40.630320000000005,
+        111.57984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p0.jpg",
+      "source_image": "clip_portrait_2_f000294.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.710701,
+        0.56575,
+        0.056431,
+        0.155208
+      ],
+      "source_bbox_pixels": [
+        491.3895600000001,
+        468.62015999999994,
+        40.630320000000005,
+        148.99968
+      ],
+      "crop_window_pixels": [
+        481,
+        431,
+        61,
+        224
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.389560000000017,
+        37.62016,
+        40.630320000000005,
+        148.99968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p2.jpg",
+      "source_image": "clip_portrait_2_f000294.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.5705,
+        0.60774,
+        0.11825,
+        0.186792
+      ],
+      "source_bbox_pixels": [
+        368.19,
+        493.77023999999994,
+        85.14,
+        179.32032
+      ],
+      "crop_window_pixels": [
+        347,
+        449,
+        128,
+        269
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.189999999999998,
+        44.770239999999944,
+        85.14,
+        179.32032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p3.jpg",
+      "source_image": "clip_portrait_2_f000294.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.448215,
+        0.508635,
+        0.051069,
+        0.117583
+      ],
+      "source_bbox_pixels": [
+        304.32995999999997,
+        431.84975999999995,
+        36.76968,
+        112.87968
+      ],
+      "crop_window_pixels": [
+        295,
+        403,
+        56,
+        170
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        9.329959999999971,
+        28.849759999999947,
+        36.76968,
+        112.87968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p4.jpg",
+      "source_image": "clip_portrait_2_f000294.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.542278,
+        0.544917,
+        0.056444,
+        0.113542
+      ],
+      "source_bbox_pixels": [
+        370.12032000000005,
+        468.62015999999994,
+        40.63968,
+        109.00032
+      ],
+      "crop_window_pixels": [
+        360,
+        441,
+        61,
+        164
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.12032000000005,
+        27.62016,
+        40.63968,
+        109.00032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000306_p3.jpg",
+      "source_image": "clip_portrait_2_f000306.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.549,
+        0.606396,
+        0.152306,
+        0.184104
+      ],
+      "source_bbox_pixels": [
+        340.44984,
+        493.77024,
+        109.66032,
+        176.73984
+      ],
+      "crop_window_pixels": [
+        313,
+        449,
+        165,
+        266
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        27.44984000000005,
+        44.77024000000006,
+        109.66032,
+        176.73984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000319_p0.jpg",
+      "source_image": "clip_portrait_2_f000319.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.677556,
+        0.562391,
+        0.083306,
+        0.12699
+      ],
+      "source_bbox_pixels": [
+        457.85016,
+        478.94016,
+        59.980320000000006,
+        121.9104
+      ],
+      "crop_window_pixels": [
+        443,
+        448,
+        90,
+        183
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.850160000000017,
+        30.94015999999999,
+        59.980320000000006,
+        121.9104
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000319_p3.jpg",
+      "source_image": "clip_portrait_2_f000319.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.542729,
+        0.608078,
+        0.112875,
+        0.183427
+      ],
+      "source_bbox_pixels": [
+        350.12988,
+        495.70992,
+        81.27,
+        176.08992
+      ],
+      "crop_window_pixels": [
+        330,
+        451,
+        122,
+        265
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.129880000000014,
+        44.709919999999954,
+        81.27,
+        176.08992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000319_p4.jpg",
+      "source_image": "clip_portrait_2_f000319.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.517639,
+        0.548948,
+        0.046583,
+        0.104146
+      ],
+      "source_bbox_pixels": [
+        355.93019999999996,
+        477.0,
+        33.53976,
+        99.98016
+      ],
+      "crop_window_pixels": [
+        347,
+        452,
+        51,
+        150
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.930199999999957,
+        25.000000000000057,
+        33.53976,
+        99.98016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000331_p0.jpg",
+      "source_image": "clip_portrait_2_f000331.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.67084,
+        0.56776,
+        0.080625,
+        0.128333
+      ],
+      "source_bbox_pixels": [
+        453.9798,
+        483.44976,
+        58.050000000000004,
+        123.19968
+      ],
+      "crop_window_pixels": [
+        439,
+        453,
+        88,
+        185
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.979800000000012,
+        30.449760000000083,
+        58.050000000000004,
+        123.19968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000331_p3.jpg",
+      "source_image": "clip_portrait_2_f000331.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.52884,
+        0.620172,
+        0.140653,
+        0.19149
+      ],
+      "source_bbox_pixels": [
+        330.12971999999996,
+        503.44991999999996,
+        101.27016,
+        183.8304
+      ],
+      "crop_window_pixels": [
+        305,
+        457,
+        152,
+        276
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.129719999999963,
+        46.449919999999906,
+        101.27016,
+        183.8304
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000344_p0.jpg",
+      "source_image": "clip_portrait_2_f000344.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.669493,
+        0.570786,
+        0.079736,
+        0.130344
+      ],
+      "source_bbox_pixels": [
+        453.33,
+        485.38944000000004,
+        57.40992,
+        125.13023999999999
+      ],
+      "crop_window_pixels": [
+        439,
+        454,
+        87,
+        188
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.330000000000041,
+        31.389440000000036,
+        57.40992,
+        125.13023999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000344_p3.jpg",
+      "source_image": "clip_portrait_2_f000344.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.527049,
+        0.620505,
+        0.120931,
+        0.186781
+      ],
+      "source_bbox_pixels": [
+        335.94012,
+        506.02991999999995,
+        87.07032,
+        179.30976
+      ],
+      "crop_window_pixels": [
+        314,
+        461,
+        131,
+        269
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.94011999999998,
+        45.029920000000004,
+        87.07032,
+        179.30976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000356_p0.jpg",
+      "source_image": "clip_portrait_2_f000356.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.674417,
+        0.579187,
+        0.07525,
+        0.136396
+      ],
+      "source_bbox_pixels": [
+        458.49024000000003,
+        490.54944,
+        54.18,
+        130.94016
+      ],
+      "crop_window_pixels": [
+        445,
+        458,
+        82,
+        197
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.490240000000028,
+        32.54944000000006,
+        54.18,
+        130.94016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000356_p1.jpg",
+      "source_image": "clip_portrait_2_f000356.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.504653,
+        0.631943,
+        0.129889,
+        0.197573
+      ],
+      "source_bbox_pixels": [
+        316.59012,
+        511.83024,
+        93.52008000000001,
+        189.67007999999998
+      ],
+      "crop_window_pixels": [
+        293,
+        464,
+        141,
+        285
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        23.590120000000013,
+        47.83024000000006,
+        93.52008000000001,
+        189.67007999999998
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000369_p0.jpg",
+      "source_image": "clip_portrait_2_f000369.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.678917,
+        0.58288,
+        0.07525,
+        0.136385
+      ],
+      "source_bbox_pixels": [
+        461.73024,
+        494.09999999999997,
+        54.18,
+        130.9296
+      ],
+      "crop_window_pixels": [
+        448,
+        461,
+        82,
+        197
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.730240000000038,
+        33.10000000000002,
+        54.18,
+        130.9296
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000369_p1.jpg",
+      "source_image": "clip_portrait_2_f000369.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.510486,
+        0.625542,
+        0.134306,
+        0.1935
+      ],
+      "source_bbox_pixels": [
+        319.19975999999997,
+        507.64032000000003,
+        96.70032,
+        185.76
+      ],
+      "crop_window_pixels": [
+        295,
+        461,
+        146,
+        279
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        24.19975999999997,
+        46.64032000000009,
+        96.70032,
+        185.76
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000381_p0.jpg",
+      "source_image": "clip_portrait_2_f000381.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.690535,
+        0.584224,
+        0.086069,
+        0.136385
+      ],
+      "source_bbox_pixels": [
+        466.20036000000005,
+        495.39023999999995,
+        61.969680000000004,
+        130.9296
+      ],
+      "crop_window_pixels": [
+        451,
+        462,
+        93,
+        197
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        15.20035999999999,
+        33.39023999999995,
+        61.969680000000004,
+        130.9296
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000381_p2.jpg",
+      "source_image": "clip_portrait_2_f000381.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.516319,
+        0.63025,
+        0.11375,
+        0.186792
+      ],
+      "source_bbox_pixels": [
+        330.79967999999997,
+        515.37984,
+        81.9,
+        179.32032
+      ],
+      "crop_window_pixels": [
+        310,
+        471,
+        123,
+        269
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.799679999999967,
+        44.379839999999945,
+        81.9,
+        179.32032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000394_p0.jpg",
+      "source_image": "clip_portrait_2_f000394.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.710278,
+        0.577177,
+        0.07525,
+        0.122271
+      ],
+      "source_bbox_pixels": [
+        484.31015999999994,
+        495.39984000000004,
+        54.18,
+        117.38016
+      ],
+      "crop_window_pixels": [
+        470,
+        466,
+        82,
+        177
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.310159999999996,
+        29.399839999999983,
+        54.18,
+        117.38016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000394_p1.jpg",
+      "source_image": "clip_portrait_2_f000394.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.512306,
+        0.621828,
+        0.1165,
+        0.186156
+      ],
+      "source_bbox_pixels": [
+        326.92032,
+        507.6,
+        83.88000000000001,
+        178.70976
+      ],
+      "crop_window_pixels": [
+        306,
+        462,
+        126,
+        269
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        20.920320000000004,
+        45.60000000000002,
+        83.88000000000001,
+        178.70976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000406_p0.jpg",
+      "source_image": "clip_portrait_2_f000406.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.512771,
+        0.63225,
+        0.122792,
+        0.18675
+      ],
+      "source_bbox_pixels": [
+        324.98999999999995,
+        517.3199999999999,
+        88.41024,
+        179.28
+      ],
+      "crop_window_pixels": [
+        303,
+        472,
+        133,
+        269
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.989999999999952,
+        45.32000000000005,
+        88.41024,
+        179.28
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000419_p1.jpg",
+      "source_image": "clip_portrait_2_f000419.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.535563,
+        0.645031,
+        0.127208,
+        0.139083
+      ],
+      "source_bbox_pixels": [
+        339.81048,
+        552.46992,
+        91.58975999999998,
+        133.51968000000002
+      ],
+      "crop_window_pixels": [
+        317,
+        519,
+        138,
+        201
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.81048000000004,
+        33.46992,
+        91.58975999999998,
+        133.51968000000002
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000419_p3.jpg",
+      "source_image": "clip_portrait_2_f000419.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.528389,
+        0.531818,
+        0.060917,
+        0.100781
+      ],
+      "source_bbox_pixels": [
+        358.50996,
+        462.17040000000003,
+        43.86024,
+        96.74976
+      ],
+      "crop_window_pixels": [
+        347,
+        438,
+        66,
+        146
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        11.509960000000035,
+        24.170399999999972,
+        43.86024,
+        96.74976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000431_p0.jpg",
+      "source_image": "clip_portrait_2_f000431.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.71025,
+        0.583885,
+        0.136167,
+        0.093396
+      ],
+      "source_bbox_pixels": [
+        462.3598800000001,
+        515.69952,
+        98.04024000000001,
+        89.66016
+      ],
+      "crop_window_pixels": [
+        437,
+        493,
+        148,
+        135
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.359880000000032,
+        22.699520000000007,
+        98.04024000000001,
+        89.66016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000431_p1.jpg",
+      "source_image": "clip_portrait_2_f000431.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.552139,
+        0.647714,
+        0.171111,
+        0.13774
+      ],
+      "source_bbox_pixels": [
+        335.94012000000004,
+        555.69024,
+        123.19992,
+        132.2304
+      ],
+      "crop_window_pixels": [
+        305,
+        522,
+        185,
+        199
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        30.940120000000036,
+        33.69024000000002,
+        123.19992,
+        132.2304
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000444_p1.jpg",
+      "source_image": "clip_portrait_2_f000444.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.55034,
+        0.652417,
+        0.154986,
+        0.163271
+      ],
+      "source_bbox_pixels": [
+        340.44984,
+        547.95024,
+        111.58992,
+        156.74016
+      ],
+      "crop_window_pixels": [
+        312,
+        508,
+        168,
+        236
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        28.44984000000005,
+        39.95024000000001,
+        111.58992,
+        156.74016
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000444_p4.jpg",
+      "source_image": "clip_portrait_2_f000444.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.662778,
+        0.532151,
+        0.035833,
+        0.039635
+      ],
+      "source_bbox_pixels": [
+        464.30028,
+        491.84015999999997,
+        25.79976,
+        38.0496
+      ],
+      "crop_window_pixels": [
+        458,
+        482,
+        39,
+        58
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        6.300279999999987,
+        9.840160000000083,
+        25.79976,
+        38.0496
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000456_p1.jpg",
+      "source_image": "clip_portrait_2_f000456.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.541833,
+        0.659813,
+        0.18275,
+        0.176708
+      ],
+      "source_bbox_pixels": [
+        324.32976,
+        548.6006399999999,
+        131.57999999999998,
+        169.63968
+      ],
+      "crop_window_pixels": [
+        291,
+        506,
+        198,
+        255
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        33.329759999999965,
+        42.60064,
+        131.57999999999998,
+        169.63968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000456_p2.jpg",
+      "source_image": "clip_portrait_2_f000456.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.407903,
+        0.526104,
+        0.070778,
+        0.057104
+      ],
+      "source_bbox_pixels": [
+        268.21008,
+        477.64992,
+        50.960159999999995,
+        54.81984
+      ],
+      "crop_window_pixels": [
+        255,
+        464,
+        77,
+        83
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.210080000000005,
+        13.649920000000009,
+        50.960159999999995,
+        54.81984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000456_p4.jpg",
+      "source_image": "clip_portrait_2_f000456.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.661875,
+        0.529464,
+        0.039417,
+        0.046365
+      ],
+      "source_bbox_pixels": [
+        462.35988,
+        486.03024000000005,
+        28.38024,
+        44.510400000000004
+      ],
+      "crop_window_pixels": [
+        455,
+        475,
+        43,
+        67
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        7.359880000000032,
+        11.030240000000049,
+        28.38024,
+        44.510400000000004
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000469_p0.jpg",
+      "source_image": "clip_portrait_2_f000469.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.719236,
+        0.600349,
+        0.120944,
+        0.111552
+      ],
+      "source_bbox_pixels": [
+        474.31008,
+        522.79008,
+        87.07968,
+        107.08991999999999
+      ],
+      "crop_window_pixels": [
+        452,
+        496,
+        131,
+        161
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.31007999999997,
+        26.790080000000103,
+        87.07968,
+        107.08991999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000469_p1.jpg",
+      "source_image": "clip_portrait_2_f000469.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.558458,
+        0.660484,
+        0.146972,
+        0.161948
+      ],
+      "source_bbox_pixels": [
+        349.17984,
+        556.3296,
+        105.81984,
+        155.47008
+      ],
+      "crop_window_pixels": [
+        323,
+        517,
+        159,
+        234
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        26.179840000000013,
+        39.329599999999914,
+        105.81984,
+        155.47008
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000481_p1.jpg",
+      "source_image": "clip_portrait_2_f000481.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.568292,
+        0.668099,
+        0.188139,
+        0.182552
+      ],
+      "source_bbox_pixels": [
+        341.4402,
+        553.75008,
+        135.46008,
+        175.24992
+      ],
+      "crop_window_pixels": [
+        307,
+        510,
+        204,
+        263
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        34.440200000000004,
+        43.750080000000025,
+        135.46008,
+        175.24992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000481_p2.jpg",
+      "source_image": "clip_portrait_2_f000481.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.404187,
+        0.533198,
+        0.080236,
+        0.063479
+      ],
+      "source_bbox_pixels": [
+        262.12968,
+        481.4001599999999,
+        57.76992,
+        60.93984
+      ],
+      "crop_window_pixels": [
+        248,
+        466,
+        87,
+        92
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        14.129680000000008,
+        15.400159999999971,
+        57.76992,
+        60.93984
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p0.jpg",
+      "source_image": "clip_portrait_2_f000494.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.706472,
+        0.608401,
+        0.120944,
+        0.111552
+      ],
+      "source_bbox_pixels": [
+        465.12,
+        530.52,
+        87.07968,
+        107.08991999999999
+      ],
+      "crop_window_pixels": [
+        443,
+        504,
+        131,
+        161
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        22.120000000000005,
+        26.519999999999982,
+        87.07968,
+        107.08991999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p1.jpg",
+      "source_image": "clip_portrait_2_f000494.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.575715,
+        0.655755,
+        0.144403,
+        0.17724
+      ],
+      "source_bbox_pixels": [
+        362.52971999999994,
+        544.4495999999999,
+        103.97016,
+        170.15040000000002
+      ],
+      "crop_window_pixels": [
+        337,
+        502,
+        156,
+        256
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        25.529719999999998,
+        42.44960000000003,
+        103.97016,
+        170.15040000000002
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p2.jpg",
+      "source_image": "clip_portrait_2_f000494.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.409278,
+        0.531323,
+        0.070056,
+        0.071812
+      ],
+      "source_bbox_pixels": [
+        269.46,
+        475.60032,
+        50.44031999999999,
+        68.93952
+      ],
+      "crop_window_pixels": [
+        257,
+        458,
+        76,
+        104
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        12.45999999999998,
+        17.600319999999954,
+        50.44031999999999,
+        68.93952
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p3.jpg",
+      "source_image": "clip_portrait_2_f000494.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.528861,
+        0.554182,
+        0.060889,
+        0.071906
+      ],
+      "source_bbox_pixels": [
+        358.85988000000003,
+        497.49983999999995,
+        43.84008,
+        69.02976
+      ],
+      "crop_window_pixels": [
+        348,
+        480,
+        66,
+        104
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        10.859879999999976,
+        17.499839999999892,
+        43.84008,
+        69.02976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p4.jpg",
+      "source_image": "clip_portrait_2_f000494.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.669826,
+        0.538547,
+        0.033403,
+        0.046677
+      ],
+      "source_bbox_pixels": [
+        470.24964,
+        494.60015999999996,
+        24.05016,
+        44.809920000000005
+      ],
+      "crop_window_pixels": [
+        464,
+        483,
+        37,
+        68
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        6.249639999999999,
+        11.600160000000017,
+        24.05016,
+        44.809920000000005
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000506_p0.jpg",
+      "source_image": "clip_portrait_2_f000506.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.697306,
+        0.603823,
+        0.120944,
+        0.111542
+      ],
+      "source_bbox_pixels": [
+        458.52048,
+        526.12992,
+        87.07968,
+        107.08032
+      ],
+      "crop_window_pixels": [
+        437,
+        499,
+        131,
+        161
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.52048000000002,
+        27.12991999999997,
+        87.07968,
+        107.08032
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000506_p1.jpg",
+      "source_image": "clip_portrait_2_f000506.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.552257,
+        0.659151,
+        0.195208,
+        0.168781
+      ],
+      "source_bbox_pixels": [
+        327.35015999999996,
+        551.77008,
+        140.54976,
+        162.02975999999998
+      ],
+      "crop_window_pixels": [
+        292,
+        511,
+        211,
+        244
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        35.35016000000002,
+        40.77008000000012,
+        140.54976,
+        162.02975999999998
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000506_p2.jpg",
+      "source_image": "clip_portrait_2_f000506.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.411292,
+        0.533964,
+        0.074083,
+        0.06501
+      ],
+      "source_bbox_pixels": [
+        269.46036,
+        481.40064,
+        53.33976,
+        62.4096
+      ],
+      "crop_window_pixels": [
+        256,
+        466,
+        81,
+        94
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.460360000000037,
+        15.400640000000067,
+        53.33976,
+        62.4096
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000519_p0.jpg",
+      "source_image": "clip_portrait_2_f000519.jpg",
+      "source_annotation_index": 0,
+      "source_bbox_yolo": [
+        0.692222,
+        0.600766,
+        0.120944,
+        0.111552
+      ],
+      "source_bbox_pixels": [
+        454.86,
+        523.1904,
+        87.07968,
+        107.08991999999999
+      ],
+      "crop_window_pixels": [
+        433,
+        496,
+        131,
+        161
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        21.860000000000014,
+        27.190400000000068,
+        87.07968,
+        107.08991999999999
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000556_p4.jpg",
+      "source_image": "clip_portrait_2_f000556.jpg",
+      "source_annotation_index": 4,
+      "source_bbox_yolo": [
+        0.660715,
+        0.606911,
+        0.132319,
+        0.094656
+      ],
+      "source_bbox_pixels": [
+        428.07996,
+        537.19968,
+        95.26968,
+        90.86976
+      ],
+      "crop_window_pixels": [
+        404,
+        514,
+        143,
+        137
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        24.07996000000003,
+        23.199679999999944,
+        95.26968,
+        90.86976
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000569_p1.jpg",
+      "source_image": "clip_portrait_2_f000569.jpg",
+      "source_annotation_index": 1,
+      "source_bbox_yolo": [
+        0.661229,
+        0.586688,
+        0.078375,
+        0.154958
+      ],
+      "source_bbox_pixels": [
+        447.86987999999997,
+        488.84064,
+        56.43,
+        148.75968
+      ],
+      "crop_window_pixels": [
+        434,
+        451,
+        85,
+        224
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        13.869879999999966,
+        37.84063999999995,
+        56.43,
+        148.75968
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000581_p2.jpg",
+      "source_image": "clip_portrait_2_f000581.jpg",
+      "source_annotation_index": 2,
+      "source_bbox_yolo": [
+        0.685687,
+        0.587828,
+        0.212792,
+        0.131302
+      ],
+      "source_bbox_pixels": [
+        417.08952,
+        501.28992,
+        153.21024,
+        126.04992
+      ],
+      "crop_window_pixels": [
+        379,
+        469,
+        230,
+        190
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        38.08952000000005,
+        32.289919999999995,
+        153.21024,
+        126.04992
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000581_p3.jpg",
+      "source_image": "clip_portrait_2_f000581.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.366063,
+        0.510349,
+        0.108903,
+        0.09999
+      ],
+      "source_bbox_pixels": [
+        224.36028000000002,
+        441.93984000000006,
+        78.41016,
+        95.9904
+      ],
+      "crop_window_pixels": [
+        205,
+        418,
+        118,
+        144
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        19.36027999999999,
+        23.93984000000006,
+        78.41016,
+        95.9904
+      ]
+    },
+    {
+      "crop_image": "clip_portrait_2_f000594_p3.jpg",
+      "source_image": "clip_portrait_2_f000594.jpg",
+      "source_annotation_index": 3,
+      "source_bbox_yolo": [
+        0.662243,
+        0.507292,
+        0.043764,
+        0.061833
+      ],
+      "source_bbox_pixels": [
+        461.05992000000003,
+        457.32048,
+        31.51008,
+        59.35968
+      ],
+      "crop_window_pixels": [
+        453,
+        442,
+        48,
+        90
+      ],
+      "swimmer_bbox_in_crop_pixels": [
+        8.059920000000034,
+        15.320479999999975,
+        31.51008,
+        59.35968
+      ]
+    }
+  ]
+}

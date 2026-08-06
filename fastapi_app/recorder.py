@@ -358,7 +358,9 @@ class Recorder:
 
     def write_landmarks_multi(self, local_ts: float, frame_count: int,
                               all_landmarks: list,
-                              track_ids: list | None = None):
+                              track_ids: list | None = None,
+                              frame_seq: int | None = None,
+                              pose_seq: int | None = None):
         """Write one JSONL row per video frame with every detected person.
 
         ``all_landmarks`` is a list of up to N persons; each person is a
@@ -373,6 +375,14 @@ class Recorder:
 
         Empty list is fine — we always write a row so the file stays
         1:1 with ``video.mp4`` frames (see DEVLOG #13 sync fix).
+
+        ``frame_seq`` / ``pose_seq`` (optional, DEVLOG #36): camera
+        sequence of the video frame being written and of the frame the
+        attached pose was computed on. Since recording/inference were
+        decoupled, the pose can lag the video frame on slow machines;
+        persisting both seqs lets offline analysis measure (and
+        re-align) that lag instead of silently attributing an old
+        skeleton to a newer frame. Missing fields = legacy recording.
         """
         with self._lock:
             if not self._recording or self._landmarks_multi_file is None:
@@ -403,6 +413,10 @@ class Recorder:
                    "frame": int(frame_count),
                    "persons": persons,
                    "ids": ids}
+            if frame_seq is not None:
+                row["frame_seq"] = int(frame_seq)
+            if pose_seq is not None:
+                row["pose_seq"] = int(pose_seq)
             self._landmarks_multi_file.write(json.dumps(row, separators=(",", ":")) + "\n")
             if self._vision_frame_count % 30 == 0:
                 self._landmarks_multi_file.flush()

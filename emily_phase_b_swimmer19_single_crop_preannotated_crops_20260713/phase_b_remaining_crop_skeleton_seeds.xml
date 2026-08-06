@@ -1,0 +1,1223 @@
+<?xml version='1.0' encoding='utf-8'?>
+<annotations>
+  <version>1.1</version>
+  <image id="0" name="clip_horizontal_f000028_p3.jpg" width="219" height="196">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="95.49,63.27" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="99.42,58.65" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="92.37,58.78" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="104.15,59.22" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="87.24,59.27" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="122.13,84.90" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="70.95,86.53" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="139.93,114.37" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="55.26,115.71" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="124.44,115.09" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="52.10,127.94" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="116.89,144.49" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="85.29,144.54" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="109.50,98.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="109.50,98.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="109.50,98.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="109.50,98.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="109.50,98.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="109.50,98.00" />
+    </skeleton>
+  </image>
+  <image id="1" name="clip_horizontal_f000046_p1.jpg" width="201" height="158">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="100.46,56.93" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="105.36,51.11" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="95.62,51.69" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="111.80,51.28" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="88.24,52.49" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="129.80,79.88" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="77.90,82.31" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="146.68,96.79" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="100.50,79.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="100.50,79.00" />
+    </skeleton>
+  </image>
+  <image id="2" name="clip_horizontal_f000064_p2.jpg" width="110" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="56.19,74.70" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="58.27,72.45" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="53.85,72.21" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="60.54,74.07" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="49.11,73.44" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="62.98,86.58" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="44.89,83.90" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="68.60,98.06" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="39.70,93.96" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="59.73,85.00" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="46.12,93.26" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="58.73,108.19" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="46.74,107.07" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="63.58,93.08" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="46.62,92.04" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="63.08,108.00" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="45.53,105.60" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="55.00,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="55.00,76.00" />
+    </skeleton>
+  </image>
+  <image id="3" name="clip_horizontal_f000082_p1.jpg" width="166" height="179">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="85.89,62.62" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="90.07,57.03" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="81.42,57.36" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="95.86,57.53" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="73.90,57.93" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="109.64,82.60" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="61.97,82.66" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="135.29,92.66" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="46.81,89.65" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="117.00,83.15" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="78.01,77.68" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="103.10,139.34" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="72.46,140.25" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="116.94,159.08" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="83.00,89.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="83.00,89.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="83.00,89.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="83.00,89.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="83.00,89.50" />
+    </skeleton>
+  </image>
+  <image id="4" name="clip_horizontal_f000082_p4.jpg" width="100" height="93">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="61.61,38.32" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="62.44,35.80" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="59.91,35.75" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="55.94,38.26" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="68.55,56.37" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="49.65,56.67" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="75.53,61.55" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="64.51,54.78" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="61.74,55.71" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="50.00,46.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="50.00,46.50" />
+    </skeleton>
+  </image>
+  <image id="5" name="clip_horizontal_f000100_p1.jpg" width="153" height="164">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="57.90,53.47" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="81.61,55.02" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="46.92,82.52" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="86.18,86.77" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="76.50,82.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="76.50,82.00" />
+    </skeleton>
+  </image>
+  <image id="6" name="clip_horizontal_f000100_p3.jpg" width="177" height="221">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="83.33,117.97" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="108.26,118.32" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="68.85,143.68" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="110.76,140.17" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="79.24,130.59" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="122.54,115.44" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="113.98,88.82" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="138.69,74.04" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="75.62,180.80" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="107.60,181.13" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="88.50,110.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="88.50,110.50" />
+    </skeleton>
+  </image>
+  <image id="7" name="clip_horizontal_f000118_p3.jpg" width="153" height="160">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="62.61,53.22" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="82.77,54.83" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="53.80,78.57" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="82.68,81.59" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="69.59,81.74" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="102.84,85.78" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="76.50,80.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="76.50,80.00" />
+    </skeleton>
+  </image>
+  <image id="8" name="clip_horizontal_f000136_p1.jpg" width="128" height="177">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="68.74,80.57" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="31.04,105.23" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="69.72,102.72" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="52.32,79.28" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="97.60,66.85" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="84.90,47.31" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="32.90,149.20" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="60.59,149.58" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="64.00,88.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="64.00,88.50" />
+    </skeleton>
+  </image>
+  <image id="9" name="clip_horizontal_f000154_p1.jpg" width="208" height="145">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="99.03,46.34" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="121.60,47.14" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="88.41,72.04" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="127.32,71.09" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="137.37,69.29" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="104.00,72.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="104.00,72.50" />
+    </skeleton>
+  </image>
+  <image id="10" name="clip_horizontal_f000172_p4.jpg" width="250" height="172">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="132.26,54.46" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="140.28,54.46" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="142.74,79.31" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="117.60,78.87" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="160.06,90.11" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="108.83,93.38" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="162.85,80.49" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="150.59,86.07" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="134.89,133.55" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="120.46,135.60" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="125.00,86.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="125.00,86.00" />
+    </skeleton>
+  </image>
+  <image id="11" name="clip_horizontal_f000190_p4.jpg" width="93" height="97">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="50.84,37.74" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="54.50,33.86" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="48.12,33.87" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="59.87,35.37" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="44.67,34.87" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="62.24,52.71" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="41.11,51.27" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="46.50,48.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="46.50,48.50" />
+    </skeleton>
+  </image>
+  <image id="12" name="clip_horizontal_f000209_p2.jpg" width="183" height="208">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="119.47,100.95" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="125.19,100.15" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="119.86,99.25" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="135.48,109.93" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="140.14,130.87" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="102.81,121.50" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="135.63,152.62" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="91.50,104.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="91.50,104.00" />
+    </skeleton>
+  </image>
+  <image id="13" name="clip_horizontal_f000245_p2.jpg" width="198" height="40">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="152.31,12.57" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="152.91,12.21" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="152.05,11.93" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="99.00,20.00" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="151.06,11.17" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="153.42,12.50" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="147.90,11.42" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="154.16,13.91" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="144.78,12.44" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="154.44,15.58" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="145.53,14.80" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="148.58,14.04" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="144.72,13.53" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="150.67,14.32" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="143.62,14.04" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="148.40,16.86" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="140.49,16.75" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="99.00,20.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="99.00,20.00" />
+    </skeleton>
+  </image>
+  <image id="14" name="clip_horizontal_f000299_p3.jpg" width="140" height="146">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="112.08,37.49" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="108.31,37.49" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="104.57,41.64" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="103.81,41.93" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="100.63,45.35" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="104.26,44.81" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="102.26,52.24" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="101.68,52.55" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="103.33,63.23" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="100.82,63.88" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="101.17,75.41" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="99.70,75.72" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="70.00,73.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="70.00,73.00" />
+    </skeleton>
+  </image>
+  <image id="15" name="clip_horizontal_f000317_p0.jpg" width="154" height="179">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="77.00,89.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="77.00,89.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="77.00,89.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="77.00,89.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="107.78,50.31" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="103.85,58.51" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="103.60,58.59" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="94.80,68.39" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="90.15,66.88" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="87.67,85.57" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="82.69,84.14" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="93.98,72.81" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="94.20,71.97" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="90.31,84.22" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="90.41,83.01" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="85.99,98.15" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="82.16,95.42" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="77.00,89.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="77.00,89.50" />
+    </skeleton>
+  </image>
+  <image id="16" name="clip_horizontal_f000335_p2.jpg" width="142" height="195">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="78.97,71.98" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="77.88,71.20" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="74.72,74.43" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="73.38,84.80" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="76.14,80.64" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="74.79,89.79" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="83.53,71.09" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="78.72,92.47" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="91.28,54.71" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="75.44,97.62" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="76.99,96.58" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="80.63,85.91" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="71.00,97.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="71.00,97.50" />
+    </skeleton>
+  </image>
+  <image id="17" name="clip_horizontal_f000353_p3.jpg" width="126" height="124">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="89.98,34.07" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="92.38,32.66" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="89.49,31.85" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="94.41,35.01" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="87.88,32.78" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="87.12,46.11" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="83.04,44.36" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="75.08,49.39" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="72.46,49.83" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="67.19,58.71" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="67.76,58.84" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="73.91,67.73" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="71.40,66.25" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="63.00,62.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="63.00,62.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="63.00,62.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="63.00,62.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="63.00,62.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="63.00,62.00" />
+    </skeleton>
+  </image>
+  <image id="18" name="clip_horizontal_f000371_p2.jpg" width="142" height="167">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="81.46,77.76" />
+      <points label="right_shoulder" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="82.25,77.31" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="97.07,51.86" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="95.57,50.66" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="81.41,74.89" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="82.97,76.47" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="83.76,60.44" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="84.52,63.45" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="96.30,54.59" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="95.26,55.16" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="71.00,83.50" />
+    </skeleton>
+  </image>
+  <image id="19" name="clip_horizontal_f000371_p3.jpg" width="133" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="102.43,33.12" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="103.48,31.99" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="102.13,31.84" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="103.20,32.72" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="100.83,32.40" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="97.74,37.91" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="98.09,37.53" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="90.51,40.98" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="89.96,40.26" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="66.50,76.00" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="91.43,45.90" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="87.72,47.97" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="88.20,46.94" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="79.42,59.03" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="80.01,58.52" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="77.70,67.56" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="75.92,66.04" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="66.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="66.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="20" name="clip_horizontal_f000390_p0.jpg" width="133" height="145">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="90.56,46.00" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="91.42,44.54" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="90.10,44.95" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="66.50,72.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="89.04,46.23" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="87.88,53.50" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="88.66,53.52" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="74.06,64.60" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="74.18,63.45" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="65.99,80.06" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="66.16,79.86" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="85.86,64.18" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="86.37,63.97" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="76.25,58.99" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="79.53,61.54" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="66.50,72.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="66.50,72.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="66.50,72.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="66.50,72.50" />
+    </skeleton>
+  </image>
+  <image id="21" name="clip_horizontal_f000390_p1.jpg" width="142" height="167">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="103.02,47.79" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="95.87,54.68" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="75.48,81.12" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="79.37,80.67" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="39.13,96.81" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="42.32,97.05" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="57.01,118.39" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="71.00,83.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="71.00,83.50" />
+    </skeleton>
+  </image>
+  <image id="22" name="clip_horizontal_f000516_p0.jpg" width="59" height="158">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="28.75,34.35" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="29.52,33.07" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="27.61,33.23" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="30.35,33.38" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="25.94,33.92" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="31.10,39.76" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="25.05,40.16" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="31.97,46.06" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="23.20,48.18" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="30.98,48.27" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="24.41,55.68" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="30.74,56.00" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="26.55,56.18" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="31.69,69.07" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="26.26,69.50" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="33.77,81.79" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="25.90,83.06" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="29.50,79.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="29.50,79.00" />
+    </skeleton>
+  </image>
+  <image id="23" name="clip_horizontal_f000516_p3.jpg" width="117" height="222">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="54.15,44.88" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="55.30,43.59" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="53.08,43.55" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="56.31,44.90" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="50.78,44.77" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="57.67,53.25" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="47.44,53.23" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="61.12,60.84" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="43.08,62.96" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="62.11,64.74" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="44.68,73.64" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="55.60,71.49" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="48.77,71.55" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="56.96,85.15" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="46.80,86.40" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="58.95,102.05" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="45.27,104.05" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="58.50,111.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="58.50,111.00" />
+    </skeleton>
+  </image>
+  <image id="24" name="clip_horizontal_f000534_p1.jpg" width="53" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="23.15,41.36" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="22.67,39.92" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="20.87,41.58" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="19.54,51.31" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="20.59,51.75" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="24.11,64.64" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="25.37,71.63" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="26.83,74.14" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="19.66,70.35" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="21.04,70.78" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="21.93,85.36" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="25.26,86.01" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="23.61,106.02" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="26.56,107.33" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="25" name="clip_horizontal_f000534_p2.jpg" width="57" height="175">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="29.16,39.12" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="29.28,37.68" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="27.83,37.47" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="28.00,37.63" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="23.96,37.33" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="28.79,44.06" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="24.95,44.12" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="35.52,53.14" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="32.77,51.52" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="28.05,45.48" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="27.05,41.62" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="30.51,64.15" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="26.92,64.33" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="32.84,79.60" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="26.10,81.85" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="34.15,98.60" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="25.76,100.02" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="28.50,87.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="28.50,87.50" />
+    </skeleton>
+  </image>
+  <image id="26" name="clip_horizontal_f000534_p3.jpg" width="53" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="24.45,27.33" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="25.38,26.14" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="23.81,26.19" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="26.85,27.34" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="22.86,27.21" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="29.06,35.22" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="20.62,34.79" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="32.13,42.86" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="17.88,43.19" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="29.33,45.01" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="18.75,53.50" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="28.03,52.50" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="22.31,52.40" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="30.45,66.74" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="22.61,67.52" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="33.43,81.60" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="23.36,82.33" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="27" name="clip_horizontal_f000552_p3.jpg" width="53" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="23.21,31.33" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="24.08,30.01" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="22.20,30.13" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="25.11,31.35" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="20.75,31.63" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="27.56,39.66" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="19.28,39.43" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="30.03,45.79" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="16.60,49.21" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="25.14,36.96" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="20.80,55.64" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="27.78,55.62" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="22.75,55.59" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="27.93,66.91" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="24.88,67.48" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="30.20,78.23" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="25.99,78.86" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="28" name="clip_horizontal_f000552_p4.jpg" width="53" height="162">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="23.22,36.20" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="24.08,34.85" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="22.27,34.75" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="24.57,35.21" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="20.25,34.86" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="26.39,42.62" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="17.97,41.15" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="30.24,51.42" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="16.33,48.18" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="28.31,49.08" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="19.52,50.72" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="25.71,63.10" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="19.88,62.68" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="26.58,80.83" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="19.33,81.47" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="29.44,100.11" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="18.95,100.52" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,81.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,81.00" />
+    </skeleton>
+  </image>
+  <image id="29" name="clip_horizontal_f000571_p2.jpg" width="47" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="21.98,34.93" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="23.12,33.56" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="20.93,33.75" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="25.07,32.96" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="18.91,33.28" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="27.10,36.59" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="16.26,37.10" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="28.90,47.07" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="13.99,48.39" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="27.06,61.83" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="19.56,65.06" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="25.63,47.49" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="18.83,47.84" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="26.15,61.01" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="21.41,61.46" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="28.18,74.15" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="23.56,73.47" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="23.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="23.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="30" name="clip_horizontal_f000571_p3.jpg" width="50" height="158">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="15.45,35.52" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="16.85,33.73" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="13.86,34.21" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="20.15,34.56" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="25.00,79.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="24.43,42.14" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="15.32,44.12" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="32.00,49.25" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="18.91,53.20" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="28.68,52.32" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="20.80,58.35" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="26.68,60.12" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="20.34,61.00" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="27.77,72.78" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="21.57,74.55" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="31.97,87.01" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="22.28,88.53" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="25.00,79.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="25.00,79.00" />
+    </skeleton>
+  </image>
+  <image id="31" name="clip_horizontal_f000589_p1.jpg" width="53" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="27.59,38.07" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="28.35,37.27" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="26.81,37.28" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="29.66,37.86" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="31.15,42.19" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="25.74,42.52" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="34.77,45.85" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="33.13,44.88" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="30.67,55.12" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="26.94,55.23" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="31.00,67.00" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="27.81,67.13" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="33.19,78.72" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="28.98,78.51" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="32" name="clip_horizontal_f000607_p0.jpg" width="53" height="152">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="26.74,33.93" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="27.53,32.93" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="26.22,32.84" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="28.61,34.30" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="25.53,34.20" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="31.35,41.44" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="23.63,41.85" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="35.26,45.22" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="21.32,50.47" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="33.94,43.95" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="23.43,59.30" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="30.27,60.18" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="25.23,60.27" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="30.41,78.86" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="25.30,80.32" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="29.16,101.55" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="22.33,103.66" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="26.50,76.00" />
+    </skeleton>
+  </image>
+  <image id="33" name="clip_horizontal_f000607_p1.jpg" width="55" height="191">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="27.50,95.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="27.50,95.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="27.50,95.50" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="27.54,41.90" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="28.84,41.75" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="27.99,50.53" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="30.04,49.57" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="32.77,57.69" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="35.38,56.14" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="27.50,95.50" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="33.29,57.70" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="28.76,68.56" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="29.94,67.95" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="30.21,87.41" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="27.38,87.29" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="28.56,105.36" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="25.67,106.02" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="27.50,95.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="27.50,95.50" />
+    </skeleton>
+  </image>
+  <image id="34" name="clip_horizontal_f000679_p1.jpg" width="58" height="147">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="29.27,47.74" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="30.68,46.03" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="27.83,46.35" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="33.61,46.89" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="26.32,47.65" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="36.31,57.18" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="26.79,57.93" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="38.85,70.68" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="27.27,72.34" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="39.27,82.35" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="27.84,84.17" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="35.77,82.26" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="28.95,82.34" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="36.40,100.28" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="27.18,100.15" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="37.69,117.47" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="25.73,117.74" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="29.00,73.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="29.00,73.50" />
+    </skeleton>
+  </image>
+  <image id="35" name="clip_horizontal_f000679_p2.jpg" width="80" height="123">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="37.61,65.25" />
+      <points label="right_shoulder" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="51.99,66.78" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="52.36,63.83" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="36.10,38.61" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="35.53,38.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="40.00,61.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="40.00,61.50" />
+    </skeleton>
+  </image>
+  <image id="36" name="clip_horizontal_f000715_p2.jpg" width="81" height="182">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="40.50,91.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="40.50,91.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="40.50,91.00" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="40.50,91.00" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="52.32,122.57" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="55.36,134.40" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="55.55,129.47" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="57.75,114.54" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="44.87,100.18" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="49.11,62.86" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="39.11,58.27" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="52.88,112.52" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="55.30,110.43" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="54.40,88.62" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="43.47,91.45" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="40.12,67.31" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="38.16,59.12" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="40.50,91.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="40.50,91.00" />
+    </skeleton>
+  </image>
+  <image id="37" name="clip_horizontal_f000733_p0.jpg" width="137" height="159">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="99.84,30.85" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="100.81,30.10" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="68.50,79.50" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="103.37,30.22" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="68.50,79.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="104.75,34.06" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="103.13,34.22" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="107.83,38.66" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="68.50,79.50" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="111.19,42.94" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="68.50,79.50" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="104.99,45.45" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="103.89,45.15" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="100.08,55.76" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="97.75,56.88" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="96.52,76.06" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="93.14,76.47" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="68.50,79.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="68.50,79.50" />
+    </skeleton>
+  </image>
+  <image id="38" name="clip_horizontal_f000752_p0.jpg" width="97" height="179">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="67.68,90.86" />
+      <points label="right_shoulder" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="72.32,69.02" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="70.93,68.45" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="70.89,56.02" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="67.75,56.42" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="64.32,101.42" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="68.28,80.29" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="69.74,77.32" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="48.50,89.50" />
+    </skeleton>
+  </image>
+  <image id="39" name="clip_horizontal_f000788_p0.jpg" width="97" height="179">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="46.98,41.06" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="47.31,41.15" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="50.06,52.63" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="49.39,53.39" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="55.32,65.50" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="53.33,66.49" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="46.65,67.27" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="47.67,67.40" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="46.61,87.72" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="49.55,88.34" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="45.18,110.98" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="49.79,113.51" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="48.50,89.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="48.50,89.50" />
+    </skeleton>
+  </image>
+  <image id="40" name="clip_horizontal_f000896_p1.jpg" width="166" height="85">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="115.92,29.55" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="118.20,27.46" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="113.85,27.77" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="121.99,29.16" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="111.05,29.61" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="127.41,39.77" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="109.31,39.79" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="136.06,42.34" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="100.64,41.77" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="129.32,35.38" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="95.74,42.44" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="111.41,53.57" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="83.00,42.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="83.00,42.50" />
+    </skeleton>
+  </image>
+  <image id="41" name="clip_portrait_1_f000065_p3.jpg" width="77" height="81">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="40.39,18.21" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="41.40,16.12" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="38.50,16.24" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="38.50,40.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="34.27,16.05" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="44.86,23.67" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="30.27,24.98" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="47.33,30.74" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="25.83,33.79" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="38.86,30.31" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="34.60,30.11" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="43.14,39.72" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="33.30,40.22" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="43.87,44.01" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="26.92,44.21" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="38.50,40.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="38.50,40.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="38.50,40.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="38.50,40.50" />
+    </skeleton>
+  </image>
+  <image id="42" name="clip_portrait_1_f000149_p0.jpg" width="63" height="128">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="40.04,55.59" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="41.06,54.59" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="39.02,54.59" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="42.45,55.32" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="37.38,55.35" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="44.39,61.54" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="35.85,61.33" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="46.92,69.44" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="34.05,68.65" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="45.16,71.52" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="35.54,70.45" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="43.72,74.48" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="37.95,74.44" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="44.44,81.51" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="36.97,81.92" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="45.11,89.02" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="36.97,89.58" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="31.50,64.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="31.50,64.00" />
+    </skeleton>
+  </image>
+  <image id="43" name="clip_portrait_1_f000530_p0.jpg" width="74" height="137">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="39.66,27.84" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="41.39,26.08" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="37.98,25.66" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="33.39,26.51" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="41.14,39.86" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="27.73,38.92" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="26.01,54.03" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="27.74,60.19" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="39.46,63.64" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="30.60,63.84" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="37.00,68.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="37.00,68.50" />
+    </skeleton>
+  </image>
+  <image id="44" name="clip_portrait_2_f000069_p0.jpg" width="185" height="131">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="68.76,43.67" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="72.09,40.12" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="65.93,41.06" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="77.98,41.10" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="61.77,42.58" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="85.90,58.07" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="57.31,59.91" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="99.13,70.88" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="51.02,71.06" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="104.14,71.12" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="48.97,70.31" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="83.38,85.78" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="64.91,86.36" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="88.69,64.00" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="51.27,67.18" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="76.70,77.89" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="52.43,73.31" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="92.50,65.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="92.50,65.50" />
+    </skeleton>
+  </image>
+  <image id="45" name="clip_portrait_2_f000231_p0.jpg" width="73" height="138">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="33.66,30.41" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="33.19,29.25" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="right_ear" source="file" outside="0" occluded="0" points="31.35,27.58" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="33.68,30.02" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="28.85,29.37" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="35.91,33.03" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="26.65,32.67" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="35.94,40.64" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="28.34,40.97" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="32.67,40.76" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="29.45,40.71" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="30.96,46.02" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="36.50,69.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="36.50,69.00" />
+    </skeleton>
+  </image>
+  <image id="46" name="clip_portrait_2_f000244_p2.jpg" width="54" height="127">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="0" occluded="0" points="25.43,30.44" />
+      <points label="left_eye" source="file" outside="0" occluded="0" points="26.30,29.39" />
+      <points label="right_eye" source="file" outside="0" occluded="0" points="25.01,29.58" />
+      <points label="left_ear" source="file" outside="0" occluded="0" points="28.28,29.78" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="27.00,63.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="28.12,34.71" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="26.72,34.83" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="27.05,40.59" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="26.74,40.55" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="26.80,43.61" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="27.03,43.57" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="28.32,45.75" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="27.35,45.79" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="28.38,52.67" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="28.03,53.08" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="30.66,59.14" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="28.59,59.34" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="27.00,63.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="27.00,63.50" />
+    </skeleton>
+  </image>
+  <image id="47" name="clip_portrait_2_f000294_p0.jpg" width="61" height="224">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="left_shoulder" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="right_shoulder" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="28.69,83.25" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="25.08,64.22" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="25.17,64.29" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="27.43,88.17" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="26.80,88.18" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="30.28,81.64" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="31.12,83.92" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="30.51,110.30" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="31.64,112.38" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="30.50,112.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="30.50,112.00" />
+    </skeleton>
+  </image>
+  <image id="48" name="clip_portrait_2_f000294_p3.jpg" width="56" height="170">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="32.05,92.14" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="35.07,92.36" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="33.71,76.28" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="33.58,74.16" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="30.70,44.59" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="30.48,43.44" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="32.54,97.38" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="34.21,97.84" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="28.00,85.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="28.00,85.00" />
+    </skeleton>
+  </image>
+  <image id="49" name="clip_portrait_2_f000394_p0.jpg" width="82" height="177">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="left_shoulder" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="right_shoulder" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="36.97,80.62" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="42.09,81.22" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="34.21,53.38" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="34.39,54.81" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="26.24,100.93" />
+      <points label="right_hip" source="file" outside="0" occluded="0" points="26.04,100.77" />
+      <points label="left_knee" source="file" outside="0" occluded="0" points="40.11,74.90" />
+      <points label="right_knee" source="file" outside="0" occluded="0" points="41.46,75.24" />
+      <points label="left_ankle" source="file" outside="0" occluded="0" points="38.30,96.09" />
+      <points label="right_ankle" source="file" outside="0" occluded="0" points="38.01,97.73" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="41.00,88.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="41.00,88.50" />
+    </skeleton>
+  </image>
+  <image id="50" name="clip_portrait_2_f000456_p2.jpg" width="77" height="83">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="58.29,37.00" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="49.14,35.59" />
+      <points label="left_elbow" source="file" outside="0" occluded="0" points="58.24,57.16" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="37.38,51.40" />
+      <points label="left_wrist" source="file" outside="0" occluded="0" points="47.87,64.12" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="27.98,62.18" />
+      <points label="left_hip" source="file" outside="0" occluded="0" points="45.05,65.07" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="38.50,41.50" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="38.50,41.50" />
+    </skeleton>
+  </image>
+  <image id="51" name="clip_portrait_2_f000481_p2.jpg" width="87" height="92">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="59.16,38.87" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="54.83,38.59" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_elbow" source="file" outside="0" occluded="0" points="47.05,44.30" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_wrist" source="file" outside="0" occluded="0" points="61.62,31.48" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="43.50,46.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="43.50,46.00" />
+    </skeleton>
+  </image>
+  <image id="52" name="clip_portrait_2_f000494_p2.jpg" width="76" height="104">
+    <skeleton label="swimmer" source="file" outside="0">
+      <points label="nose" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_eye" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_eye" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_ear" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_ear" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_shoulder" source="file" outside="0" occluded="0" points="58.91,61.49" />
+      <points label="right_shoulder" source="file" outside="0" occluded="0" points="37.29,62.39" />
+      <points label="left_elbow" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_elbow" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_wrist" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_wrist" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_hip" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_hip" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_knee" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_knee" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_ankle" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_ankle" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="left_foot_index" source="file" outside="1" occluded="0" points="38.00,52.00" />
+      <points label="right_foot_index" source="file" outside="1" occluded="0" points="38.00,52.00" />
+    </skeleton>
+  </image>
+</annotations>

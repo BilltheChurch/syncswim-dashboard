@@ -81,6 +81,26 @@ if [ ! -d "$REPO" ]; then
     exit 1
 fi
 
+# 先保住这台机器的本地设置：code.zip 会整体覆盖 config.toml（这正是新模型路径
+# 生效的方式），所以摄像头地址这类"只属于这台电脑"的设置要搬进 config.local.toml，
+# 它不在 kit 里、永远不会被覆盖。只在第一次更新时迁移一次。
+if [ -f "$REPO/config.toml" ] && [ ! -f "$REPO/config.local.toml" ]; then
+    {
+        echo "# 这台电脑的本地设置 — 更新时不会被覆盖（由 1-update.command 自动生成）"
+        echo "[hardware]"
+        grep -E '^[[:space:]]*(camera_url|camera_rotation)[[:space:]]*=' \
+            "$REPO/config.toml" || true
+        echo ""
+        echo "[analysis]"
+        if [ "$(uname -m)" = "x86_64" ]; then
+            echo 'device = "cpu"   # Intel Mac 没有 Apple Metal(mps)'
+        else
+            echo 'device = "mps"   # Apple Silicon'
+        fi
+    } > "$REPO/config.local.toml"
+    echo "    ✓ 本地设置已存入 config.local.toml（以后更新不会覆盖它）"
+fi
+
 if [ -f "$KIT_DIR/code.zip" ]; then
     if unzip -oq "$KIT_DIR/code.zip" -d "$REPO/"; then
         date "+%Y-%m-%d %H:%M:%S" > "$REPO/.kit-version"
@@ -93,11 +113,20 @@ else
     echo "    ⚠ kit 没带 code.zip（旧版 kit 格式？让 Tim 老师重新打）"
 fi
 
-# 模型 — 仅在 kit 里有 + 仓库当前版本 mtime 更老时才覆盖（避免覆盖 best.pt 训练产物）
+# 模型
 if [ -d "$KIT_DIR/models" ]; then
+    # 基础模型（COCO/MediaPipe 通用权重）放仓库根，不覆盖已存在的 —— 它们不会变，
+    # 而且万一这台机器上有训练产物同名，不能动。
     cp -n "$KIT_DIR/models/"*.pt   "$REPO/" 2>/dev/null || true
     cp -n "$KIT_DIR/models/"*.task "$REPO/" 2>/dev/null || true
-    echo "    ✓ 模型同步（已存在的不覆盖）"
+fi
+
+# 我们自己训的花泳专用权重 → $REPO/models/，**必须覆盖**：每个 kit 带的就是当前
+# 上线版本，文件名自带版本号(swimmer_det_v3.pt)，不会误伤任何训练产物。
+if [ -d "$KIT_DIR/vision_models" ]; then
+    mkdir -p "$REPO/models"
+    cp -f "$KIT_DIR/vision_models/"*.pt "$REPO/models/" 2>/dev/null || true
+    echo "    ✓ 花泳视觉模型已更新（$(ls -1 "$REPO/models"/*.pt 2>/dev/null | wc -l | tr -d ' ') 个）"
 fi
 
 # ────────── 4: 刷新桌面图标 ──────────

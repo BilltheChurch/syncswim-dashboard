@@ -10,8 +10,19 @@
 const CONNECTIONS = [
     [11,12],[11,13],[13,15],[12,14],[14,16],
     [11,23],[12,24],[23,24],[23,25],[24,26],
-    [25,27],[26,28]
+    [25,27],[26,28],
+    // ankle→foot_index (脚尖) — only populated by Phase B 19-kpt
+    // weights; invisible (vis 0) on stock COCO models.
+    [27,31],[28,32]
 ];
+
+// Minimum keypoint visibility before we draw. COCO-pose hallucinates
+// plausible-looking keypoints for underwater joints at conf 0.3-0.5,
+// so anything below these gates reads as "model guessing" and must
+// not be rendered (Emily dogfood 2026-07: office + pool sets both
+// showed garbage skeletons drawn from 0.3-0.5-conf points).
+const BONE_MIN_VIS = 0.45;
+const DOT_MIN_VIS = 0.35;
 
 const THRESHOLDS = {
     leg_deviation:            { clean: 5,   minor: 15,  inverted: false },
@@ -418,7 +429,11 @@ function connectVideoWs() {
         const badge = $('#pose-badge');
         if (badge) {
             badge.classList.toggle('pose-detected', !!primary);
-            const txt = n === 0 ? '无人' : n === 1 ? '检测中' : `${n} 人`;
+            // pose_error = backend failed to initialise (missing model
+            // weights etc.). Video still flows — say so, instead of an
+            // innocent-looking permanent "无人".
+            const txt = data.pose_error ? '姿态后端故障'
+                : n === 0 ? '无人' : n === 1 ? '检测中' : `${n} 人`;
             $('#pose-text').textContent = txt;
         }
 
@@ -527,7 +542,7 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1, trackId = null) {
     c.lineWidth = 1.8;
     c.lineCap = 'round';
     CONNECTIONS.forEach(([i, j]) => {
-        if (landmarks[i][2] > 0.3 && landmarks[j][2] > 0.3) {
+        if (landmarks[i][2] > BONE_MIN_VIS && landmarks[j][2] > BONE_MIN_VIS) {
             c.beginPath();
             c.moveTo(landmarks[i][0] * w, landmarks[i][1] * h);
             c.lineTo(landmarks[j][0] * w, landmarks[j][1] * h);
@@ -537,7 +552,7 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1, trackId = null) {
     // Joints
     c.fillStyle = color;
     for (let i = 0; i < 33; i++) {
-        if (landmarks[i][2] < 0.3) continue;
+        if (landmarks[i][2] < DOT_MIN_VIS) continue;
         c.beginPath();
         c.arc(landmarks[i][0] * w, landmarks[i][1] * h, 3, 0, Math.PI * 2);
         c.fill();
@@ -545,11 +560,11 @@ function drawSecondaryPose(c, cv, landmarks, angles, idx = 1, trackId = null) {
 
     // "Pn" label — anchor above the head (nose with fallback to shoulder midpoint).
     let labelX = 0, labelY = 0, anchorOk = false;
-    if (landmarks[0][2] > 0.3) {
+    if (landmarks[0][2] > DOT_MIN_VIS) {
         labelX = landmarks[0][0] * w;
         labelY = landmarks[0][1] * h - 22;
         anchorOk = true;
-    } else if (landmarks[11][2] > 0.3 && landmarks[12][2] > 0.3) {
+    } else if (landmarks[11][2] > DOT_MIN_VIS && landmarks[12][2] > DOT_MIN_VIS) {
         labelX = (landmarks[11][0] + landmarks[12][0]) / 2 * w;
         labelY = (landmarks[11][1] + landmarks[12][1]) / 2 * h - 30;
         anchorOk = true;
@@ -608,12 +623,12 @@ function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
     // overlap; the small dark pill stays readable either way.
     if (trackId != null && landmarks && landmarks.length === 33) {
         let lx = 0, ly = 0, ok = false;
-        if (landmarks[0] && landmarks[0][2] > 0.3) {
+        if (landmarks[0] && landmarks[0][2] > DOT_MIN_VIS) {
             lx = landmarks[0][0] * w;
             ly = landmarks[0][1] * h - 22;
             ok = true;
         } else if (landmarks[11] && landmarks[12]
-                   && landmarks[11][2] > 0.3 && landmarks[12][2] > 0.3) {
+                   && landmarks[11][2] > DOT_MIN_VIS && landmarks[12][2] > DOT_MIN_VIS) {
             lx = (landmarks[11][0] + landmarks[12][0]) / 2 * w;
             ly = (landmarks[11][1] + landmarks[12][1]) / 2 * h - 30;
             ok = true;
@@ -640,7 +655,7 @@ function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
     c.lineWidth = 2.2;
     c.lineCap = 'round';
     CONNECTIONS.forEach(([i, j]) => {
-        if (landmarks[i][2] > 0.3 && landmarks[j][2] > 0.3) {
+        if (landmarks[i][2] > BONE_MIN_VIS && landmarks[j][2] > BONE_MIN_VIS) {
             c.beginPath();
             c.moveTo(landmarks[i][0] * w, landmarks[i][1] * h);
             c.lineTo(landmarks[j][0] * w, landmarks[j][1] * h);
@@ -651,12 +666,12 @@ function drawSkeletonOnCanvas(c, cv, landmarks, angles, trackId = null) {
     // --- Joint dots ---
     const jointSet = detailed
         ? Array.from({ length: 33 }, (_, i) => i)
-        : [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+        : [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32];
     jointSet.forEach(i => {
         const lm = landmarks[i];
         if (!lm) return;
         const vis = lm[2];
-        if (vis < 0.2) return;
+        if (vis < DOT_MIN_VIS) return;
         const r = detailed ? 3 + vis * 2 : 4;
         c.fillStyle = vis > 0.6 ? '#3B82F6' : 'rgba(59,130,246,0.6)';
         c.beginPath();
@@ -1708,6 +1723,8 @@ function renderReport(name, report) {
             <div class="vp-header">
                 <span class="vp-title">视频回放</span>
                 <button class="vp-athletes-btn" id="vp-athletes-btn" type="button" title="给检测到的运动员命名">队员</button>
+                <button class="vp-athletes-btn" id="vp-analyze-btn" type="button"
+                        title="离线视觉分析：对录制视频跑重模型（hybrid + imgsz 1280），重写骨架与角度数据。实时页不再做任何推理（2026-07-30 架构转向）">视觉分析</button>
                 <a class="vp-pdf-btn" id="vp-pdf-btn" target="_blank"
                    href="/api/sets/${encodeURIComponent(name)}/report.pdf"
                    title="导出 PDF 训练报告（含评分、雷达、关键帧、备注）">PDF</a>
@@ -1847,9 +1864,79 @@ function renderReport(name, report) {
     if (aBtn) {
         aBtn.addEventListener('click', () => openAthleteManager(name));
     }
+    // Offline vision analysis (DEVLOG #37 — the only inference path)
+    const vBtn = $('#vp-analyze-btn');
+    if (vBtn) {
+        vBtn.addEventListener('click', () => startVisionAnalysis(name));
+        // Resume progress display if this set is already being analyzed
+        // (e.g. user navigated away and back mid-run).
+        fetch(`/api/sets/${encodeURIComponent(name)}/analyze/status`)
+            .then(r => r.json())
+            .then(st => { if (st.state === 'running') _pollVisionAnalysis(name); })
+            .catch(() => {});
+    }
     setupSetNote(name);
     setupMarkerStrip(name);
     setupSkeletonOverlay(name);
+}
+
+/** Kick offline vision analysis for a set and poll progress on the
+ *  分析页 button. On completion the report is reloaded so the fresh
+ *  skeletons/angles appear without a manual refresh. */
+async function startVisionAnalysis(name) {
+    try {
+        const res = await fetch(`/api/sets/${encodeURIComponent(name)}/analyze`,
+                                { method: 'POST' });
+        const body = await res.json();
+        if (!res.ok) {
+            toast(body.error || '无法启动视觉分析', 'error');
+            return;
+        }
+    } catch {
+        toast('无法启动视觉分析（网络错误）', 'error');
+        return;
+    }
+    toast('视觉分析已开始 — 重模型离线推理，可能需要几分钟', 'info');
+    _pollVisionAnalysis(name);
+}
+
+const _visionPollTimers = {};   // set name → interval id (dedup guard)
+
+function _pollVisionAnalysis(name) {
+    // Re-entering the analysis page while a poll is alive must not
+    // stack a second interval on the same set.
+    if (_visionPollTimers[name]) clearInterval(_visionPollTimers[name]);
+    const vBtn = $('#vp-analyze-btn');
+    if (vBtn) { vBtn.disabled = true; vBtn.textContent = '分析中 0%'; }
+    const timer = setInterval(async () => {
+        let st;
+        try {
+            st = await fetch(`/api/sets/${encodeURIComponent(name)}/analyze/status`)
+                .then(r => r.json());
+        } catch { return; }   // transient network error — keep polling
+        // #vp-analyze-btn is re-created by renderReport for WHICHEVER
+        // set is currently open — only touch it when it's ours,
+        // otherwise a poll for set A would hijack set B's button.
+        const btn = (_currentSet === name) ? $('#vp-analyze-btn') : null;
+        if (st.state === 'running') {
+            if (btn) { btn.disabled = true; btn.textContent = `分析中 ${st.progress || 0}%`; }
+            return;
+        }
+        clearInterval(timer);
+        if (_visionPollTimers[name] === timer) delete _visionPollTimers[name];
+        if (st.state === 'done') {
+            const s = st.summary || {};
+            toast(`视觉分析完成：${s.frames || 0} 帧，检出率 ${s.detection_pct || 0}%`,
+                  'success');
+            if (_currentSet === name) loadReport(name);
+        } else if (st.state === 'error') {
+            toast(`视觉分析失败：${st.error || '未知错误'}`, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = '视觉分析'; }
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = '视觉分析'; }
+        }
+    }, 1000);
+    _visionPollTimers[name] = timer;
 }
 
 /** Render coach markers (phase 8.5) as a row of clickable triangles
@@ -2415,13 +2502,13 @@ async function setupSkeletonOverlay(name) {
         c2.lineWidth = 2;
         CONNECTIONS.forEach(([i, j]) => {
             const a = toXY(pts[i]); const b = toXY(pts[j]);
-            if (a.v > 0.3 && b.v > 0.3) {
+            if (a.v > BONE_MIN_VIS && b.v > BONE_MIN_VIS) {
                 c2.beginPath(); c2.moveTo(a.x, a.y); c2.lineTo(b.x, b.y); c2.stroke();
             }
         });
         for (let i = 0; i < 33; i++) {
             const p = toXY(pts[i]);
-            if (p.v < 0.3) continue;
+            if (p.v < DOT_MIN_VIS) continue;
             c2.fillStyle = color;
             c2.beginPath(); c2.arc(p.x, p.y, 3.5, 0, Math.PI * 2); c2.fill();
             c2.fillStyle = '#fff';
@@ -2432,11 +2519,11 @@ async function setupSkeletonOverlay(name) {
         // path that wants to stay uncluttered).
         if (label) {
             let lx = 0, ly = 0, ok = false;
-            if (pts[0][2] > 0.3) {
+            if (pts[0][2] > DOT_MIN_VIS) {
                 lx = box.x + pts[0][0] * box.w;
                 ly = box.y + pts[0][1] * box.h - 18;
                 ok = true;
-            } else if (pts[11][2] > 0.3 && pts[12][2] > 0.3) {
+            } else if (pts[11][2] > DOT_MIN_VIS && pts[12][2] > DOT_MIN_VIS) {
                 lx = box.x + (pts[11][0] + pts[12][0]) / 2 * box.w;
                 ly = box.y + (pts[11][1] + pts[12][1]) / 2 * box.h - 24;
                 ok = true;
@@ -3612,6 +3699,19 @@ applyBodyMode();
     }
 })();
 
+// 2026-07-30 architecture pivot (DEVLOG #37): with pose_backend="none"
+// the live page is camera + IMU only. Hide every vision-dependent
+// widget — skeleton badge, live score ring, athlete binding (needs
+// track IDs), annotation toggle, raw-snapshot twin. Vision happens
+// offline via the analysis page's 运行视觉分析 button.
+function applyNoLiveVision() {
+    ['#pose-badge', '#btn-live-athletes', '#btn-annotate',
+     '#btn-snapshot-raw', '#live-score-card'].forEach(sel => {
+        const el = $(sel);
+        if (el) el.style.display = 'none';
+    });
+}
+
 // Preload camera rotation from server config so the buttons + state match.
 async function preloadCameraState() {
     try {
@@ -3621,6 +3721,9 @@ async function preloadCameraState() {
             currentRotation = parseInt(hw.camera_rotation, 10) || 0;
             $$('.btn-rot').forEach(b =>
                 b.classList.toggle('active', parseInt(b.dataset.rot, 10) === currentRotation));
+        }
+        if (String(hw.pose_backend ?? 'none').toLowerCase() === 'none') {
+            applyNoLiveVision();
         }
     } catch { /* ignore — defaults are fine */ }
 }

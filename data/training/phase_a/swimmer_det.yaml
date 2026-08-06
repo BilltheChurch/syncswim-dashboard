@@ -26,7 +26,7 @@
 # the YAML's parent directory — use "." (NOT "../../data/training/
 # phase_a", which Codex review caught: that resolves to data/data/
 # training/phase_a and breaks train/val.txt lookups).
-path: .
+path: data/training/phase_a
 train: train.txt
 val: val.txt
 

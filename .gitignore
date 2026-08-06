@@ -27,13 +27,14 @@ data/training/images/
 data/training/labels/
 data/training/train.txt
 data/training/val.txt
-# Phase 9.x — phase_a/, phase_b/ subdirs follow the same shape; only
-# the swimmer_det.yaml / pose.yaml configs go in repo.
+# Phase 9.x — 标注(labels/ + train/val.txt)反而是**最该进版本管理**的东西：
+# 那是几个小时的人工成果、纯文本、体积可忽略，而且丢了就再也回不来
+# （DEVLOG #39 的教训：detector v2 的 350 帧训练素材就是这样丢的，
+#  导致 v3 只能热启动微调而无法从头复现）。真正该排除的只有中间产物。
 data/training/phase_*/frames/
-data/training/phase_*/labels/
 data/training/phase_*/labels_raw/
-data/training/phase_*/train.txt
-data/training/phase_*/val.txt
+data/training/phase_*/labels.cache
+data/training/phase_*/*.cache
 runs/
 
 # macOS Finder metadata
@@ -54,3 +55,14 @@ data/athletes.json
 # Emily kit packaging output (large, regenerated each build)
 emily_kit_*/
 emily_kit_*.zip
+emily_phase_b_pose_*/
+emily_phase_b_pose_*.zip
+emily_phase_b_swimmer19_crops_*/
+emily_phase_b_swimmer19_crops_*.zip
+
+# Machine-specific config overrides (camera URL, device) — DEVLOG #40.
+# Survives kit updates because the kit never ships this file.
+config.local.toml
+
+# Deployed model weights (hardlinks into runs/ locally, real files in a kit)
+models/

@@ -1,0 +1,5 @@
+./images/clip_horizontal_f00040_p0.jpg
+./images/clip_horizontal_f00040_p2.jpg
+./images/clip_horizontal_f00080_p0.jpg
+./images/clip_horizontal_f00120_p2.jpg
+./images/clip_horizontal_f00120_p3.jpg

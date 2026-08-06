@@ -151,6 +151,8 @@ def _vision_writer_loop():
             frame_count,
             data.get("all_landmarks") or [],
             data.get("track_ids"),
+            frame_seq=data.get("frame_seq"),
+            pose_seq=data.get("pose_seq"),
         )
 
         # Write video frame

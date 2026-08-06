@@ -59,17 +59,31 @@ imu_nodes = [
     "NODE_A2",
 ]
 camera_rotation = 270
-# Pose detection backend:
-#   "yolo"      → YOLOv8-pose (recommended for multi-person — reliable,
-#                 handles 2-10 swimmers; ultralytics required)
-#   "mediapipe" → MediaPipe Pose Landmarker (single-person solid,
-#                 multi-person unstable; kept as fallback)
-pose_backend = "yolo"
+# Pose detection backend for the LIVE path:
+#   "none"      → (default since 2026-07-30, DEVLOG #37) NO live
+#                 inference. Live page = camera + IMU only. All vision
+#                 runs offline after recording (see [analysis] below) —
+#                 heavier models, no real-time budget, better accuracy.
+#   "yolo"      → YOLOv8-pose live (legacy; 2-4fps skeleton refresh on
+#                 CPU-only machines)
+#   "mediapipe" → MediaPipe Pose Landmarker live (legacy fallback)
+pose_backend = "none"
 # YOLO-specific options (ignored for mediapipe backend):
-yolo_model = "yolov8n-pose.pt"    # "yolov8n-pose.pt" (6MB, fast) or "yolov8s-pose.pt" (22MB, more accurate)
+yolo_model = "yolov8s-pose.pt"    # "yolov8n-pose.pt" (6MB, fast) or "yolov8s-pose.pt" (22MB, more accurate)
 yolo_conf = 0.35                   # detection confidence threshold
-yolo_device = "mps"                # "mps" (Apple Metal), "cuda", or "cpu"
+yolo_device = "mps"                # "mps" (Apple Metal, M-series only), "cuda", or "cpu".
+                                   # Intel Mac (e.g. Emily's machine): set "cpu" explicitly —
+                                   # mps silently falls back to cpu after a failed warm-up anyway.
+                                   # Since 2026-07 preview/recording FPS no longer depends on this
+                                   # (inference is decoupled); it only sets skeleton refresh rate.
 yolo_imgsz = 640                   # inference resolution. 640 = realtime; 1280 = better small-target recall (~4× cost)
+# Minimum per-keypoint confidence. Keypoints below this are zeroed at the
+# source (never recorded, never drawn). COCO-pose invents plausible-looking
+# coordinates for underwater/occluded joints at conf 0.1-0.4 — Emily's
+# 2026-07 dogfood showed those hallucinations rendered as garbage skeletons.
+# Raise toward 0.5 to show only very confident joints; lower toward 0 to
+# see everything the model emits (debugging).
+kpt_min_conf = 0.35
 # Phase A optional: path to a custom-trained YOLOv8s DETECTOR (bbox-only,
 # trained on swim frames per docs/phase-a-annotation.md). When set, the
 # pipeline switches to hybrid mode — custom detector for bboxes (high
@@ -104,6 +118,40 @@ pose_track_conf = 0.3
 [hardware.node_placement]
 NODE_A1 = "forearm"
 NODE_A2 = "shin"
+
+# Offline vision analysis (post-recording, dashboard 分析页 "运行视觉分析"
+# button or POST /api/sets/{name}/analyze). This is the ONLY place pose
+# inference runs since the 2026-07-30 pivot. Values omitted here fall
+# back to [hardware] equivalents (model → yolo_model, device →
+# yolo_device, swimmer_detector, kpt_min_conf, max_persons → num_poses).
+# Defaults are the dogfood-tuned offline profile (DEVLOG #33):
+[analysis]
+# conf: omit to use the smart default — 0.35 when a swimmer_detector is
+# configured (fine-tuned detector is confident; lower values admit lane
+# buoys as false tracks), 0.15 for single-model COCO (water poses
+# inherently score low, DEVLOG #33). Uncomment to pin a value:
+# conf = 0.35
+imgsz = 1280     # 4× cost of 640, catches ankle-only swimmers — fine offline
+# Deployed weights live in models/ — a stable, kit-shippable location.
+# On a dev machine these are hardlinks into runs/…/weights/; in Emily's
+# install they are real files the kit dropped there (DEVLOG #41). Never
+# point production config at runs/ directly: that path only exists on the
+# machine that did the training.
+#
+# Phase B swimmer-19 pose weights. v3 (2026-08-04) = 99 crops (旧 53 +
+# 新泳池 46). Head-to-head on the same val set (incl. new-pool set_016):
+# v2 pose mAP50 0.006 → v3 0.110 (18×). Taken from last.pt deliberately —
+# best.pt is picked by box-dominated fitness and its pose head is weaker
+# (v3 best 0.055 vs last 0.110). See DEVLOG #38/#39.
+model = "models/swimmer_pose19_v3.pt"
+# Phase A detector v3 (DEVLOG #40, 2026-08-05): v2 fine-tuned on 150
+# old-pool + 46 new-pool frames. Fixes the new pool's red lane-float
+# false positives that v2 scored 0.72-0.85 on. Domain-split val:
+#   old pool  mAP50 0.842 → 0.880 (no regression)
+#   new pool  mAP50 0.493 → 0.867, precision 0.463 → 1.000
+# A 40-box visual audit on new-pool footage returned zero false positives
+# (v2: the 18 highest-confidence boxes were all floats).
+swimmer_detector = "models/swimmer_det_v3.pt"
 
 [dashboard]
 default_role = "Coach"

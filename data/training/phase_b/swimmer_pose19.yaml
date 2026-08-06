@@ -1,0 +1,38 @@
+# SyncSwim Phase B — 19-keypoint pose fine-tune (DEVLOG #38)
+#
+# Dataset: 53 single-swimmer crops annotated in local CVAT
+# (job_4 export 2026-07-16, ultralytics YOLO pose 1.0 format).
+# Skeleton = COCO-17 + left/right foot_index (脚尖 — required for
+# pointe/绷脚 scoring; MediaPipe has these points but its weights
+# can't be fine-tuned, which is why we grow our own).
+#
+# Annotation discipline (docs/emily-annotation-onboarding.md):
+#   - underwater / invisible joints have visibility = 0 so the loss
+#     never punishes the model for not hallucinating them
+#   - crops are bbox-centered, subject fills ~2/3 of the crop
+#
+# Split rule (same as Phase A): whole-clip holdout — val gets ALL
+# crops of clip_portrait_1 + set_005/006/007/008 (11 crops across 5
+# scenes), train keeps clip_horizontal + clip_portrait_2 + set_004
+# (42 crops). Random splits leak adjacent frames and inflate val OKS.
+#
+# NOTE (Codex/phase_a lesson): ultralytics resolves `path` relative
+# to the CWD for relative dataset roots defined like this — keep the
+# same convention as swimmer_det.yaml.
+path: data/training/phase_b
+train: train.txt
+val: val.txt
+
+# 19 keypoints, (x, y, visibility) triples
+kpt_shape: [19, 3]
+
+# Horizontal-flip index map: COCO-17 left/right pairs + foot_index
+# pair (17 ↔ 18). Order matches cvat_skeleton_swimmer_19pt.json:
+#   0 nose, 1/2 eye L/R, 3/4 ear L/R, 5/6 shoulder L/R, 7/8 elbow L/R,
+#   9/10 wrist L/R, 11/12 hip L/R, 13/14 knee L/R, 15/16 ankle L/R,
+#   17/18 foot_index L/R
+flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17]
+
+nc: 1
+names:
+  0: swimmer

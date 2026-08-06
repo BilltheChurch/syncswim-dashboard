@@ -20,6 +20,16 @@ from dataclasses import dataclass
 
 import numpy as np
 
+# Swimmer-tuned tracker config — we tried tweaking ByteTrack thresholds
+# (data/tracker_configs/swimmer_bytetrack.yaml v3 dogfood) but it made
+# inflation WORSE (14× → 26×). Pivoting to BoT-SORT with default thresholds
+# + GMC (Global Motion Compensation), which is the only architectural
+# difference that should help with handheld-camera bbox jitter.
+SWIMMER_TRACKER_YAML = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "data", "tracker_configs", "swimmer_botsort.yaml"
+)
+
 # COCO-17 index → MediaPipe-33 index. Every COCO keypoint maps to an
 # MP keypoint with the same semantic meaning.
 #   COCO indexing:  nose=0, L/R eye=1/2, L/R ear=3/4, L/R shoulder=5/6,
@@ -46,6 +56,13 @@ COCO_TO_MP = {
     16: 28,  # right_ankle
 }
 
+# Phase B models emit the swimmer-19 skeleton: COCO-17 + foot_index
+# L/R (data/training/phase_b/swimmer_pose19.yaml). The two extra
+# points map onto MediaPipe's foot_index slots — which is exactly why
+# the custom skeleton was designed as a COCO superset: same pipeline
+# serves stock 17-kpt weights and fine-tuned 19-kpt weights.
+KPT_TO_MP = {**COCO_TO_MP, 17: 31, 18: 32}   # left/right foot_index
+
 
 @dataclass
 class _Landmark:
@@ -59,6 +76,51 @@ class _Landmark:
 
 def _empty_mp33() -> list[_Landmark]:
     return [_Landmark(0.0, 0.0, 0.0) for _ in range(33)]
+
+
+def _kpts_to_mp33(
+    kp_xy, kp_conf, w: int, h: int,
+    x_offset: float = 0.0, y_offset: float = 0.0,
+) -> list[_Landmark]:
+    """Map one person's model keypoints (17 COCO or 19 swimmer-19,
+    pixel coords) into the MP-33 layout, normalizing to [0,1].
+
+    ``x_offset``/``y_offset`` shift crop-relative coords back to
+    full-frame (HybridSwimmerDetector's crop→pose path); leave 0 for
+    full-frame models. Unknown extra keypoints (beyond the mapping)
+    are ignored rather than crashing on future skeleton growth.
+    """
+    mp33 = _empty_mp33()
+    for k in range(kp_xy.shape[0]):
+        mp_idx = KPT_TO_MP.get(k)
+        if mp_idx is None:
+            continue
+        mp33[mp_idx] = _Landmark(
+            x=(x_offset + float(kp_xy[k, 0])) / max(1, w),
+            y=(y_offset + float(kp_xy[k, 1])) / max(1, h),
+            visibility=float(kp_conf[k]),
+        )
+    return mp33
+
+
+def _apply_kpt_gate(mp33: list[_Landmark], min_conf: float) -> list[_Landmark]:
+    """Zero out keypoints below ``min_conf`` so hallucinated joints
+    never reach the recorder / frontend.
+
+    COCO-pose has no concept of "this joint is underwater" — it always
+    emits 17 coordinates, and for occluded joints it invents plausible
+    positions at conf ~0.1-0.4 (Emily dogfood 2026-07: knee/ankle conf
+    0.007-0.03 with confident-looking xy). Gating at the source keeps
+    landmarks.csv / landmarks_multi.jsonl clean, which matters twice:
+    the replay overlay stops drawing garbage, and Phase B pre-annotation
+    built from these files doesn't inherit fake points.
+    """
+    if min_conf <= 0:
+        return mp33
+    for idx, lm in enumerate(mp33):
+        if lm.visibility < min_conf and (lm.x or lm.y or lm.visibility):
+            mp33[idx] = _Landmark(0.0, 0.0, 0.0)
+    return mp33
 
 
 class YoloPoseDetector:
@@ -78,6 +140,7 @@ class YoloPoseDetector:
         max_persons: int = 8,
         device: str = "mps",
         imgsz: int = 640,
+        kpt_min_conf: float = 0.35,
     ):
         from ultralytics import YOLO
 
@@ -101,6 +164,7 @@ class YoloPoseDetector:
         # frame): under 640 those features get downsampled to single-digit
         # pixels and the detector misses them entirely. Cost: ~4× wall-time.
         self._imgsz = int(imgsz)
+        self._kpt_min_conf = float(kpt_min_conf)
 
         # Warm-up: run once on a tiny dummy frame so the first real
         # inference isn't stuck behind model compile / JIT / kernel cache.
@@ -156,13 +220,14 @@ class YoloPoseDetector:
         if result.keypoints is None or result.keypoints.xy is None:
             return [], []
 
-        # kp_xy shape: (N_persons, 17, 2)   pixel coords
-        # kp_cnf shape: (N_persons, 17)     confidence per keypoint
+        # kp_xy shape: (N_persons, K, 2) pixel coords — K is 17 for
+        # stock COCO weights, 19 for Phase B swimmer weights.
+        # kp_cnf shape: (N_persons, K) confidence per keypoint.
         kp_xy = result.keypoints.xy.cpu().numpy()
         kp_conf = (
             result.keypoints.conf.cpu().numpy()
             if result.keypoints.conf is not None
-            else np.ones((kp_xy.shape[0], 17), dtype=np.float32)
+            else np.ones(kp_xy.shape[:2], dtype=np.float32)
         )
         if kp_xy.shape[0] == 0:
             return [], []
@@ -192,20 +257,8 @@ class YoloPoseDetector:
 
         persons: list[list[_Landmark]] = []
         for i in range(kp_xy.shape[0]):
-            mp33 = _empty_mp33()
-            for coco_idx in range(17):
-                x_px = float(kp_xy[i, coco_idx, 0])
-                y_px = float(kp_xy[i, coco_idx, 1])
-                c = float(kp_conf[i, coco_idx])
-                mp_idx = COCO_TO_MP[coco_idx]
-                # Normalize to [0,1] so downstream code treats it the
-                # same way as MediaPipe's NormalizedLandmark.
-                mp33[mp_idx] = _Landmark(
-                    x=x_px / max(1, w),
-                    y=y_px / max(1, h),
-                    visibility=c,
-                )
-            persons.append(mp33)
+            mp33 = _kpts_to_mp33(kp_xy[i], kp_conf[i], w, h)
+            persons.append(_apply_kpt_gate(mp33, self._kpt_min_conf))
         return persons, track_ids
 
     def reset_tracking(self) -> None:
@@ -264,6 +317,7 @@ class HybridSwimmerDetector:
         max_persons: int = 8,
         device: str = "mps",
         imgsz: int = 1280,
+        kpt_min_conf: float = 0.35,
     ):
         from ultralytics import YOLO
 
@@ -284,11 +338,24 @@ class HybridSwimmerDetector:
 
         self._det_model = YOLO(swimmer_detector_path)   # custom bbox
         self._pose_model = YOLO(pose_model_path)         # COCO keypoints
+        # The swimmer-tuned tracker yaml lives in data/ and can be
+        # missing on a fresh deploy (kit built before the file was
+        # committed). ultralytics .track() with a nonexistent tracker
+        # path raises → detect() would return zero persons EVERY frame
+        # with no visible error. Fall back to the bundled BoT-SORT
+        # defaults instead, loudly.
+        if os.path.exists(SWIMMER_TRACKER_YAML):
+            self._tracker_yaml = SWIMMER_TRACKER_YAML
+        else:
+            print(f"[hybrid] WARNING: {SWIMMER_TRACKER_YAML} missing — "
+                  f"falling back to bundled botsort.yaml")
+            self._tracker_yaml = "botsort.yaml"
         self._conf = float(conf)
         self._iou = float(iou)
         self._max_persons = max(1, int(max_persons))
         self._device = device
         self._imgsz = int(imgsz)
+        self._kpt_min_conf = float(kpt_min_conf)
 
         # Warm-up BOTH models so first real frame isn't stuck behind JIT.
         dummy = np.zeros((320, 320, 3), dtype=np.uint8)
@@ -332,7 +399,7 @@ class HybridSwimmerDetector:
                 max_det=self._max_persons,
                 imgsz=self._imgsz,
                 persist=True,
-                tracker="bytetrack.yaml",
+                tracker=self._tracker_yaml,  # see module-level docstring
             )
         except Exception:
             return [], []
@@ -356,6 +423,17 @@ class HybridSwimmerDetector:
         persons: list[list[_Landmark]] = []
         for i in range(n):
             x1, y1, x2, y2 = boxes_xyxy[i]
+            # Expand the bbox 1.5× around its center before cropping.
+            # Phase B training crops are bbox-centered with the subject
+            # filling ~2/3 of the crop (tools/build_emily_phase_b_kit.py)
+            # — feeding the pose model a TIGHT crop is out of its
+            # training distribution and drops keypoint confidence below
+            # the draw/record gates (DEVLOG #38: inverted-swimmer frames
+            # that worked on val crops failed on tight inference crops).
+            bw, bh = x2 - x1, y2 - y1
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            x1, x2 = cx - bw * 0.75, cx + bw * 0.75
+            y1, y2 = cy - bh * 0.75, cy + bh * 0.75
             x1i, y1i = max(0, int(x1)), max(0, int(y1))
             x2i, y2i = min(w, int(x2)), min(h, int(y2))
             if x2i <= x1i or y2i <= y1i:
@@ -383,23 +461,18 @@ class HybridSwimmerDetector:
                 and pose_out[0].keypoints.xy is not None
                 and len(pose_out[0].keypoints.xy) > 0
             ):
-                kp_xy = pose_out[0].keypoints.xy[0].cpu().numpy()  # (17,2)
+                # (K, 2) — K = 17 (stock COCO) or 19 (Phase B weights)
+                kp_xy = pose_out[0].keypoints.xy[0].cpu().numpy()
                 kp_conf = (
                     pose_out[0].keypoints.conf[0].cpu().numpy()
                     if pose_out[0].keypoints.conf is not None
-                    else np.ones(17, dtype=np.float32)
+                    else np.ones(kp_xy.shape[0], dtype=np.float32)
                 )
-                for coco_idx in range(17):
-                    # Crop-relative px → full-frame px → normalize
-                    x_full_px = x1i + float(kp_xy[coco_idx, 0])
-                    y_full_px = y1i + float(kp_xy[coco_idx, 1])
-                    mp_idx = COCO_TO_MP[coco_idx]
-                    mp33[mp_idx] = _Landmark(
-                        x=x_full_px / max(1, w),
-                        y=y_full_px / max(1, h),
-                        visibility=float(kp_conf[coco_idx]),
-                    )
-            persons.append(mp33)
+                # Crop-relative px → full-frame px → normalize
+                mp33 = _kpts_to_mp33(
+                    kp_xy, kp_conf, w, h, x_offset=x1i, y_offset=y1i,
+                )
+            persons.append(_apply_kpt_gate(mp33, self._kpt_min_conf))
 
         # Sort by bbox area (biggest first) to match
         # YoloPoseDetector.detect() semantics — index 0 is the most
@@ -438,6 +511,7 @@ def create_pose_detector(
     max_persons: int,
     device: str,
     imgsz: int = 640,
+    kpt_min_conf: float = 0.35,
 ):
     """Factory: pick HybridSwimmerDetector if a custom detector is
     configured, otherwise fall back to the single-model YoloPoseDetector.
@@ -458,6 +532,7 @@ def create_pose_detector(
             max_persons=max_persons,
             device=device,
             imgsz=imgsz,
+            kpt_min_conf=kpt_min_conf,
         )
     return YoloPoseDetector(
         model_path=pose_model_path,
@@ -465,4 +540,5 @@ def create_pose_detector(
         max_persons=max_persons,
         device=device,
         imgsz=imgsz,
+        kpt_min_conf=kpt_min_conf,
     )

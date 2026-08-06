@@ -1,0 +1,33 @@
+# SyncSwim detector v3 — old pool + new pool (DEVLOG #40)
+#
+# Why v3 (the decisive finding of 2026-08-04): after Phase B v3 fixed the
+# POSE model (val pose mAP 0.006 → 0.110 on new-pool data), the end-to-end
+# pipeline on Emily's new pool was still broken — and the bottleneck had
+# MOVED to the detector. A 40-box visual audit showed the 18 highest-
+# confidence detections (conf 0.72-0.85) were ALL red lane-rope floats,
+# while real swimmers scored 0.35-0.67. Raising the conf threshold makes
+# it strictly worse: it keeps the floats and discards the athletes.
+#
+# Data:
+#   - 150 old-pool frames (clip_horizontal / clip_portrait_1 / _2), the
+#     original Phase A annotation set.
+#   - 46 new-pool frames (set_012~016) whose single swimmer box was
+#     human-verified during the Phase B crop QA. Every one of these frames
+#     ALSO contains the red lane floats as UNLABELED background — which is
+#     exactly the negative signal the detector needs to stop firing on them.
+#
+# Split: whole-clip / whole-video holdout — val = clip_portrait_2 (old) +
+# set_016 (new pool), so val measures BOTH old-pool regression and
+# new-pool generalization. Never split adjacent frames of one clip across
+# train/val (Phase A lesson, docs/phase-a-annotation.md).
+#
+# Train by FINE-TUNING from swimmer_det_v2 best.pt, not from scratch: v2
+# was trained on 350 frames whose sources are no longer on disk, so a
+# from-scratch v3 would silently lose that knowledge.
+path: data/training/phase_a_v3
+train: train.txt
+val: val_old.txt
+
+nc: 1
+names:
+  0: person

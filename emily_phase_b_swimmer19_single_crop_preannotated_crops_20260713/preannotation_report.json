@@ -1,0 +1,282 @@
+{
+  "schema": "phase-b-swimmer19-model-preannotations/v1",
+  "model": "/Users/billthechurch/Downloads/test_rec/yolov8s-pose.pt",
+  "detection_confidence_threshold": 0.1,
+  "point_confidence_threshold": 0.2,
+  "image_size": 640,
+  "device": "cpu",
+  "crops": 53,
+  "crops_with_model_detection": 53,
+  "crops_with_visible_model_pose": 53,
+  "model_visible_coco17_points": 630,
+  "foot_index_points": "outside: local COCO pose checkpoint does not predict them",
+  "per_crop": [
+    {
+      "crop_image": "clip_horizontal_f000028_p3.jpg",
+      "detection_confidence": 0.5410799384117126,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000046_p1.jpg",
+      "detection_confidence": 0.18433766067028046,
+      "model_visible_coco17_points": 8
+    },
+    {
+      "crop_image": "clip_horizontal_f000064_p2.jpg",
+      "detection_confidence": 0.22504127025604248,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000082_p1.jpg",
+      "detection_confidence": 0.2720904052257538,
+      "model_visible_coco17_points": 14
+    },
+    {
+      "crop_image": "clip_horizontal_f000082_p4.jpg",
+      "detection_confidence": 0.14316962659358978,
+      "model_visible_coco17_points": 9
+    },
+    {
+      "crop_image": "clip_horizontal_f000100_p1.jpg",
+      "detection_confidence": 0.7773185968399048,
+      "model_visible_coco17_points": 4
+    },
+    {
+      "crop_image": "clip_horizontal_f000100_p3.jpg",
+      "detection_confidence": 0.4103023111820221,
+      "model_visible_coco17_points": 10
+    },
+    {
+      "crop_image": "clip_horizontal_f000118_p3.jpg",
+      "detection_confidence": 0.4560512602329254,
+      "model_visible_coco17_points": 6
+    },
+    {
+      "crop_image": "clip_horizontal_f000136_p1.jpg",
+      "detection_confidence": 0.7705722451210022,
+      "model_visible_coco17_points": 8
+    },
+    {
+      "crop_image": "clip_horizontal_f000154_p1.jpg",
+      "detection_confidence": 0.6271479725837708,
+      "model_visible_coco17_points": 5
+    },
+    {
+      "crop_image": "clip_horizontal_f000172_p4.jpg",
+      "detection_confidence": 0.6990875005722046,
+      "model_visible_coco17_points": 10
+    },
+    {
+      "crop_image": "clip_horizontal_f000190_p4.jpg",
+      "detection_confidence": 0.16935314238071442,
+      "model_visible_coco17_points": 7
+    },
+    {
+      "crop_image": "clip_horizontal_f000209_p2.jpg",
+      "detection_confidence": 0.22036726772785187,
+      "model_visible_coco17_points": 7
+    },
+    {
+      "crop_image": "clip_horizontal_f000245_p2.jpg",
+      "detection_confidence": 0.16158415377140045,
+      "model_visible_coco17_points": 16
+    },
+    {
+      "crop_image": "clip_horizontal_f000299_p3.jpg",
+      "detection_confidence": 0.1451851725578308,
+      "model_visible_coco17_points": 12
+    },
+    {
+      "crop_image": "clip_horizontal_f000317_p0.jpg",
+      "detection_confidence": 0.14725542068481445,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000335_p2.jpg",
+      "detection_confidence": 0.5246195793151855,
+      "model_visible_coco17_points": 12
+    },
+    {
+      "crop_image": "clip_horizontal_f000353_p3.jpg",
+      "detection_confidence": 0.12002149969339371,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p2.jpg",
+      "detection_confidence": 0.22183924913406372,
+      "model_visible_coco17_points": 10
+    },
+    {
+      "crop_image": "clip_horizontal_f000371_p3.jpg",
+      "detection_confidence": 0.1899295300245285,
+      "model_visible_coco17_points": 16
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p0.jpg",
+      "detection_confidence": 0.3035047650337219,
+      "model_visible_coco17_points": 14
+    },
+    {
+      "crop_image": "clip_horizontal_f000390_p1.jpg",
+      "detection_confidence": 0.24417628347873688,
+      "model_visible_coco17_points": 7
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p0.jpg",
+      "detection_confidence": 0.4289456009864807,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000516_p3.jpg",
+      "detection_confidence": 0.29696914553642273,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p1.jpg",
+      "detection_confidence": 0.16598233580589294,
+      "model_visible_coco17_points": 14
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p2.jpg",
+      "detection_confidence": 0.6753120422363281,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000534_p3.jpg",
+      "detection_confidence": 0.4471665322780609,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p3.jpg",
+      "detection_confidence": 0.24849630892276764,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000552_p4.jpg",
+      "detection_confidence": 0.22043068706989288,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p2.jpg",
+      "detection_confidence": 0.15553443133831024,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000571_p3.jpg",
+      "detection_confidence": 0.6706131100654602,
+      "model_visible_coco17_points": 16
+    },
+    {
+      "crop_image": "clip_horizontal_f000589_p1.jpg",
+      "detection_confidence": 0.2869683504104614,
+      "model_visible_coco17_points": 14
+    },
+    {
+      "crop_image": "clip_horizontal_f000607_p0.jpg",
+      "detection_confidence": 0.1824103146791458,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000607_p1.jpg",
+      "detection_confidence": 0.30871933698654175,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000679_p1.jpg",
+      "detection_confidence": 0.24631117284297943,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_horizontal_f000679_p2.jpg",
+      "detection_confidence": 0.10014334321022034,
+      "model_visible_coco17_points": 5
+    },
+    {
+      "crop_image": "clip_horizontal_f000715_p2.jpg",
+      "detection_confidence": 0.2936488091945648,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000733_p0.jpg",
+      "detection_confidence": 0.5919061899185181,
+      "model_visible_coco17_points": 13
+    },
+    {
+      "crop_image": "clip_horizontal_f000752_p0.jpg",
+      "detection_confidence": 0.3106243312358856,
+      "model_visible_coco17_points": 8
+    },
+    {
+      "crop_image": "clip_horizontal_f000788_p0.jpg",
+      "detection_confidence": 0.1428174376487732,
+      "model_visible_coco17_points": 12
+    },
+    {
+      "crop_image": "clip_horizontal_f000896_p1.jpg",
+      "detection_confidence": 0.14491358399391174,
+      "model_visible_coco17_points": 12
+    },
+    {
+      "crop_image": "clip_portrait_1_f000065_p3.jpg",
+      "detection_confidence": 0.10760176926851273,
+      "model_visible_coco17_points": 14
+    },
+    {
+      "crop_image": "clip_portrait_1_f000149_p0.jpg",
+      "detection_confidence": 0.6350073218345642,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_portrait_1_f000530_p0.jpg",
+      "detection_confidence": 0.24882034957408905,
+      "model_visible_coco17_points": 10
+    },
+    {
+      "crop_image": "clip_portrait_2_f000069_p0.jpg",
+      "detection_confidence": 0.6264926195144653,
+      "model_visible_coco17_points": 17
+    },
+    {
+      "crop_image": "clip_portrait_2_f000231_p0.jpg",
+      "detection_confidence": 0.30337193608283997,
+      "model_visible_coco17_points": 12
+    },
+    {
+      "crop_image": "clip_portrait_2_f000244_p2.jpg",
+      "detection_confidence": 0.16097940504550934,
+      "model_visible_coco17_points": 16
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p0.jpg",
+      "detection_confidence": 0.2584056258201599,
+      "model_visible_coco17_points": 9
+    },
+    {
+      "crop_image": "clip_portrait_2_f000294_p3.jpg",
+      "detection_confidence": 0.14882563054561615,
+      "model_visible_coco17_points": 8
+    },
+    {
+      "crop_image": "clip_portrait_2_f000394_p0.jpg",
+      "detection_confidence": 0.41974446177482605,
+      "model_visible_coco17_points": 10
+    },
+    {
+      "crop_image": "clip_portrait_2_f000456_p2.jpg",
+      "detection_confidence": 0.11726758629083633,
+      "model_visible_coco17_points": 7
+    },
+    {
+      "crop_image": "clip_portrait_2_f000481_p2.jpg",
+      "detection_confidence": 0.15452904999256134,
+      "model_visible_coco17_points": 4
+    },
+    {
+      "crop_image": "clip_portrait_2_f000494_p2.jpg",
+      "detection_confidence": 0.15480300784111023,
+      "model_visible_coco17_points": 2
+    }
+  ],
+  "source_inference_crops": 175,
+  "selection": "at_least_one_reliable_visible_local_model_keypoint"
+}
