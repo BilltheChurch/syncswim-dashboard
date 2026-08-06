@@ -66,3 +66,10 @@ config.local.toml
 
 # Deployed model weights (hardlinks into runs/ locally, real files in a kit)
 models/
+
+# Emily 交接包（生成物，由 tools/build_emily_phase_b_kit.py 重建）
+emily_phase_b_swimmer19_*/
+emily_phase_b_swimmer19_*.zip
+# phase_a_v3/images 是指向 phase_a/ 与 phase_b_newpool/ 的绝对路径软链接，
+# 换机器必断；用 tools/ 重建即可，真正的标注在 phase_a_v3/labels/（已入库）
+data/training/phase_a_v3/images/
